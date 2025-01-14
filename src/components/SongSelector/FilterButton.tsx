@@ -1,20 +1,32 @@
 import React from 'react';
+import colors from '../../theme/colors';
+
+type ColorKeys = keyof typeof colors;
 
 type FilterButtonProps = {
-  label: string;
+  label: ColorKeys;
   isActive: boolean;
   onClick: () => void;
 };
 
-const FilterButton: React.FC<FilterButtonProps> = ({ label, isActive, onClick }) => (
-  <button
-    className={`px-4 py-2 rounded-full ${
-      isActive ? `bg-${label.toLowerCase()}-500 text-white` : 'bg-gray-200'
-    }`}
-    onClick={onClick}
-  >
-    {label}
-  </button>
-);
+function FilterButton({ label, isActive, onClick }: FilterButtonProps) {
+  const buttonStyle = {
+    backgroundColor: isActive
+      ? colors[label.toLowerCase() as ColorKeys]
+      : `${colors[label.toLowerCase() as ColorKeys]}33`,
+    color: isActive ? 'white' : colors[label.toLowerCase() as ColorKeys],
+    padding: '0.5rem 1rem',
+    marginRight: '0.3rem',
+    borderRadius: '9999px',
+    border: 'none',
+    cursor: 'pointer',
+  };
+
+  return (
+    <button type="button" style={buttonStyle} onClick={onClick}>
+      {label}
+    </button>
+  );
+}
 
 export default FilterButton;

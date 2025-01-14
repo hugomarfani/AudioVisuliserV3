@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { JSX } from 'react';
+import colors from '../../theme/colors';
 
 type SongCardProps = {
   title: string;
@@ -7,28 +8,79 @@ type SongCardProps = {
   status: 'Blue' | 'Green' | 'Yellow' | 'Red';
 };
 
-const SongCard: React.FC<SongCardProps> = ({
+function SongCard({
   title,
   artist,
   albumArt,
   status,
-}) => (
-  <div className="flex items-center space-x-4">
-    <img
-      src={albumArt}
-      alt={title}
-      className="w-12 h-12 rounded-lg object-cover"
-    />
-    <div className="flex-1">
-      <h2 className="font-medium text-sm">{title}</h2>
-      <p className="text-xs text-gray-500">{artist}</p>
+}: SongCardProps): JSX.Element {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        backgroundColor: colors.grey5,
+        padding: '1rem',
+        borderRadius: '24px',
+        width: '200px', // Fixed width
+        height: '48px', // Fixed height
+        margin: '0 auto 1rem',
+        overflow: 'hidden', // Ensures no content overflows the card boundaries
+      }}
+    >
+      {/* Album Art */}
+      <img
+        src={albumArt}
+        alt={title}
+        style={{
+          borderRadius: '8px',
+          width: '48px',
+          height: '48px',
+          objectFit: 'cover',
+        }}
+      />
+      {/* Song Details */}
+      <div style={{ flex: 1, marginLeft: '1rem', overflow: 'hidden' }}>
+        <h2
+          style={{
+            fontSize: '1rem',
+            margin: '0 0 0.25rem',
+            fontWeight: 'bold',
+            color: '#000',
+            whiteSpace: 'nowrap', // Prevents text wrapping
+            overflow: 'hidden', // Hides overflowing text
+            textOverflow: 'ellipsis', // Adds "..." for truncated text
+          }}
+        >
+          {title}
+        </h2>
+        <p
+          style={{
+            fontSize: '0.875rem',
+            margin: 0,
+            color: '#6B7280', // Grey tone
+            whiteSpace: 'nowrap', // Prevents text wrapping
+            overflow: 'hidden', // Hides overflowing text
+            textOverflow: 'ellipsis', // Adds "..." for truncated text
+          }}
+        >
+          {artist}
+        </p>
+      </div>
+      {/* Status Indicator */}
+      <div>
+        <span
+          style={{
+            display: 'inline-block',
+            width: '12px',
+            height: '12px',
+            borderRadius: '50%',
+            backgroundColor: colors[status.toLowerCase()],
+          }}
+        />
+      </div>
     </div>
-    <div>
-      <span
-        className={`inline-block w-3 h-3 rounded-full bg-${status.toLowerCase()}-500`}
-      ></span>
-    </div>
-  </div>
-);
+  );
+}
 
 export default SongCard;
