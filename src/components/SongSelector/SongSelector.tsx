@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import FilterButton from './FilterButton';
 import SongCard from './SongCard';
-import { songs, Song } from './SongData';
+import { songs } from './SongData';
 import colors from '../../theme/colors';
 
 const SongSelector: React.FC = () => {
@@ -11,24 +11,30 @@ const SongSelector: React.FC = () => {
 
   return (
     <div
-      className="p-4 max-w-md mx-auto rounded-lg shadow-md"
       style={{
         backgroundColor: colors.white,
+        borderRadius: '24px', // Corner radius
+        padding: '1.5rem', // Padding
+        // maxWidth: '400px', // Optional: Ensures the panel has a max width
+        margin: '0 auto', // Centers the panel horizontally
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', // Subtle shadow for depth
       }}
     >
       {/* Header */}
       <div
-        className="text-center mb-4"
         style={{
           color: colors.black,
+          marginBottom: '1.5rem',
         }}
       >
-        <h1 className="text-xl font-bold">Welcome Back</h1>
-        <p className="text-gray-600">Say or search a song to begin</p>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Welcome Back</h1>
+        <p style={{ fontSize: '1rem', color: '#6B7280' }}>
+          Say or search a song to begin
+        </p>
       </div>
 
       {/* Filter Buttons */}
-      <div className="flex justify-center space-x-2 mb-4">
+      <div style={{ display: 'flex', justifyContent: 'left', gap: '0.5rem', marginBottom: '1rem' }}>
         {['Blue', 'Green', 'Yellow', 'Red'].map((color) => (
           <FilterButton
             key={color}
@@ -43,7 +49,6 @@ const SongSelector: React.FC = () => {
 
       {/* Song List */}
       <div
-        className="grid grid-cols-2 gap-4"
         style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
