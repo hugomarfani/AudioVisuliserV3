@@ -1,7 +1,8 @@
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
-import icon from '../../assets/icon.svg';
 import './App.css';
+import SongSelector from '../components/SongSelector/SongSelector';
 
+/*
 function Hello() {
   return (
     <div>
@@ -38,12 +39,13 @@ function Hello() {
     </div>
   );
 }
+*/
 
 export default function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Hello />} />
+        <Route path="/" element={<SongSelector />} />
       </Routes>
     </Router>
   );
