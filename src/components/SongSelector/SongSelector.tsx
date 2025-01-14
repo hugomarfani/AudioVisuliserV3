@@ -34,7 +34,14 @@ const SongSelector: React.FC = () => {
       </div>
 
       {/* Filter Buttons */}
-      <div style={{ display: 'flex', justifyContent: 'left', gap: '0.5rem', marginBottom: '1rem' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'left',
+          gap: '0.5rem',
+          marginBottom: '1rem',
+        }}
+      >
         {['Blue', 'Green', 'Yellow', 'Red'].map((color) => (
           <FilterButton
             key={color}
