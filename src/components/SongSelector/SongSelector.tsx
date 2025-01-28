@@ -72,12 +72,9 @@ const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken 
           .map((song) => (
             <SongCard
               key={song.id}
-              title={song.title}
-              artist={song.artist}
-              albumArt={song.albumArt}
-              status={song.status}
               uri={song.id}
               onSelect={onTrackSelect}
+              accessToken={accessToken}
             />
           ))}
       </div>
