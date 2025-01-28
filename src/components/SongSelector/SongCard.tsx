@@ -6,6 +6,8 @@ type SongCardProps = {
   artist: string;
   albumArt: string;
   status: 'Blue' | 'Green' | 'Yellow' | 'Red';
+  uri: string;
+  onSelect: (uri: string) => void;
 };
 
 function SongCard({
@@ -13,9 +15,12 @@ function SongCard({
   artist,
   albumArt,
   status,
+  uri,
+  onSelect,
 }: SongCardProps): JSX.Element {
   return (
     <div
+      onClick={() => onSelect(uri)}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -26,6 +31,7 @@ function SongCard({
         height: '48px', // Fixed height
         margin: '0 auto 1rem',
         overflow: 'hidden', // Ensures no content overflows the card boundaries
+        cursor: 'pointer',
       }}
     >
       {/* Album Art */}

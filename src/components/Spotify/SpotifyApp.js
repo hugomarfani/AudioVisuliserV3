@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import WebPlayback from './auth/WebPlayback';
 import Login from './auth/Login';
 import './SpotifyApp.css';
+import Player from '../SongSelector/Player';
 
 function SpotifyApp() {
   const [token, setToken] = useState('');
@@ -17,7 +18,7 @@ function SpotifyApp() {
   }, []);
 
   // eslint-disable-next-line react/jsx-no-useless-fragment
-  return <>{token === '' ? <Login /> : <WebPlayback token={token} />}</>;
+  return <>{token === '' ? <Login /> : <Player accessToken={token} trackURI={"spotify:track:5M2lX0ZAYSAzCs1xPPi9BX"} />}</>;
 }
 
 export default SpotifyApp;

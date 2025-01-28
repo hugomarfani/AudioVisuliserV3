@@ -111,6 +111,8 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.16.0",
+    "react-spotify-embed": "^2.0.4",
+    "react-spotify-web-playback": "^0.14.7",
     "spotify-web-api-js": "^1.5.2"
   },
   "devDependencies": {

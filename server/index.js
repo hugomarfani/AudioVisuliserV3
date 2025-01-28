@@ -31,7 +31,7 @@ var app = express();
 app.use(cors({ origin: 'http://localhost:1212' }));
 
 app.get('/auth/login', (req, res) => {
-  var scope = 'streaming user-read-email user-read-private';
+  var scope = 'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-read-currently-playing streaming app-remote-control user-library-read playlist-read-private';
   var state = generateRandomString(16);
 
   var auth_query_parameters = new URLSearchParams({
@@ -50,6 +50,16 @@ app.get('/auth/login', (req, res) => {
 
 app.get('/auth/callback', (req, res) => {
   var code = req.query.code;
+  var state = req.query.state;
+
+  if (state === null) {
+    res.redirect('/#' +
+      new URLSearchParams({
+        error: 'state_mismatch'
+      }).toString()
+    );
+    return;
+  }
 
   var authOptions = {
     url: 'https://accounts.spotify.com/api/token',
@@ -72,7 +82,18 @@ app.get('/auth/callback', (req, res) => {
   request.post(authOptions, function (error, response, body) {
     if (!error && response.statusCode === 200) {
       access_token = body.access_token;
-      res.redirect('/');
+      res.redirect('/#' +
+        new URLSearchParams({
+          access_token: access_token,
+          token_type: body.token_type,
+        }).toString()
+      );
+    } else {
+      res.redirect('/#' +
+        new URLSearchParams({
+          error: 'invalid_token'
+        }).toString()
+      );
     }
   });
 });

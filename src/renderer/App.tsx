@@ -1,44 +1,45 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
 import MeshGradientBackground from '../components/Backgrounds/MeshGradientBackground';
 import SongSelector from '../components/SongSelector/SongSelector';
 import SpotifyApp from '../components/Spotify/SpotifyApp';
+import Player from '../components/SongSelector/Player';
 
 // eslint-disable-next-line react/function-component-definition
 const App: React.FC = () => {
+  const [accessToken, setAccessToken] = useState<string>('');
+  const [selectedTrackURI, setSelectedTrackURI] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Check if we're on the callback URL
+    const hash = window.location.hash;
+    if (hash) {
+      const params = new URLSearchParams(hash.substring(1));
+      const token = params.get('access_token');
+      if (token) {
+        setAccessToken(token);
+      }
+
+    }
+  }, []);
+
   return (
     <Router>
       <Routes>
-      <Route
-  path="/auth/callback"
-  component={() => {
-    // Extract the code and state from the query parameters
-    const query = new URLSearchParams(window.location.search);
-    const code = query.get('code');
-    const state = query.get('state');
-
-    // Send the code and state to your backend for token exchange
-    fetch(`http://localhost:5001/auth/callback?code=${code}&state=${state}`)
-      .then(response => response.json())
-      .then(data => {
-        console.log('Token exchanged:', data);
-        // Handle token (e.g., store in state or redirect to another page)
-      })
-      .catch(err => console.error('Error:', err));
-
-    return <div>Processing...</div>; // Show a loading or success message
-  }}
-/>
-        <Route
-          path="/"
-          element={
-            <MeshGradientBackground>
-              <SongSelector />
-              <SpotifyApp />
-            </MeshGradientBackground>
-          }
-        />
+        <Route path="/" element={
+          <MeshGradientBackground>
+            <SongSelector
+              onTrackSelect={setSelectedTrackURI}
+              accessToken={accessToken}
+            />
+            <Player
+              accessToken={accessToken}
+              trackURI={selectedTrackURI}
+            />
+            {/* <SpotifyApp /> */}
+          </MeshGradientBackground>
+        } />
       </Routes>
     </Router>
   );

@@ -4,7 +4,12 @@ import SongCard from './SongCard';
 import { songs } from './SongData';
 import colors from '../../theme/colors';
 
-const SongSelector: React.FC = () => {
+interface SongSelectorProps {
+  onTrackSelect: (uri: string) => void;
+  accessToken: string;
+}
+
+const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken }) => {
   const [filter, setFilter] = useState<'Blue' | 'Green' | 'Yellow' | 'Red'>(
     'Green',
   );
@@ -71,6 +76,8 @@ const SongSelector: React.FC = () => {
               artist={song.artist}
               albumArt={song.albumArt}
               status={song.status}
+              uri={song.id}
+              onSelect={onTrackSelect}
             />
           ))}
       </div>

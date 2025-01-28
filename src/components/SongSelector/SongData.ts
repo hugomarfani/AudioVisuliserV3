@@ -8,7 +8,7 @@ export type Song = {
 
 export const songs: Song[] = [
   {
-    id: '1',
+    id: 'spotify:track:0qcr5FMsEO85NAQjrlDRKo',
     title: 'Let It Go',
     artist: 'Idina Menzel',
     albumArt: 'letitgo',
