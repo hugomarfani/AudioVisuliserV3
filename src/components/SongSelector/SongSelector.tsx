@@ -1,18 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import FilterButton from './FilterButton';
 import SongCard from './SongCard';
 import { songs } from './SongData';
 import colors from '../../theme/colors';
+import axios from 'axios';
 
 interface SongSelectorProps {
   onTrackSelect: (uri: string) => void;
   accessToken: string;
 }
 
+interface Device {
+  id: string;
+  name: string;
+}
+
 const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken }) => {
-  const [filter, setFilter] = useState<'Blue' | 'Green' | 'Yellow' | 'Red'>(
-    'Green',
-  );
+  const [filter, setFilter] = useState<'Blue' | 'Green' | 'Yellow' | 'Red'>('Green');
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchDevices() {
+      try {
+        const response = await axios.get("https://api.spotify.com/v1/me/player/devices", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        setDevices(response.data.devices);
+      } catch (error) {
+        console.error("Error fetching devices:", error);
+      }
+    }
+
+    if (accessToken) {
+      fetchDevices();
+    }
+  }, [accessToken]);
 
   return (
     <div
@@ -36,6 +61,29 @@ const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken 
         <p style={{ fontSize: '1rem', color: '#6B7280' }}>
           Say or search a song to begin
         </p>
+      </div>
+
+      {/* Device Selector */}
+      <div style={{ marginBottom: '1rem' }}>
+        <select
+          onChange={(e) => setSelectedDevice(e.target.value)}
+          value={selectedDevice || ""}
+          style={{
+            padding: '0.5rem',
+            borderRadius: '8px',
+            border: '1px solid #ccc',
+            width: '100%',
+          }}
+        >
+          <option value="" disabled>
+            Select a device
+          </option>
+          {devices.map((device) => (
+            <option key={device.id} value={device.id}>
+              {device.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Filter Buttons */}
@@ -75,6 +123,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken 
               uri={song.id}
               onSelect={onTrackSelect}
               accessToken={accessToken}
+              selectedDevice={selectedDevice}
             />
           ))}
       </div>

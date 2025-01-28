@@ -1,13 +1,15 @@
 import React, { JSX, useEffect, useState } from 'react';
 import colors from '../../theme/colors';
+import axios from 'axios';
 
 type SongCardProps = {
   uri: string;
   onSelect: (uri: string) => void;
   accessToken: string;
+  selectedDevice: string | null;
 };
 
-function SongCard({ uri, onSelect, accessToken }: SongCardProps): JSX.Element {
+function SongCard({ uri, onSelect, accessToken, selectedDevice }: SongCardProps): JSX.Element {
   const [songDetails, setSongDetails] = useState<{
     title: string;
     artist: string;
@@ -23,6 +25,12 @@ function SongCard({ uri, onSelect, accessToken }: SongCardProps): JSX.Element {
           Authorization: `Bearer ${accessToken}`,
         },
       });
+
+      if (response.status === 401) {
+        console.error('Unauthorized: Access token may be expired or invalid');
+        return;
+      }
+
       const data = await response.json();
       if (data && data.artists && data.artists.length > 0 && data.album && data.album.images && data.album.images.length > 0) {
         setSongDetails({
@@ -38,13 +46,42 @@ function SongCard({ uri, onSelect, accessToken }: SongCardProps): JSX.Element {
     fetchSongDetails();
   }, [uri, accessToken]);
 
+  const handlePlay = async () => {
+    if (accessToken && selectedDevice && uri) {
+      try {
+        await axios.put(
+          `https://api.spotify.com/v1/me/player/play?device_id=${selectedDevice}`,
+          {
+            uris: [uri]
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response) {
+          console.error("Error playing track - Status:", error.response.status);
+          console.error("Error data:", error.response.data);
+        } else {
+          console.error("Error playing track:", error);
+        }
+      }
+    }
+  };
+
   if (!songDetails) {
     return <div>Loading...</div>;
   }
 
   return (
     <div
-      onClick={() => onSelect(uri)}
+      onClick={() => {
+        onSelect(uri);
+        handlePlay();
+      }}
       style={{
         display: 'flex',
         alignItems: 'center',
