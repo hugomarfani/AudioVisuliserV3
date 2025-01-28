@@ -5,6 +5,7 @@ import MeshGradientBackground from '../components/Backgrounds/MeshGradientBackgr
 import SongSelector from '../components/SongSelector/SongSelector';
 import SpotifyApp from '../components/Spotify/SpotifyApp';
 import Player from '../components/SongSelector/Player';
+import Login from '../components/Spotify/auth/Login'; // Assuming you have a Login component
 
 // eslint-disable-next-line react/function-component-definition
 const App: React.FC = () => {
@@ -12,16 +13,13 @@ const App: React.FC = () => {
   const [selectedTrackURI, setSelectedTrackURI] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if we're on the callback URL
-    const hash = window.location.hash;
-    if (hash) {
-      const params = new URLSearchParams(hash.substring(1));
-      const token = params.get('access_token');
-      if (token) {
-        setAccessToken(token);
-      }
-
+    async function getToken() {
+      const response = await fetch('http://localhost:5001/auth/token');
+      const json = await response.json();
+      setAccessToken(json.access_token);
     }
+
+    getToken();
   }, []);
 
   return (
@@ -29,15 +27,20 @@ const App: React.FC = () => {
       <Routes>
         <Route path="/" element={
           <MeshGradientBackground>
-            <SongSelector
-              onTrackSelect={setSelectedTrackURI}
-              accessToken={accessToken}
-            />
-            <Player
-              accessToken={accessToken}
-              trackURI={selectedTrackURI}
-            />
-            {/* <SpotifyApp /> */}
+            {accessToken === '' ? (
+              <Login />
+            ) : (
+              <>
+                <SongSelector
+                  onTrackSelect={setSelectedTrackURI}
+                  accessToken={accessToken}
+                />
+                <Player
+                  accessToken={accessToken}
+                  trackURI={selectedTrackURI}
+                />
+              </>
+            )}
           </MeshGradientBackground>
         } />
       </Routes>
