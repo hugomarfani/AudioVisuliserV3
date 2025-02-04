@@ -1,0 +1,3 @@
+C:/Users/billy/Documents/coding/openvinoPython/cppVer/build/CMakeFiles/test.dir
+C:/Users/billy/Documents/coding/openvinoPython/cppVer/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/billy/Documents/coding/openvinoPython/cppVer/build/CMakeFiles/ZERO_CHECK.dir
