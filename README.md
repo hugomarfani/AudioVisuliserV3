@@ -28,6 +28,10 @@ Clone the repo and install dependencies:
 git clone --depth 1 --branch main https://github.com/electron-react-boilerplate/electron-react-boilerplate.git your-project-name
 cd your-project-name
 npm install
+
+npm install p5
+npm i --save-dev @types/p5
+
 ```
 
 **Having issues installing? See our [debugging guide](https://github.com/electron-react-boilerplate/electron-react-boilerplate/issues/400)**
