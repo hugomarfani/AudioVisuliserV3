@@ -5,6 +5,7 @@ import {
   BrowserWindow,
   MenuItemConstructorOptions,
 } from 'electron';
+import { ipcMain } from 'electron';
 
 interface DarwinMenuItemConstructorOptions extends MenuItemConstructorOptions {
   selector?: string;
@@ -206,6 +207,12 @@ export default class MenuBuilder {
             accelerator: 'Ctrl+W',
             click: () => {
               this.mainWindow.close();
+            },
+          },
+          {
+            label: 'Run Gemma Test',
+            click: () => {
+              this.mainWindow.webContents.send('run-gemma-test');
             },
           },
         ],
