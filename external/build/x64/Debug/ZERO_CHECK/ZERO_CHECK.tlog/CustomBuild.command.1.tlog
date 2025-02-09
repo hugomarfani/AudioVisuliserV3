@@ -1,0 +1,10 @@
+^C:\USERS\BILLY\DOCUMENTS\CODING\OPENVINOPYTHON\CPPVER COPY\BUILD\CMAKEFILES\455174852CE5551BA319702C03E6356B\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/billy/Documents/coding/openvinoPython/cppVer copy/project" "-BC:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build" --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/cppVer.sln"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
