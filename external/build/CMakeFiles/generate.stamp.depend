@@ -115,6 +115,10 @@ C:/Program Files/CMake/share/cmake-3.31/Modules/Platform/Windows-MSVC-CXX.cmake
 C:/Program Files/CMake/share/cmake-3.31/Modules/Platform/Windows-MSVC.cmake
 C:/Program Files/CMake/share/cmake-3.31/Modules/Platform/Windows.cmake
 C:/Program Files/CMake/share/cmake-3.31/Modules/Platform/WindowsPaths.cmake
+C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/CMakeFiles/3.31.1/CMakeCCompiler.cmake
+C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/CMakeFiles/3.31.1/CMakeCXXCompiler.cmake
+C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/CMakeFiles/3.31.1/CMakeRCCompiler.cmake
+C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/CMakeFiles/3.31.1/CMakeSystem.cmake
 C:/Users/billy/Documents/coding/AudioVisuliserV3/external/openvino_2024/runtime/cmake/OpenVINOConfig-version.cmake
 C:/Users/billy/Documents/coding/AudioVisuliserV3/external/openvino_2024/runtime/cmake/OpenVINOConfig.cmake
 C:/Users/billy/Documents/coding/AudioVisuliserV3/external/openvino_2024/runtime/cmake/OpenVINOGenAIConfig.cmake
@@ -125,8 +129,4 @@ C:/Users/billy/Documents/coding/AudioVisuliserV3/external/openvino_2024/runtime/
 C:/Users/billy/Documents/coding/AudioVisuliserV3/external/openvino_2024/runtime/cmake/OpenVINOTargets-debug.cmake
 C:/Users/billy/Documents/coding/AudioVisuliserV3/external/openvino_2024/runtime/cmake/OpenVINOTargets-release.cmake
 C:/Users/billy/Documents/coding/AudioVisuliserV3/external/openvino_2024/runtime/cmake/OpenVINOTargets.cmake
-C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/CMakeFiles/3.31.1/CMakeCCompiler.cmake
-C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/CMakeFiles/3.31.1/CMakeCXXCompiler.cmake
-C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/CMakeFiles/3.31.1/CMakeRCCompiler.cmake
-C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/CMakeFiles/3.31.1/CMakeSystem.cmake
-C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/project/CMakeLists.txt
+C:/Users/billy/Documents/coding/AudioVisuliserV3/external/project/CMakeLists.txt

@@ -20,8 +20,8 @@ project(nlohmann_json-populate NONE)
 include(ExternalProject)
 ExternalProject_Add(nlohmann_json-populate
                      "UPDATE_DISCONNECTED" "False" "DOWNLOAD_EXTRACT_TIMESTAMP" "TRUE" "EXTERNALPROJECT_INTERNAL_ARGUMENT_SEPARATOR" "URL" "https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz"
-                    SOURCE_DIR          "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-src"
-                    BINARY_DIR          "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-build"
+                    SOURCE_DIR          "C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-src"
+                    BINARY_DIR          "C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-build"
                     CONFIGURE_COMMAND   ""
                     BUILD_COMMAND       ""
                     INSTALL_COMMAND     ""

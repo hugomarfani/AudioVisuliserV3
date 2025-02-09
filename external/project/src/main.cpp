@@ -41,155 +41,155 @@ std::string modelPath = "./gemma-2-9b-it-int4-ov";
 
 std::string outputFilePath = "./output.json";
 
-std::string particleListFilePath = "./particles/particleList.json";
+std::string particleListFilePath = "../src/particles/particleList.json";
 
 std::string getModelDevice()
 {
-    ov::Core core;
+  ov::Core core;
 
-    std::vector<std::string> availableDevices = core.get_available_devices();
-    // print available devices
-    // for (const auto &device : availableDevices)
-    // {
-    //     std::cout << "Available device: " << device << std::endl;
-    // }
-    std::ranges::copy(availableDevices, std::ostream_iterator<std::string>(std::cout, ", "));
+  std::vector<std::string> availableDevices = core.get_available_devices();
+  // print available devices
+  // for (const auto &device : availableDevices)
+  // {
+  //     std::cout << "Available device: " << device << std::endl;
+  // }
+  std::ranges::copy(availableDevices, std::ostream_iterator<std::string>(std::cout, ", "));
 
-    // raise error if no devices are available
-    if (availableDevices.empty())
+  // raise error if no devices are available
+  if (availableDevices.empty())
+  {
+    throw std::runtime_error("No devices available");
+  }
+
+  for (const auto &device : availableDevices)
+  {
+    if (device.find("GPU") != std::string::npos)
     {
-        throw std::runtime_error("No devices available");
+      return device;
     }
-
-    for (const auto &device : availableDevices)
-    {
-        if (device.find("GPU") != std::string::npos)
-        {
-            return device;
-        }
-    }
-    return availableDevices[0];
+  }
+  return availableDevices[0];
 }
 
 std::string getLyrics(std::string songName)
 {
-    // read in lyrics from lyrics folder under song.txt
-    std::string lyrics = "";
-    std::string line;
-    std::ifstream lyricsFile;
-    lyricsFile.open("./lyrics/" + songName + ".txt");
-    if (lyricsFile.is_open())
+  // read in lyrics from lyrics folder under song.txt
+  std::string lyrics = "";
+  std::string line;
+  std::ifstream lyricsFile;
+  lyricsFile.open("./lyrics/" + songName + ".txt");
+  if (lyricsFile.is_open())
+  {
+    while (getline(lyricsFile, line))
     {
-        while (getline(lyricsFile, line))
-        {
-            lyrics += line + "\n";
-        }
-        lyricsFile.close();
+      lyrics += line + "\n";
     }
-    else
-    {
-        throw std::runtime_error("Unable to open file");
-    }
+    lyricsFile.close();
+  }
+  else
+  {
+    throw std::runtime_error("Unable to open file");
+  }
 
-    return lyrics;
+  return lyrics;
 }
 
 void jsonStoreData(std::string colourOutput, std::string particleOutput)
 {
-    // create empty json object
-    json j;
-    // regex to match hex colours
-    std::regex hexColour("#[0-9a-fA-F]{6}");
-    // create iterator to iterate through matches
-    std::sregex_iterator next(colourOutput.begin(), colourOutput.end(), hexColour);
-    std::sregex_iterator end;
-    // iterate through matches and store in json object
-    while (next != end)
-    {
-        std::smatch match = *next;
-        j["colours"].push_back(match.str());
-        next++;
-    }
-    // store whole colour string in json object
-    j["coloursReason"] = colourOutput;
-    j["particleEffect"] = particleOutput;
+  // create empty json object
+  json j;
+  // regex to match hex colours
+  std::regex hexColour("#[0-9a-fA-F]{6}");
+  // create iterator to iterate through matches
+  std::sregex_iterator next(colourOutput.begin(), colourOutput.end(), hexColour);
+  std::sregex_iterator end;
+  // iterate through matches and store in json object
+  while (next != end)
+  {
+    std::smatch match = *next;
+    j["colours"].push_back(match.str());
+    next++;
+  }
+  // store whole colour string in json object
+  j["coloursReason"] = colourOutput;
+  j["particleEffect"] = particleOutput;
 
-    // write json object to file
-    std::ofstream o(outputFilePath);
-    o << std::setw(4) << j << std::endl;
+  // write json object to file
+  std::ofstream o(outputFilePath);
+  o << std::setw(4) << j << std::endl;
 }
 
 auto getParticleEffectFromJson(std::string filePath)
 {
-    // read in particle effects from json file
-    std::ifstream inputFile(filePath);
-    if (!inputFile.is_open())
-    {
-        throw std::runtime_error("Unable to open file");
-    }
-    json jsonData;
-    inputFile >> jsonData;
-    inputFile.close();
+  // read in particle effects from json file
+  std::ifstream inputFile(filePath);
+  if (!inputFile.is_open())
+  {
+    throw std::runtime_error("Unable to open file");
+  }
+  json jsonData;
+  inputFile >> jsonData;
+  inputFile.close();
 
-    if (jsonData.contains("particles") && jsonData["particles"].is_array())
-    {
-        return jsonData["particles"];
-    }
-    else
-    {
-        throw std::runtime_error("Invalid json format");
-    }
+  if (jsonData.contains("particles") && jsonData["particles"].is_array())
+  {
+    return jsonData["particles"];
+  }
+  else
+  {
+    throw std::runtime_error("Invalid json format");
+  }
 }
 
 int main(int argc, char *argv[])
 {
-    std::string device = getModelDevice();
-    // print device
-    std::cout << "Device: " << device << std::endl;
-    std::cout << "Model Path: " << modelPath << std::endl;
-    std::cout << "Initialising LLM Pipeline" << std::endl;
-    ov::genai::LLMPipeline pipe(modelPath, device);
-    std::cout << "LLM Pipeline initialised" << std::endl;
+  std::string device = getModelDevice();
+  // print device
+  std::cout << "Device: " << device << std::endl;
+  std::cout << "Model Path: " << modelPath << std::endl;
+  std::cout << "Initialising LLM Pipeline" << std::endl;
+  ov::genai::LLMPipeline pipe(modelPath, device);
+  std::cout << "LLM Pipeline initialised" << std::endl;
 
-    // if -s flag exists, store it as songName
-    std::string songName = "";
-    if (argc == 3 && strcmp(argv[1], "-s") == 0)
-    {
-        songName = argv[2];
-    }
-    else
-    {
-        songName = "let it go";
-    }
+  // if -s flag exists, store it as songName
+  std::string songName = "";
+  if (argc == 3 && strcmp(argv[1], "-s") == 0)
+  {
+    songName = argv[2];
+  }
+  else
+  {
+    songName = "let it go";
+  }
 
-    // print song name
-    std::cout << "Song Name: " << songName << std::endl;
+  // print song name
+  std::cout << "Song Name: " << songName << std::endl;
 
-    std::string lyrics = getLyrics(songName);
-    // log lyrics has loaded
-    std::cout << "Lyrics loaded" << std::endl;
+  std::string lyrics = getLyrics(songName);
+  // log lyrics has loaded
+  std::cout << "Lyrics loaded" << std::endl;
 
-    // extract colours from lyrics
-    std::cout << "Extracting colours from lyrics" << std::endl;
-    std::string colourPrompt = lyricsPrompt + " " + songName + "\n" + lyrics + colourExtractionPrompt;
-    std::string colourOutput = pipe.generate(colourPrompt, ov::genai::max_new_tokens(500));
-    std::cout << "Extracted colours from lyrics" << std::endl;
+  // extract colours from lyrics
+  std::cout << "Extracting colours from lyrics" << std::endl;
+  std::string colourPrompt = lyricsPrompt + " " + songName + "\n" + lyrics + colourExtractionPrompt;
+  std::string colourOutput = pipe.generate(colourPrompt, ov::genai::max_new_tokens(500));
+  std::cout << "Extracted colours from lyrics" << std::endl;
 
-    std::cout << colourOutput << std::endl;
+  std::cout << colourOutput << std::endl;
 
-    // obtain list of particle effects
-    std::cout << "Obtaining list of particle effects" << std::endl;
-    json particles = getParticleEffectFromJson(particleListFilePath);
-    std::cout << "Obtained list of particle effects" << std::endl;
+  // obtain list of particle effects
+  std::cout << "Obtaining list of particle effects" << std::endl;
+  json particles = getParticleEffectFromJson(particleListFilePath);
+  std::cout << "Obtained list of particle effects" << std::endl;
 
-    // extract particle effect from lyrics
-    std::cout << "Extracting particle effect from lyrics" << std::endl;
-    std::string particlePrompt = lyricsPrompt + " " + songName + "\n" + lyrics + particleSelectionPrompt + "\n" + particles.dump();
-    std::string particleOutput = pipe.generate(particlePrompt, ov::genai::max_new_tokens(100));
-    std::cout << "Extracted particle effect from lyrics" << std::endl;
+  // extract particle effect from lyrics
+  std::cout << "Extracting particle effect from lyrics" << std::endl;
+  std::string particlePrompt = lyricsPrompt + " " + songName + "\n" + lyrics + particleSelectionPrompt + "\n" + particles.dump();
+  std::string particleOutput = pipe.generate(particlePrompt, ov::genai::max_new_tokens(100));
+  std::cout << "Extracted particle effect from lyrics" << std::endl;
 
-    // store data in json file
-    std::cout << "Storing data in json file" << std::endl;
-    jsonStoreData(colourOutput, particleOutput);
-    std::cout << "Data stored in json file" << std::endl;
+  // store data in json file
+  std::cout << "Storing data in json file" << std::endl;
+  jsonStoreData(colourOutput, particleOutput);
+  std::cout << "Data stored in json file" << std::endl;
 }

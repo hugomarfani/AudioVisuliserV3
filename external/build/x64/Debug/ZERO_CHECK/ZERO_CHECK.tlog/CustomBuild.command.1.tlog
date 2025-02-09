@@ -1,6 +1,6 @@
-^C:\USERS\BILLY\DOCUMENTS\CODING\OPENVINOPYTHON\CPPVER COPY\BUILD\CMAKEFILES\455174852CE5551BA319702C03E6356B\GENERATE.STAMP.RULE
+^C:\USERS\BILLY\DOCUMENTS\CODING\AUDIOVISULISERV3\EXTERNAL\BUILD\CMAKEFILES\35FD8CA378BB2F0A3FEBF8449B3E00D2\GENERATE.STAMP.RULE
 setlocal
-"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/billy/Documents/coding/openvinoPython/cppVer copy/project" "-BC:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build" --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/cppVer.sln"
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/billy/Documents/coding/AudioVisuliserV3/external/project -BC:/Users/billy/Documents/coding/AudioVisuliserV3/external/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/cppVer.sln
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone

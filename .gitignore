@@ -27,3 +27,9 @@ npm-debug.log.*
 *.css.d.ts
 *.sass.d.ts
 *.scss.d.ts
+
+
+# external unwanted files -> files which are too big
+external/openvino_2024
+external/gemma-2-9b-it-int4-ov
+external/build

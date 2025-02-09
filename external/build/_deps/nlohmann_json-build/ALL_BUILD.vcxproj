@@ -25,7 +25,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{CF69F7D7-F209-3EDF-A5D4-B9B6EBE04B40}</ProjectGuid>
+    <ProjectGuid>{6E2E4AAA-ED6C-384A-828B-F7E9E50F5212}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
     <Platform>x64</Platform>
@@ -108,11 +108,11 @@
     </Midl>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CustomBuild Include="C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-src\CMakeLists.txt">
+    <CustomBuild Include="C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-src\CMakeLists.txt">
       <UseUtf8Encoding>Always</UseUtf8Encoding>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-src/CMakeLists.txt</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-src/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/billy/Documents/coding/openvinoPython/cppVer copy/project" "-BC:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build" --check-stamp-file "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-build/CMakeFiles/generate.stamp"
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/billy/Documents/coding/AudioVisuliserV3/external/project -BC:/Users/billy/Documents/coding/AudioVisuliserV3/external/build --check-stamp-file C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-build/CMakeFiles/generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -120,12 +120,12 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\shared_internal_commands.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\GNUInstallDirs.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\WriteBasicConfigVersionFile.cmake;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-src\cmake\config.cmake.in;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-src\cmake\nlohmann_jsonConfigVersion.cmake.in;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-src\cmake\pkg-config.pc.in;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-build\CMakeFiles\generate.stamp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\shared_internal_commands.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\GNUInstallDirs.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\WriteBasicConfigVersionFile.cmake;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-src\cmake\config.cmake.in;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-src\cmake\nlohmann_jsonConfigVersion.cmake.in;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-src\cmake\pkg-config.pc.in;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-build\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-src/CMakeLists.txt</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-src/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
-"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/billy/Documents/coding/openvinoPython/cppVer copy/project" "-BC:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build" --check-stamp-file "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-build/CMakeFiles/generate.stamp"
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/billy/Documents/coding/AudioVisuliserV3/external/project -BC:/Users/billy/Documents/coding/AudioVisuliserV3/external/build --check-stamp-file C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-build/CMakeFiles/generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -133,12 +133,12 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\shared_internal_commands.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\GNUInstallDirs.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\WriteBasicConfigVersionFile.cmake;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-src\cmake\config.cmake.in;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-src\cmake\nlohmann_jsonConfigVersion.cmake.in;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-src\cmake\pkg-config.pc.in;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-build\CMakeFiles\generate.stamp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\shared_internal_commands.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\GNUInstallDirs.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\WriteBasicConfigVersionFile.cmake;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-src\cmake\config.cmake.in;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-src\cmake\nlohmann_jsonConfigVersion.cmake.in;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-src\cmake\pkg-config.pc.in;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-build\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building Custom Rule C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-src/CMakeLists.txt</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building Custom Rule C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-src/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
-"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/billy/Documents/coding/openvinoPython/cppVer copy/project" "-BC:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build" --check-stamp-file "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-build/CMakeFiles/generate.stamp"
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/billy/Documents/coding/AudioVisuliserV3/external/project -BC:/Users/billy/Documents/coding/AudioVisuliserV3/external/build --check-stamp-file C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-build/CMakeFiles/generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -146,12 +146,12 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\shared_internal_commands.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\GNUInstallDirs.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\WriteBasicConfigVersionFile.cmake;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-src\cmake\config.cmake.in;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-src\cmake\nlohmann_jsonConfigVersion.cmake.in;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-src\cmake\pkg-config.pc.in;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-build\CMakeFiles\generate.stamp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\shared_internal_commands.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\GNUInstallDirs.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\WriteBasicConfigVersionFile.cmake;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-src\cmake\config.cmake.in;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-src\cmake\nlohmann_jsonConfigVersion.cmake.in;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-src\cmake\pkg-config.pc.in;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-build\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building Custom Rule C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-src/CMakeLists.txt</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building Custom Rule C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-src/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
-"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/billy/Documents/coding/openvinoPython/cppVer copy/project" "-BC:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build" --check-stamp-file "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-build/CMakeFiles/generate.stamp"
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/billy/Documents/coding/AudioVisuliserV3/external/project -BC:/Users/billy/Documents/coding/AudioVisuliserV3/external/build --check-stamp-file C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-build/CMakeFiles/generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -159,8 +159,8 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\shared_internal_commands.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\GNUInstallDirs.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\WriteBasicConfigVersionFile.cmake;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-src\cmake\config.cmake.in;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-src\cmake\nlohmann_jsonConfigVersion.cmake.in;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-src\cmake\pkg-config.pc.in;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-build\CMakeFiles\generate.stamp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\shared_internal_commands.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\GNUInstallDirs.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\WriteBasicConfigVersionFile.cmake;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-src\cmake\config.cmake.in;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-src\cmake\nlohmann_jsonConfigVersion.cmake.in;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-src\cmake\pkg-config.pc.in;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-build\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
@@ -168,8 +168,8 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
-    <ProjectReference Include="C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\ZERO_CHECK.vcxproj">
-      <Project>{1AC5AAF4-FA69-3C69-BD46-0A401C7C8B4C}</Project>
+    <ProjectReference Include="C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\ZERO_CHECK.vcxproj">
+      <Project>{94741B57-9632-3680-9366-F6DA52C01DD0}</Project>
       <Name>ZERO_CHECK</Name>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>

@@ -1,13 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <CustomBuild Include="C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\CMakeFiles\6a64c0cf6e646ac850062e6543ad2e2a\generate.stamp.rule">
+    <CustomBuild Include="C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\CMakeFiles\f1774abbd3d5433b7f71f251f3eac034\generate.stamp.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="CMake Rules">
-      <UniqueIdentifier>{A2286CC5-7C17-323D-A000-612743A80D18}</UniqueIdentifier>
+      <UniqueIdentifier>{F9DDA50F-C8F6-3660-BE66-0618183CBFB0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

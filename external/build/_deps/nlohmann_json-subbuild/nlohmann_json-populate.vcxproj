@@ -10,7 +10,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{16F46806-DEBC-3272-A371-FE3FD62ABA79}</ProjectGuid>
+    <ProjectGuid>{33C5F5C4-D214-35AC-B098-2E97904CD7E0}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
     <Platform>x64</Platform>
@@ -46,13 +46,13 @@
     </Midl>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CustomBuild Include="C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\CMakeFiles\493307d3de904d7c2bd1cfac76326843\nlohmann_json-populate-mkdir.rule">
+    <CustomBuild Include="C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\CMakeFiles\05eae676fb2a3b4b5d16ccfd62674ddc\nlohmann_json-populate-mkdir.rule">
       <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Creating directories for 'nlohmann_json-populate'</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-"C:\Program Files\CMake\bin\cmake.exe" -Dcfgdir=/Debug -P "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/tmp/nlohmann_json-populate-mkdirs.cmake"
+"C:\Program Files\CMake\bin\cmake.exe" -Dcfgdir=/Debug -P C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/tmp/nlohmann_json-populate-mkdirs.cmake
 if %errorlevel% neq 0 goto :cmEnd
-"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/Debug/nlohmann_json-populate-mkdir"
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/Debug/nlohmann_json-populate-mkdir
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -61,25 +61,25 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-mkdir</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-mkdir</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\CMakeFiles\493307d3de904d7c2bd1cfac76326843\nlohmann_json-populate-download.rule">
+    <CustomBuild Include="C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\CMakeFiles\05eae676fb2a3b4b5d16ccfd62674ddc\nlohmann_json-populate-download.rule">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Performing download step (download, verify and extract) for 'nlohmann_json-populate'</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-cd "C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps"
+cd C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps
 if %errorlevel% neq 0 goto :cmEnd
 C:
 if %errorlevel% neq 0 goto :cmEnd
-"C:\Program Files\CMake\bin\cmake.exe" -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/download-nlohmann_json-populate.cmake"
+"C:\Program Files\CMake\bin\cmake.exe" -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/download-nlohmann_json-populate.cmake
 if %errorlevel% neq 0 goto :cmEnd
-"C:\Program Files\CMake\bin\cmake.exe" -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/verify-nlohmann_json-populate.cmake"
+"C:\Program Files\CMake\bin\cmake.exe" -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/verify-nlohmann_json-populate.cmake
 if %errorlevel% neq 0 goto :cmEnd
-"C:\Program Files\CMake\bin\cmake.exe" -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/extract-nlohmann_json-populate.cmake"
+"C:\Program Files\CMake\bin\cmake.exe" -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/extract-nlohmann_json-populate.cmake
 if %errorlevel% neq 0 goto :cmEnd
-"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/Debug/nlohmann_json-populate-download"
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/Debug/nlohmann_json-populate-download
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -87,18 +87,18 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\download-nlohmann_json-populate.cmake;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\nlohmann_json-populate-urlinfo.txt;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-mkdir;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-download</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\download-nlohmann_json-populate.cmake;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\nlohmann_json-populate-urlinfo.txt;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-mkdir;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-download</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\CMakeFiles\493307d3de904d7c2bd1cfac76326843\nlohmann_json-populate-update.rule">
+    <CustomBuild Include="C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\CMakeFiles\05eae676fb2a3b4b5d16ccfd62674ddc\nlohmann_json-populate-update.rule">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">No update step for 'nlohmann_json-populate'</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 "C:\Program Files\CMake\bin\cmake.exe" -E echo_append
 if %errorlevel% neq 0 goto :cmEnd
-"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/Debug/nlohmann_json-populate-update"
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/Debug/nlohmann_json-populate-update
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -106,18 +106,18 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\nlohmann_json-populate-update-info.txt;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-download;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-update</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\nlohmann_json-populate-update-info.txt;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-download;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-update</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\CMakeFiles\493307d3de904d7c2bd1cfac76326843\nlohmann_json-populate-patch.rule">
+    <CustomBuild Include="C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\CMakeFiles\05eae676fb2a3b4b5d16ccfd62674ddc\nlohmann_json-populate-patch.rule">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">No patch step for 'nlohmann_json-populate'</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 "C:\Program Files\CMake\bin\cmake.exe" -E echo_append
 if %errorlevel% neq 0 goto :cmEnd
-"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/Debug/nlohmann_json-populate-patch"
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/Debug/nlohmann_json-populate-patch
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -125,23 +125,23 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\nlohmann_json-populate-patch-info.txt;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-update;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-patch</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\nlohmann_json-populate-patch-info.txt;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-update;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-patch</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\CMakeFiles\493307d3de904d7c2bd1cfac76326843\nlohmann_json-populate-configure.rule">
+    <CustomBuild Include="C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\CMakeFiles\05eae676fb2a3b4b5d16ccfd62674ddc\nlohmann_json-populate-configure.rule">
       <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">No configure step for 'nlohmann_json-populate'</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-cd "C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-build"
+cd C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-build
 if %errorlevel% neq 0 goto :cmEnd
 C:
 if %errorlevel% neq 0 goto :cmEnd
 "C:\Program Files\CMake\bin\cmake.exe" -E echo_append
 if %errorlevel% neq 0 goto :cmEnd
-"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/Debug/nlohmann_json-populate-configure"
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/Debug/nlohmann_json-populate-configure
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -149,23 +149,23 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\tmp\nlohmann_json-populate-cfgcmd.txt;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-patch;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-configure</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\tmp\nlohmann_json-populate-cfgcmd.txt;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-patch;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-configure</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\CMakeFiles\493307d3de904d7c2bd1cfac76326843\nlohmann_json-populate-build.rule">
+    <CustomBuild Include="C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\CMakeFiles\05eae676fb2a3b4b5d16ccfd62674ddc\nlohmann_json-populate-build.rule">
       <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">No build step for 'nlohmann_json-populate'</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-cd "C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-build"
+cd C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-build
 if %errorlevel% neq 0 goto :cmEnd
 C:
 if %errorlevel% neq 0 goto :cmEnd
 "C:\Program Files\CMake\bin\cmake.exe" -E echo_append
 if %errorlevel% neq 0 goto :cmEnd
-"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/Debug/nlohmann_json-populate-build"
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/Debug/nlohmann_json-populate-build
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -173,23 +173,23 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-configure;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-build</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-configure;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-build</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\CMakeFiles\493307d3de904d7c2bd1cfac76326843\nlohmann_json-populate-install.rule">
+    <CustomBuild Include="C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\CMakeFiles\05eae676fb2a3b4b5d16ccfd62674ddc\nlohmann_json-populate-install.rule">
       <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">No install step for 'nlohmann_json-populate'</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-cd "C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-build"
+cd C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-build
 if %errorlevel% neq 0 goto :cmEnd
 C:
 if %errorlevel% neq 0 goto :cmEnd
 "C:\Program Files\CMake\bin\cmake.exe" -E echo_append
 if %errorlevel% neq 0 goto :cmEnd
-"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/Debug/nlohmann_json-populate-install"
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/Debug/nlohmann_json-populate-install
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -197,23 +197,23 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-build;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-install</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-build;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-install</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\CMakeFiles\493307d3de904d7c2bd1cfac76326843\nlohmann_json-populate-test.rule">
+    <CustomBuild Include="C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\CMakeFiles\05eae676fb2a3b4b5d16ccfd62674ddc\nlohmann_json-populate-test.rule">
       <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">No test step for 'nlohmann_json-populate'</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-cd "C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-build"
+cd C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-build
 if %errorlevel% neq 0 goto :cmEnd
 C:
 if %errorlevel% neq 0 goto :cmEnd
 "C:\Program Files\CMake\bin\cmake.exe" -E echo_append
 if %errorlevel% neq 0 goto :cmEnd
-"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/Debug/nlohmann_json-populate-test"
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/Debug/nlohmann_json-populate-test
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -221,21 +221,21 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-install;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-test</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-install;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-test</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\CMakeFiles\5057f010cff5428180dd92b301fa77a7\nlohmann_json-populate-complete.rule">
+    <CustomBuild Include="C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\CMakeFiles\fe964514cbea3250b6319269d9acd4c8\nlohmann_json-populate-complete.rule">
       <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Completed 'nlohmann_json-populate'</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-"C:\Program Files\CMake\bin\cmake.exe" -E make_directory "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-subbuild/CMakeFiles/Debug"
+"C:\Program Files\CMake\bin\cmake.exe" -E make_directory C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-subbuild/CMakeFiles/Debug
 if %errorlevel% neq 0 goto :cmEnd
-"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-subbuild/CMakeFiles/Debug/nlohmann_json-populate-complete"
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-subbuild/CMakeFiles/Debug/nlohmann_json-populate-complete
 if %errorlevel% neq 0 goto :cmEnd
-"C:\Program Files\CMake\bin\cmake.exe" -E touch "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/Debug/nlohmann_json-populate-done"
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate-prefix/src/nlohmann_json-populate-stamp/Debug/nlohmann_json-populate-done
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -243,13 +243,13 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-install;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-mkdir;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-download;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-update;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-patch;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-configure;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-build;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-test;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\CMakeFiles\Debug\nlohmann_json-populate-complete</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-install;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-mkdir;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-download;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-update;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-patch;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-configure;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-build;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\src\nlohmann_json-populate-stamp\Debug\nlohmann_json-populate-test;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\CMakeFiles\Debug\nlohmann_json-populate-complete</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\CMakeFiles\6a64c0cf6e646ac850062e6543ad2e2a\nlohmann_json-populate.rule">
+    <CustomBuild Include="C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\CMakeFiles\f1774abbd3d5433b7f71f251f3eac034\nlohmann_json-populate.rule">
       <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
@@ -259,18 +259,18 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\CMakeFiles\Debug\nlohmann_json-populate-complete;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\CMakeFiles\nlohmann_json-populate</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\CMakeFiles\Debug\nlohmann_json-populate-complete;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\CMakeFiles\nlohmann_json-populate</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <VerifyInputsAndOutputsExist Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</VerifyInputsAndOutputsExist>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\CMakeLists.txt">
+    <CustomBuild Include="C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\CMakeLists.txt">
       <UseUtf8Encoding>Always</UseUtf8Encoding>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-subbuild/CMakeLists.txt</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-subbuild/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-subbuild" "-BC:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-subbuild" --check-stamp-file "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-subbuild/CMakeFiles/generate.stamp"
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-subbuild -BC:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-subbuild --check-stamp-file C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-subbuild/CMakeFiles/generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -278,19 +278,19 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineSystem.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeSystem.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\PatchInfo.txt.in;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\RepositoryInfo.txt.in;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\UpdateInfo.txt.in;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\cfgcmd.txt.in;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\download.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\extractfile.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\mkdirs.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\shared_internal_commands.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\WindowsPaths.cmake;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\CMakeFiles\3.31.1\CMakeSystem.cmake;C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\tmp\nlohmann_json-populate-mkdirs.cmake;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\CMakeFiles\generate.stamp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeDetermineSystem.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeSystem.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\PatchInfo.txt.in;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\RepositoryInfo.txt.in;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\UpdateInfo.txt.in;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\cfgcmd.txt.in;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\download.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\extractfile.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\mkdirs.cmake.in;C:\Program Files\CMake\share\cmake-3.31\Modules\ExternalProject\shared_internal_commands.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-3.31\Modules\Platform\WindowsPaths.cmake;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\CMakeFiles\3.31.1\CMakeSystem.cmake;C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\nlohmann_json-populate-prefix\tmp\nlohmann_json-populate-mkdirs.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <None Include="C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\CMakeFiles\nlohmann_json-populate">
+    <None Include="C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\CMakeFiles\nlohmann_json-populate">
     </None>
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
-    <ProjectReference Include="C:\Users\billy\Documents\coding\openvinoPython\cppVer copy\build\_deps\nlohmann_json-subbuild\ZERO_CHECK.vcxproj">
-      <Project>{F8AF1E27-937A-38BA-A5C4-334153FBB23D}</Project>
+    <ProjectReference Include="C:\Users\billy\Documents\coding\AudioVisuliserV3\external\build\_deps\nlohmann_json-subbuild\ZERO_CHECK.vcxproj">
+      <Project>{D1D309BC-DA64-31D9-9457-1EB9DE74BC85}</Project>
       <Name>ZERO_CHECK</Name>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>

@@ -1,6 +1,6 @@
-^C:\USERS\BILLY\DOCUMENTS\CODING\OPENVINOPYTHON\CPPVER COPY\BUILD\_DEPS\NLOHMANN_JSON-SUBBUILD\CMAKEFILES\6A64C0CF6E646AC850062E6543AD2E2A\GENERATE.STAMP.RULE
+^C:\USERS\BILLY\DOCUMENTS\CODING\AUDIOVISULISERV3\EXTERNAL\BUILD\_DEPS\NLOHMANN_JSON-SUBBUILD\CMAKEFILES\F1774ABBD3D5433B7F71F251F3EAC034\GENERATE.STAMP.RULE
 setlocal
-"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-subbuild" "-BC:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-subbuild" --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file "C:/Users/billy/Documents/coding/openvinoPython/cppVer copy/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate.sln"
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-subbuild -BC:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-subbuild --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/_deps/nlohmann_json-subbuild/nlohmann_json-populate.sln
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
