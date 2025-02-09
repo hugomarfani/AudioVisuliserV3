@@ -143,6 +143,7 @@ auto getParticleEffectFromJson(std::string filePath)
 
 int main(int argc, char *argv[])
 {
+  std::cout << "Starting Gemma Script" << std::endl;
   std::string device = getModelDevice();
   // print device
   std::cout << "Device: " << device << std::endl;
