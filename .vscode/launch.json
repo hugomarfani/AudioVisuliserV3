@@ -11,6 +11,10 @@
         "run",
         "start"
       ],
+      "runtimeArgs": [
+        "run",
+        "start"
+      ],
       "env": {
         "MAIN_ARGS": "--inspect=5858 --remote-debugging-port=9223"
       }
@@ -30,8 +34,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "c:/Users/billy/Documents/coding/AudioVisuliserV3/external/cpp/project/src",
-      "program": "c:/Users/billy/Documents/coding/AudioVisuliserV3/external/cpp/project/src/build/Debug/outDebug",
+      "cwd": "c:/Users/billy/Documents/coding/AudioVisuliserV3/external/project/src",
+      "program": "c:/Users/billy/Documents/coding/AudioVisuliserV3/external/project/src/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [

@@ -14,6 +14,7 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
+import { exec } from 'child_process';
 
 class AppUpdater {
   constructor() {
@@ -29,6 +30,40 @@ ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
   console.log(msgTemplate(arg));
   event.reply('ipc-example', msgTemplate('pong'));
+});
+
+ipcMain.on('run-gemma-test', (event, arg) => {
+  //TODO: Add actual path with path.join __dirname for production
+  const exePath = path.join(__dirname, '../../external/test.exe');
+  const ps1Path = path.join(
+    __dirname,
+    '../../external/openvino_2024/setupvars.ps1',
+  );
+  // Run the PowerShell script first
+  console.log('Running PowerShell script');
+  exec(
+    `powershell -ExecutionPolicy Bypass -File "${ps1Path}"`,
+    (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error running PowerShell script: ${error.message}`);
+        event.reply(
+          'run-gemma-test',
+          'Error running PowerShell script ' + error.message,
+        );
+      }
+      console.log(`PowerShell Output: ${stdout}`);
+
+      // After the script completes, run the executable
+      exec(`"${exePath}"`, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`Error running EXE: ${error.message}`);
+          event.reply('run-gemma-test', 'Error running EXE ' + error.message);
+        }
+        console.log(`EXE Output: ${stdout}`);
+        event.reply('run-gemma-test', 'Success, log: ' + stdout);
+      });
+    },
+  );
 });
 
 if (process.env.NODE_ENV === 'production') {

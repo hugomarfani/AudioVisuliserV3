@@ -1,0 +1,10 @@
+^C:\USERS\BILLY\DOCUMENTS\CODING\AUDIOVISULISERV3\EXTERNAL\BUILD\CMAKEFILES\35FD8CA378BB2F0A3FEBF8449B3E00D2\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/billy/Documents/coding/AudioVisuliserV3/external/project -BC:/Users/billy/Documents/coding/AudioVisuliserV3/external/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/billy/Documents/coding/AudioVisuliserV3/external/build/cppVer.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
