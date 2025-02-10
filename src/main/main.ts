@@ -32,38 +32,32 @@ ipcMain.on('ipc-example', async (event, arg) => {
   event.reply('ipc-example', msgTemplate('pong'));
 });
 
-ipcMain.on('run-gemma-test', (event, arg) => {
-  //TODO: Add actual path with path.join __dirname for production
-  const exePath = path.join(__dirname, '../../external/test.exe');
+ipcMain.on('run-gemma-test', (event) => {
+  // Get absolute paths
   const ps1Path = path.join(
     __dirname,
     '../../external/openvino_2025/setupvars.ps1',
   );
-  // Run the PowerShell script first
-  console.log('Running PowerShell script');
-  exec(
-    `powershell -ExecutionPolicy Bypass -File "${ps1Path}"`,
-    (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Error running PowerShell script: ${error.message}`);
-        event.reply(
-          'run-gemma-test',
-          'Error running PowerShell script ' + error.message,
-        );
-      }
-      console.log(`PowerShell Output: ${stdout}`);
+  const exePath = path.join(__dirname, '../../external/test.exe');
 
-      // After the script completes, run the executable
-      exec(`"${exePath}"`, (error, stdout, stderr) => {
-        if (error) {
-          console.error(`Error running EXE: ${error.message}`);
-          event.reply('run-gemma-test', 'Error running EXE ' + error.message);
-        }
-        console.log(`EXE Output: ${stdout}`);
-        event.reply('run-gemma-test', 'Success, log: ' + stdout);
-      });
-    },
-  );
+  // Run PowerShell and execute both commands in the same session
+  const command = `powershell -ExecutionPolicy Bypass -NoExit -Command "& { . '${ps1Path}'; Start-Process '${exePath}' -NoNewWindow }"`;
+
+  exec(command, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Error running script: ${error.message}`);
+      event.reply('run-gemma-test-reply', `Error: ${error.message}`);
+      return;
+    }
+    if (stderr) {
+      console.error(`PowerShell Stderr: ${stderr}`);
+      event.reply('run-gemma-test-reply', `Stderr: ${stderr}`);
+      return;
+    }
+
+    console.log(`PowerShell Output: ${stdout}`);
+    event.reply('run-gemma-test-reply', stdout);
+  });
 });
 
 if (process.env.NODE_ENV === 'production') {
