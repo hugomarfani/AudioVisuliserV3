@@ -37,7 +37,7 @@ ipcMain.on('run-gemma-test', (event, arg) => {
   const exePath = path.join(__dirname, '../../external/test.exe');
   const ps1Path = path.join(
     __dirname,
-    '../../external/openvino_2024/setupvars.ps1',
+    '../../external/openvino_2025/setupvars.ps1',
   );
   // Run the PowerShell script first
   console.log('Running PowerShell script');
