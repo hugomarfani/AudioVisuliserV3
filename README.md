@@ -39,7 +39,7 @@ To run the LLM command:
 1. Download the gemma-2-9b-it-int4-ov from the huggingface model hub [here](https://huggingface.co/OpenVINO/gemma-2-9b-it-int4-ov)
 2. Place the model directory in the `external` directory with the name "gemma-2-9b-it-int4-ov"
 3. Download the openvino installer zip file from [here](https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/2025.0/windows)
-4. Extract the zip file and rename the directory to `openvino` and place it in the `external` directory
+4. Extract the zip file and rename the directory to `openvino_2024` and place it in the `external` directory
 5. Run the app as usual and the LLM should be available in the dropdown from File -> Run LLM
 
 **Having issues installing? See our [debugging guide](https://github.com/electron-react-boilerplate/electron-react-boilerplate/issues/400)**
