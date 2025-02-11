@@ -2,8 +2,10 @@
   "files.associations": {
     ".eslintrc": "jsonc",
     ".prettierrc": "jsonc",
-    ".eslintignore": "ignore"
-  },
+    ".eslintignore": "ignore",
+    "*.tcc": "cpp",
+    "iosfwd": "cpp"
+},
   "eslint.validate": [
     "javascript",
     "javascriptreact",
@@ -80,5 +82,6 @@
   "C_Cpp_Runner.useLeakSanitizer": false,
   "C_Cpp_Runner.showCompilationTime": false,
   "C_Cpp_Runner.useLinkTimeOptimization": false,
-  "C_Cpp_Runner.msvcSecureNoWarnings": false
+"C_Cpp_Runner.msvcSecureNoWarnings": false,
+"cmake.sourceDirectory": "C:/Users/billy/Documents/coding/AudioVisuliserV3/external/project"
 }

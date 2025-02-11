@@ -41,20 +41,17 @@ std::string particleSelectionPrompt =
 
 std::string lyricsPrompt = "These are the lyrics for";
 
-std::string currentDirectory = std::filesystem::current_path();
+std::filesystem::path currentDirectory = std::filesystem::current_path();
 
-std::string relativeModelPath = "./gemma-2-9b-it-int4-ov";
-std::string relativeOutputFilePath = "./output.json";
-std::string relativeParticleListFilePath = "../src/particles/particleList.json";
-std::string relativeLogPath = "./log.txt";
-
-std::string modelPath = currentDirectory + relativeModelPath;
-std::string outputFilePath = currentDirectory + relativeOutputFilePath;
-std::string particleListFilePath = currentDirectory + relativeParticleListFilePath;
-std::string logPath = currentDirectory + relativeLogPath;
+std::string modelPath = (currentDirectory / "gemma-2-9b-it-int4-ov").string();
+std::string outputFilePath = (currentDirectory / "./output.json").string();
+std::string particleListFilePath = (currentDirectory / "particleList.json").string();
+std::string logPath = (currentDirectory / "./log.txt").string();
 
 void redirectConsoleOutput()
 {
+  logFile.open(logPath, std::ofstream::out | std::ofstream::trunc);
+  logFile.close();
   logFile.open(logPath, std::ios::out | std::ios::app);
   if (!logFile)
   {
@@ -172,7 +169,7 @@ auto getParticleEffectFromJson(std::string filePath)
   }
 }
 
-int mainInference(int argc, char *argv[])
+void mainInference(int argc, char *argv[])
 {
   std::cout << "Starting Gemma Script" << std::endl;
   std::string device = getModelDevice();

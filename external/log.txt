@@ -1,0 +1,85 @@
+Starting Gemma Script
+[33m[WARNING] 15:17:47.614 [NPUBackends] Got an error during backend 'npu_level_zero_backend' loading : Exception from src/plugins/intel_npu/src/utils/src/zero/zero_init.cpp:140:
+L0 zeInit result: ZE_RESULT_ERROR_UNINITIALIZED, code 0x78000001 - driver is not initialized
+[0m
+[33m[WARNING] 15:17:47.614 [NPUBackends] None of the backends were initialized successfully.Only offline compilation can be done![0m
+[33m[WARNING] 15:17:47.615 [NPUPlugin] No available compiler. Can not determine version > compiler dependent properties remain hidden[0m
+CPU, GPU, Device: GPU
+Model Path: C:\Users\billy\Documents\coding\AudioVisuliserV3\external./gemma-2-9b-it-int4-ov
+Initialising LLM Pipeline
+Starting Gemma Script
+[33m[WARNING] 15:20:44.227 [NPUBackends] Got an error during backend 'npu_level_zero_backend' loading : Exception from src/plugins/intel_npu/src/utils/src/zero/zero_init.cpp:140:
+L0 zeInit result: ZE_RESULT_ERROR_UNINITIALIZED, code 0x78000001 - driver is not initialized
+[0m
+[33m[WARNING] 15:20:44.227 [NPUBackends] None of the backends were initialized successfully.Only offline compilation can be done![0m
+[33m[WARNING] 15:20:44.228 [NPUPlugin] No available compiler. Can not determine version > compiler dependent properties remain hidden[0m
+CPU, GPU, Device: GPU
+Model Path: C:\Users\billy\Documents\coding\AudioVisuliserV3\external./gemma-2-9b-it-int4-ov
+Initialising LLM Pipeline
+LLM Pipeline initialised
+Song Name: let it go
+Lyrics loaded
+Extracting colours from lyrics
+Extracted colours from lyrics
+
+
+**Output:**
+
+Color 1: #FFD700
+Color 2: #800080
+Color 3: #00FFFF
+Color 4: #FFC0CB
+Color 5: #008000
+
+Color 1 reason: The lyrics mention "snow glows white on the mountain tonight," implying a bright, warm yellow light reflecting off the snow.
+Color 2: The lyrics describe a "swirling storm inside," suggesting a deep, rich purple associated with stormy skies and intense emotions.
+Color 3: The phrase "heaven knows I tried" evokes a sense of celestial blue, representing the vastness and mystery of the unknown.
+Color 4: The line "Be the good girl you always have to be" hints at a pink hue, often associated with societal expectations and conformity.
+Color 5: The lyrics mention a "kingdom of isolation," which could be interpreted as a dark, secluded forest, suggesting a deep green color.
+
+
+
+Let me know if you'd like to explore more colors or delve deeper into the symbolism within the lyrics!
+
+Obtaining list of particle effects
+Error: Unable to open file
+Starting Gemma Script
+[33m[WARNING] 15:48:38.169 [NPUBackends] Got an error during backend 'npu_level_zero_backend' loading : Exception from src/plugins/intel_npu/src/utils/src/zero/zero_init.cpp:140:
+L0 zeInit result: ZE_RESULT_ERROR_UNINITIALIZED, code 0x78000001 - driver is not initialized
+[0m
+[33m[WARNING] 15:48:38.169 [NPUBackends] None of the backends were initialized successfully.Only offline compilation can be done![0m
+[33m[WARNING] 15:48:38.170 [NPUPlugin] No available compiler. Can not determine version > compiler dependent properties remain hidden[0m
+CPU, GPU, Device: GPU
+Model Path: C:\Users\billy\Documents\coding\AudioVisuliserV3\external\gemma-2-9b-it-int4-ov
+Initialising LLM Pipeline
+LLM Pipeline initialised
+Song Name: let it go
+Lyrics loaded
+Extracting colours from lyrics
+Extracted colours from lyrics
+
+
+**Output:**
+
+Color 1: #FFD700
+Color 2: #800080
+Color 3: #00FFFF
+Color 4: #FFC0CB
+Color 5: #008000
+
+Color 1 reason: The lyrics mention "snow glows white on the mountain tonight," implying a bright, warm yellow light reflecting off the snow.
+Color 2: The lyrics describe a "swirling storm inside," suggesting a deep, rich purple associated with stormy skies and intense emotions.
+Color 3: The phrase "heaven knows I tried" evokes a sense of celestial blue, representing the vastness and mystery of the unknown.
+Color 4: The line "Be the good girl you always have to be" hints at a pink hue, often associated with societal expectations and conformity.
+Color 5: The lyrics mention a "kingdom of isolation," which could be interpreted as a dark, secluded forest, suggesting a deep green color.
+
+
+
+Let me know if you'd like to explore more colors or delve deeper into the symbolism within the lyrics!
+
+Obtaining list of particle effects
+Obtained list of particle effects
+Extracting particle effect from lyrics
+Extracted particle effect from lyrics
+Storing data in json file
+Data stored in json file
