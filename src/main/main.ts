@@ -39,9 +39,10 @@ ipcMain.on('run-gemma-test', (event) => {
     '../../external/openvino_2025/setupvars.ps1',
   );
   const exePath = path.join(__dirname, '../../external/test.exe');
+  console.log(`Running Gemma test with ${ps1Path} and ${exePath}`);
 
   // Run PowerShell and execute both commands in the same session
-  const command = `powershell -ExecutionPolicy Bypass -NoExit -Command "& { . '${ps1Path}'; Start-Process '${exePath}' -NoNewWindow }"`;
+  const command = `powershell -ExecutionPolicy Bypass -NoExit -Command "& { . '${ps1Path}'; & '${exePath}' }"`;
 
   exec(command, (error, stdout, stderr) => {
     if (error) {
