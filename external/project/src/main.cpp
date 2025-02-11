@@ -10,6 +10,10 @@
 #include <fstream>
 #include <ranges>
 #include <regex>
+#include <filesystem>
+#include <stdexcept>
+
+std::ofstream logFile;
 
 using json = nlohmann::json;
 
@@ -37,11 +41,38 @@ std::string particleSelectionPrompt =
 
 std::string lyricsPrompt = "These are the lyrics for";
 
-std::string modelPath = "./gemma-2-9b-it-int4-ov";
+std::string currentDirectory = std::filesystem::current_path();
 
-std::string outputFilePath = "./output.json";
+std::string relativeModelPath = "./gemma-2-9b-it-int4-ov";
+std::string relativeOutputFilePath = "./output.json";
+std::string relativeParticleListFilePath = "../src/particles/particleList.json";
+std::string relativeLogPath = "./log.txt";
 
-std::string particleListFilePath = "../src/particles/particleList.json";
+std::string modelPath = currentDirectory + relativeModelPath;
+std::string outputFilePath = currentDirectory + relativeOutputFilePath;
+std::string particleListFilePath = currentDirectory + relativeParticleListFilePath;
+std::string logPath = currentDirectory + relativeLogPath;
+
+void redirectConsoleOutput()
+{
+  logFile.open(logPath, std::ios::out | std::ios::app);
+  if (!logFile)
+  {
+    std::cerr << "Error Unable to open log file!" << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  std::cout.rdbuf(logFile.rdbuf());
+  std::cerr.rdbuf(logFile.rdbuf());
+}
+
+void cleanup()
+{
+  if (logFile.is_open())
+  {
+    logFile.flush();
+    logFile.close();
+  }
+}
 
 std::string getModelDevice()
 {
@@ -141,7 +172,7 @@ auto getParticleEffectFromJson(std::string filePath)
   }
 }
 
-int main(int argc, char *argv[])
+int mainInference(int argc, char *argv[])
 {
   std::cout << "Starting Gemma Script" << std::endl;
   std::string device = getModelDevice();
@@ -193,4 +224,24 @@ int main(int argc, char *argv[])
   std::cout << "Storing data in json file" << std::endl;
   jsonStoreData(colourOutput, particleOutput);
   std::cout << "Data stored in json file" << std::endl;
+}
+
+int main(int argc, char *argv[])
+{
+  redirectConsoleOutput();
+  try
+  {
+    mainInference(argc, argv);
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "Error: " << e.what() << std::endl;
+  }
+  catch (...)
+  {
+    std::cerr << "Error: Unknown error" << std::endl;
+  }
+
+  cleanup();
+  return 0;
 }
