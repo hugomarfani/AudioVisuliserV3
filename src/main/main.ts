@@ -14,7 +14,7 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 
 class AppUpdater {
   constructor() {
@@ -36,29 +36,50 @@ ipcMain.on('run-gemma-test', (event) => {
   // Get absolute paths
   const ps1Path = path.join(
     __dirname,
-    '../../external/openvino_2025/setupvars.ps1',
+    '../../AiResources/openvino_2025/setupvars.ps1',
   );
-  const exePath = path.join(__dirname, '../../external/test.exe');
+  const exePath = path.join(__dirname, '../../test.exe');
   console.log(`Running Gemma test with ${ps1Path} and ${exePath}`);
 
-  // Run PowerShell and execute both commands in the same session
-  const command = `powershell -ExecutionPolicy Bypass -NoExit -Command "& { . '${ps1Path}'; & '${exePath}' }"`;
+  // running using spawn -> real time output
+  const process = spawn('powershell', [
+    '-ExecutionPolicy',
+    'Bypass',
+    '-Command',
+    `& { . '${ps1Path}'; & '${exePath}' }`,
+  ]);
 
-  exec(command, (error, stdout, stderr) => {
-    if (error) {
-      console.error(`Error running script: ${error.message}`);
-      event.reply('run-gemma-test-reply', `Error: ${error.message}`);
-      return;
-    }
-    if (stderr) {
-      console.error(`PowerShell Stderr: ${stderr}`);
-      event.reply('run-gemma-test-reply', `Stderr: ${stderr}`);
-      return;
-    }
-
-    console.log(`PowerShell Output: ${stdout}`);
-    event.reply('run-gemma-test-reply', stdout);
+  process.stdout.on('data', (data) => {
+    console.log(`📜 stdout: ${data.toString()}`);
   });
+
+  process.stderr.on('data', (data) => {
+    console.error(`⚠️ stderr: ${data.toString()}`);
+  });
+
+  process.on('close', (code) => {
+    console.log(`✅ Process exited with code ${code}`);
+    event.reply('run-gemma-test-reply', `Process exited with code ${code}`);
+  });
+
+  // // Run PowerShell and execute both commands in the same session
+  // const command = `powershell -ExecutionPolicy Bypass -NoExit -Command "& { . '${ps1Path}'; & '${exePath}' }"`;
+
+  // exec(command, (error, stdout, stderr) => {
+  //   if (error) {
+  //     console.error(`Error running script: ${error.message}`);
+  //     event.reply('run-gemma-test-reply', `Error: ${error.message}`);
+  //     return;
+  //   }
+  //   if (stderr) {
+  //     console.error(`PowerShell Stderr: ${stderr}`);
+  //     event.reply('run-gemma-test-reply', `Stderr: ${stderr}`);
+  //     return;
+  //   }
+
+  //   console.log(`PowerShell Output: ${stdout}`);
+  //   event.reply('run-gemma-test-reply', stdout);
+  // });
 });
 
 if (process.env.NODE_ENV === 'production') {

@@ -43,10 +43,11 @@ std::string lyricsPrompt = "These are the lyrics for";
 
 std::filesystem::path currentDirectory = std::filesystem::current_path();
 
-std::string modelPath = (currentDirectory / "gemma-2-9b-it-int4-ov").string();
-std::string outputFilePath = (currentDirectory / "./output.json").string();
-std::string particleListFilePath = (currentDirectory / "particleList.json").string();
-std::string logPath = (currentDirectory / "./log.txt").string();
+std::string modelPath = (currentDirectory / "AiResources" / "gemma-2-9b-it-int4-ov").string();
+std::string outputFilePath = (currentDirectory / "AiResources" / "./output.json").string();
+std::string particleListFilePath = (currentDirectory / "AiResources" / "particleList.json").string();
+std::string logPath = (currentDirectory / "AiResources" / "./log.txt").string();
+std::filesystem::path lyricsDirPath = (currentDirectory / "AiResources" / "lyrics");
 
 void redirectConsoleOutput()
 {
@@ -105,7 +106,9 @@ std::string getLyrics(std::string songName)
   std::string lyrics = "";
   std::string line;
   std::ifstream lyricsFile;
-  lyricsFile.open("./lyrics/" + songName + ".txt");
+  std::string lyricsFilePath = (lyricsDirPath / (songName + ".txt")).string();
+  std::cout << "Lyrics File Path: " << lyricsFilePath << std::endl;
+  lyricsFile.open(lyricsFilePath);
   if (lyricsFile.is_open())
   {
     while (getline(lyricsFile, line))
@@ -225,7 +228,8 @@ void mainInference(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-  redirectConsoleOutput();
+  // for logging
+  // redirectConsoleOutput();
   try
   {
     mainInference(argc, argv);
@@ -239,6 +243,7 @@ int main(int argc, char *argv[])
     std::cerr << "Error: Unknown error" << std::endl;
   }
 
-  cleanup();
+  // for logging
+  // cleanup();
   return 0;
 }
