@@ -35,10 +35,10 @@ ipcMain.on('ipc-example', async (event, arg) => {
 ipcMain.on('run-gemma-test', (event) => {
   // Get absolute paths
   const ps1Path = path.join(
-    __dirname,
+    app.getAppPath(),
     '../../AiResources/openvino_2025/setupvars.ps1',
   );
-  const exePath = path.join(__dirname, '../../test.exe');
+  const exePath = path.join(app.getAppPath(), '../../test.exe');
   console.log(`Running Gemma test with ${ps1Path} and ${exePath}`);
 
   // running using spawn -> real time output
