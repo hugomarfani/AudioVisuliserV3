@@ -36,7 +36,6 @@
   "main": "./.erb/dll/main.bundle.dev.js",
   "scripts": {
     "build": "concurrently \"npm run build:main\" \"npm run build:renderer\"",
-    "electronBuild": "electron-builder",
     "build:dll": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.renderer.dev.dll.ts",
     "build:main": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.main.prod.ts",
     "build:renderer": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.renderer.prod.ts",
@@ -128,6 +127,7 @@
     "@types/webpack-bundle-analyzer": "^4.6.0",
     "@typescript-eslint/eslint-plugin": "^6.7.0",
     "@typescript-eslint/parser": "^6.7.0",
+    "app-builder-bin": "^4.2.0",
     "browserslist-config-erb": "^0.0.3",
     "chalk": "^4.1.2",
     "concurrently": "^8.2.1",
@@ -136,7 +136,7 @@
     "css-loader": "^6.8.1",
     "css-minimizer-webpack-plugin": "^5.0.1",
     "detect-port": "^1.5.1",
-    "electron": "^31.3.0",
+    "electron": "^34.1.1",
     "electron-builder": "^24.13.3",
     "electron-devtools-installer": "^3.2.0",
     "electronmon": "^2.0.2",
@@ -245,7 +245,14 @@
         ]
       }
     ],
-    "publish": null
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "UCLSysEngGrp1_25",
+        "repo": "SuperHappySpace",
+        "releaseType": "draft"
+      }
+    ]
   },
   "collective": {
     "url": "https://opencollective.com/electron-react-boilerplate-594"
