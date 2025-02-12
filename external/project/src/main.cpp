@@ -41,6 +41,33 @@ std::string particleSelectionPrompt =
 
 std::string lyricsPrompt = "These are the lyrics for";
 
+std::string objectExtractionPrompt =
+    "Analyze the lyrics of the song provided and extract 3 unique, unusual objects that are explicitly mentioned or strongly implied."
+    "Give the output in the following exact format for easy extraction using regex:"
+    "Object 1: $Object name$"
+    "Object 2: $Object name$"
+    "Object 3: $Object name$";
+
+std::string backgroundExtractionPrompt =
+    "Analyze the lyrics of the song provided and extract 3 unique, unusual backgrounds that are explicitly mentioned or strongly implied."
+    "Give the output in the following exact format for easy extraction using regex:"
+    "Background 1: $Background name$"
+    "Background 2: $Background name$"
+    "Background 3: $Background name$";
+
+std::string imageSetup =
+    "Create a prompt to be passed to a text to image generation model to generate an image of ";
+
+std::string imageSettings =
+    ". The prompt should include the following settings:";
+
+std::string objectSettings =
+    "colour: black object with white background";
+
+std::string backgroundSettings =
+    "colour: colourful background"
+    "suitable for children and family";
+
 std::filesystem::path currentDirectory = std::filesystem::current_path();
 
 std::string modelPath = (currentDirectory / "AiResources" / "gemma-2-9b-it-int4-ov").string();
@@ -172,6 +199,24 @@ auto getParticleEffectFromJson(std::string filePath)
   }
 }
 
+auto getOptionsFromLlmOutput(std::string llmOutput)
+{
+  // regex to match all options, sandwiched by
+  std::regex optionsRegex(": \$(.*?)\$");
+  // create iterator to iterate through matches
+  std::sregex_iterator next(llmOutput.begin(), llmOutput.end(), optionsRegex);
+  std::sregex_iterator end;
+  std::vector<std::string> options;
+  // iterate through matches and store in vector
+  while (next != end)
+  {
+    std::smatch match = *next;
+    options.push_back(match.str());
+    next++;
+  }
+  return options;
+}
+
 void mainInference(int argc, char *argv[])
 {
   std::cout << "Starting Gemma Script" << std::endl;
@@ -220,6 +265,18 @@ void mainInference(int argc, char *argv[])
   std::string particleOutput = pipe.generate(particlePrompt, ov::genai::max_new_tokens(100));
   std::cout << "Extracted particle effect from lyrics" << std::endl;
 
+  // extract objects from lyrics
+  std::cout << "Extracting objects from lyrics" << std::endl;
+  std::string objectPrompt = lyricsPrompt + " " + songName + "\n" + lyrics + objectExtractionPrompt;
+  std::string objectOutput = pipe.generate(objectPrompt, ov::genai::max_new_tokens(100));
+  std::cout << "Extracted objects from lyrics" << std::endl;
+
+  // extract backgrounds from lyrics
+  std::cout << "Extracting backgrounds from lyrics" << std::endl;
+  std::string backgroundPrompt = lyricsPrompt + " " + songName + "\n" + lyrics + backgroundExtractionPrompt;
+  std::string backgroundOutput = pipe.generate(backgroundPrompt, ov::genai::max_new_tokens(100));
+  std::cout << "Extracted backgrounds from lyrics" << std::endl;
+
   // store data in json file
   std::cout << "Storing data in json file" << std::endl;
   jsonStoreData(colourOutput, particleOutput);
@@ -229,7 +286,7 @@ void mainInference(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
   // for logging
-  // redirectConsoleOutput();
+  redirectConsoleOutput();
   try
   {
     mainInference(argc, argv);
@@ -244,6 +301,6 @@ int main(int argc, char *argv[])
   }
 
   // for logging
-  // cleanup();
+  cleanup();
   return 0;
 }
