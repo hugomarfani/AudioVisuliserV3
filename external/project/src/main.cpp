@@ -1,6 +1,7 @@
 #include <openvino/genai/llm_pipeline.hpp>
 #include <openvino/openvino.hpp>
 #include <nlohmann/json.hpp>
+#include <boost/program_options.hpp>
 #include <iostream>
 #include <string>
 #include <tuple>
@@ -12,10 +13,12 @@
 #include <regex>
 #include <filesystem>
 #include <stdexcept>
+#include <unordered_map>
 
 std::ofstream logFile;
 
 using json = nlohmann::json;
+namespace po = boost::program_options;
 
 // ----------------- Prompts -----------------
 std::string colourExtractionPrompt =
@@ -29,7 +32,7 @@ std::string colourExtractionPrompt =
     "Color 4: #RRGGBB"
     "Color 5: #RRGGBB"
     "If a color is not explicitly named, infer it from vivid imagery or metaphors in the lyrics."
-    "Provide the fomatted output, followed by a brief explanation of why each color was chosen, in the following format:"
+    "Provide the formatted output, followed by a brief explanation of why each color was chosen, in the following format:"
     "Color 1 reason: Explanation"
     "Color 2 reason: Explanation"
     "Color 3 reason: Explanation"
@@ -63,11 +66,13 @@ std::string imageSettings =
     ". The prompt should include the following settings:";
 
 std::string objectSettings =
-    "colour: black object with white background";
+    "colour: black object with white background"
+    "prompt: ";
 
 std::string backgroundSettings =
-    "colour: colourful background"
-    "suitable for children and family";
+    "colour: colourful background, "
+    "suitable for children and family"
+    "prompt: ";
 
 // ----------------- paths -----------------
 std::filesystem::path currentDirectory = std::filesystem::current_path();
@@ -76,12 +81,6 @@ std::string outputFilePath = (currentDirectory / "AiResources" / "./output.json"
 std::string particleListFilePath = (currentDirectory / "AiResources" / "particleList.json").string();
 std::string logPath = (currentDirectory / "AiResources" / "./log.txt").string();
 std::filesystem::path lyricsDirPath = (currentDirectory / "AiResources" / "lyrics");
-
-// ----------------- settings -----------------
-struct Setting
-{
-  static bool debug;
-};
 
 // ----------------- Log Functions -----------------
 void redirectConsoleOutput()
@@ -185,36 +184,6 @@ std::string getLyrics(std::string songName)
   return lyrics;
 }
 
-void jsonStoreData(std::string colourOutput, std::string particleOutput, std::vector<std::string> objectList, std::vector<std::string> backgroundList,
-                   std::vector<std::string> objectPromptList, std::vector<std::string> backgroundPromptList)
-{
-  // create empty json object
-  json j;
-  // regex to match hex colours
-  std::regex hexColour("#[0-9a-fA-F]{6}");
-  // create iterator to iterate through matches
-  std::sregex_iterator next(colourOutput.begin(), colourOutput.end(), hexColour);
-  std::sregex_iterator end;
-  // iterate through matches and store in json object
-  while (next != end)
-  {
-    std::smatch match = *next;
-    j["colours"].push_back(match.str());
-    next++;
-  }
-  // store whole colour string in json object
-  j["coloursReason"] = colourOutput;
-  j["particleEffect"] = particleOutput;
-  j["objects"] = objectList;
-  j["backgrounds"] = backgroundList;
-  j["objectPrompts"] = objectPromptList;
-  j["backgroundPrompts"] = backgroundPromptList;
-
-  // write json object to file
-  std::ofstream o(outputFilePath);
-  o << std::setw(4) << j << std::endl;
-}
-
 auto getParticleEffectFromJson(std::string filePath)
 {
   // read in particle effects from json file
@@ -257,12 +226,44 @@ std::vector<std::string> getOptionsFromLlmOutput(std::string llmOutput)
       throw std::runtime_error("Invalid option format");
     }
     std::string option = unstrippedOption.substr(3, unstrippedOption.size() - 4);
-    options.push_back(match.str());
+    options.push_back(option);
     next++;
   }
   return options;
 }
 
+// ----------------- Enums -----------------
+
+enum LLMOutputType
+{
+  COLOURS,
+  COLOURS_REASON,
+  PARTICLES,
+  OBJECTS,
+  BACKGROUNDS,
+  OBJECT_PROMPTS,
+  BACKGROUND_PROMPTS
+};
+
+const std::unordered_map<LLMOutputType, std::string> outputTypeMap = {
+    {COLOURS, "colours"},
+    {COLOURS_REASON, "colours_reason"},
+    {PARTICLES, "particles"},
+    {OBJECTS, "objects"},
+    {BACKGROUNDS, "backgrounds"},
+    {OBJECT_PROMPTS, "object_prompts"},
+    {BACKGROUND_PROMPTS, "background_prompts"}};
+
+const std::unordered_map<std::string, LLMOutputType> outputTypeMapReverse = {
+    {"colours", COLOURS},
+    {"colours_reason", COLOURS_REASON},
+    {"particles", PARTICLES},
+    {"objects", OBJECTS},
+    {"backgrounds", BACKGROUNDS},
+    {"object_prompts", OBJECT_PROMPTS},
+    {"background_prompts", BACKGROUND_PROMPTS}};
+
+// ----------------- LLM Class -----------------
 class LLM
 {
 private:
@@ -270,142 +271,307 @@ private:
   ov::genai::LLMPipeline pipe;
   const std::string songName;
   const std::string lyrics;
-  const Setting settings;
+  const bool debug;
+  std::string lyricsSetup;
 
-public:
-  LLM(std::string modelPath, std::string songName, Setting settings)
-      : device(getModelDevice()), pipe(modelPath, device), songName(songName), lyrics(getLyrics(songName)), settings(settings)
-  {
-    std::cout << "LLM Pipeline initialised with the following settings: " << std::endl;
-    std::cout << "Model Path: " << modelPath << std::endl;
-    std::cout << "Device: " << device << std::endl;
-    std::cout << "Song Name: " << songName << std::endl;
-  }
+  std::unordered_map<LLMOutputType, std::vector<std::string>> outputMap;
 
   std::string generate(std::string prompt, int max_new_tokens)
   {
     return pipe.generate(prompt, ov::genai::max_new_tokens(max_new_tokens));
   }
+
+  void retrieveCurrentOutput()
+  {
+    json j;
+    // read existing json data from file if it exists
+    std::ifstream inputFile(outputFilePath);
+    if (inputFile.is_open())
+    {
+      inputFile >> j;
+      inputFile.close();
+    }
+    else
+    {
+      j = json();
+    }
+    // store existing data in outputMap
+    for (const auto &output : j.items())
+    {
+      LLMOutputType outputType = outputTypeMapReverse.at(output.key());
+      outputMap[outputType] = output.value();
+    }
+  }
+
+public:
+  LLM(std::string modelPath, std::string songName, bool debug)
+      : device(getModelDevice()), pipe(modelPath, device), songName(songName), lyrics(getLyrics(songName)), debug(debug)
+  {
+    std::cout << "LLM Pipeline initialised with the following settings: " << std::endl;
+    std::cout << "Model Path: " << modelPath << std::endl;
+    std::cout << "Device: " << device << std::endl;
+    std::cout << "Song Name: " << songName << std::endl;
+    lyricsSetup = lyricsPrompt + " " + songName + "\n" + lyrics;
+    outputMap = std::unordered_map<LLMOutputType, std::vector<std::string>>();
+  }
+
+  void extractColours()
+  {
+    std ::cout << "Extracting colours from lyrics" << std::endl;
+    std::string colourPrompt = lyricsSetup + colourExtractionPrompt;
+    std::string colourOutput = generate(colourPrompt, 500);
+    std ::cout << "Extracted colours from lyrics" << std::endl;
+
+    std::vector<std::string> colours;
+    // regex to match hex colours
+    std::regex hexColour("#[0-9a-fA-F]{6}");
+    // create iterator to iterate through matches
+    std::sregex_iterator next(colourOutput.begin(), colourOutput.end(), hexColour);
+    std::sregex_iterator end;
+    // iterate through matches and store in json object
+    while (next != end)
+    {
+      std::smatch match = *next;
+      colours.push_back(match.str());
+      next++;
+    }
+
+    outputMap[COLOURS] = colours;
+    outputMap[COLOURS_REASON] = {colourOutput};
+
+    if (debug)
+    {
+      std::cout << "Colours extracted: " << std::endl;
+      std::cout << colourOutput << std::endl;
+    }
+  }
+
+  void extractParticleEffect()
+  {
+    std::cout << "Obtaining list of particle effects" << std::endl;
+    std::vector<std::string> particleList = getParticleEffectFromJson(particleListFilePath);
+    std::string particlePrompt = lyricsSetup + particleSelectionPrompt + "\n";
+    for (const auto &particle : particleList)
+    {
+      particlePrompt += particle + "\n";
+    }
+    std::string particleOutput = generate(particlePrompt, 100);
+    std::cout << "Obtained list of particle effects" << std::endl;
+
+    outputMap[PARTICLES] = getOptionsFromLlmOutput(particleOutput);
+    if (debug)
+    {
+      std::cout << "Particle effect extracted: " << std::endl;
+      std::cout << particleOutput << std::endl;
+    }
+  }
+
+  void extractObjects()
+  {
+    std::string objectPrompt = lyricsSetup + objectExtractionPrompt;
+    std::string objectOutput = generate(objectPrompt, 500);
+    std::vector<std::string> objects = getOptionsFromLlmOutput(objectOutput);
+
+    outputMap[OBJECTS] = objects;
+
+    if (debug)
+    {
+      std::cout << "Objects extracted: " << std::endl;
+      for (const auto &object : objects)
+      {
+        std::cout << object << std::endl;
+      }
+      std ::cout << "original output: " << std::endl;
+      std::cout << objectOutput << std::endl;
+    }
+  }
+
+  void extractBackgrounds()
+  {
+    std::string backgroundPrompt = lyricsSetup + backgroundExtractionPrompt;
+    std::string backgroundOutput = generate(backgroundPrompt, 500);
+    std::vector<std::string> backgrounds = getOptionsFromLlmOutput(backgroundOutput);
+
+    outputMap[BACKGROUNDS] = backgrounds;
+
+    if (debug)
+    {
+      std::cout << "Backgrounds extracted: " << std::endl;
+      for (const auto &background : backgrounds)
+      {
+        std::cout << background << std::endl;
+      }
+      std::cout << "original output: " << std::endl;
+      std::cout << backgroundOutput << std::endl;
+    }
+  }
+
+  void generateObjectPrompts()
+  {
+    std::vector<std::string> objectPromptList;
+    // check if objects have been extracted
+    if (outputMap.find(OBJECTS) == outputMap.end())
+    {
+      throw std::runtime_error("Objects have not been extracted");
+    }
+    std::vector<std::string> objects = outputMap[OBJECTS];
+    for (const auto &object : objects)
+    {
+      std::string objectPromptPrompt = imageSetup + object + imageSettings;
+      std::string objectPrompt = generate(objectPromptPrompt, 500);
+      objectPromptList.push_back(objectPrompt);
+    }
+    outputMap[OBJECT_PROMPTS] = objectPromptList;
+
+    if (debug)
+    {
+      std::cout << "Object image prompts: " << std::endl;
+      for (const auto &objectImagePrompt : objectPromptList)
+      {
+        std::cout << objectImagePrompt << std::endl;
+      }
+    }
+  }
+
+  void generateBackgroundPrompts()
+  {
+    std::vector<std::string> backgroundPromptList;
+    // check if backgrounds have been extracted
+    if (outputMap.find(BACKGROUNDS) == outputMap.end())
+    {
+      throw std::runtime_error("Backgrounds have not been extracted");
+    }
+    std::vector<std::string> backgrounds = outputMap[BACKGROUNDS];
+    for (const auto &background : backgrounds)
+    {
+      std::string backgroundImagePromptPrompt = imageSetup + background + imageSettings + backgroundSettings;
+      std::string backgroundImagePrompt = generate(backgroundImagePromptPrompt, 500);
+      backgroundPromptList.push_back(backgroundImagePrompt);
+    }
+    outputMap[BACKGROUND_PROMPTS] = backgroundPromptList;
+
+    if (debug)
+    {
+      std::cout << "Background image prompts: " << std::endl;
+      for (const auto &backgroundImagePrompt : backgroundPromptList)
+      {
+        std::cout << backgroundImagePrompt << std::endl;
+      }
+    }
+  }
+
+  void jsonStoreData()
+  {
+    // create empty json object
+    json j;
+
+    // store whole colour string in json object
+    for (const auto &output : outputMap)
+    {
+      std::string outputType = outputTypeMap.at(output.first);
+      std::vector<std::string> outputData = output.second;
+      j[outputType] = outputData;
+    }
+
+    // write updated json object to file
+    std::ofstream outputFile(outputFilePath);
+    outputFile << std::setw(4) << j << std::endl;
+  }
 };
-
-void mainInference(int argc, char *argv[])
-{
-  std::cout << "Starting Gemma Script" << std::endl;
-  std::string device = getModelDevice();
-  // print device
-  std::cout << "Device: " << device << std::endl;
-  std::cout << "Model Path: " << modelPath << std::endl;
-  std::cout << "Initialising LLM Pipeline" << std::endl;
-  ov::genai::LLMPipeline pipe(modelPath, device);
-  std::cout << "LLM Pipeline initialised" << std::endl;
-
-  // if -s flag exists, store it as songName
-  std::string songName = "";
-  if (argc == 3 && strcmp(argv[1], "-s") == 0)
-  {
-    songName = argv[2];
-  }
-  else
-  {
-    songName = "let it go";
-  }
-
-  // print song name
-  std::cout << "Song Name: " << songName << std::endl;
-
-  std::string lyrics = getLyrics(songName);
-  // log lyrics has loaded
-  std::cout << "Lyrics loaded" << std::endl;
-
-  std::string lyrics_setup = lyricsPrompt + " " + songName + "\n" + lyrics;
-
-  // extract colours from lyrics
-  std::cout << "Extracting colours from lyrics" << std::endl;
-  std::string colourPrompt = lyrics_setup + colourExtractionPrompt;
-  std::string colourOutput = pipe.generate(colourPrompt, ov::genai::max_new_tokens(500));
-  std::cout << "Extracted colours from lyrics" << std::endl;
-
-  std::cout << colourOutput << std::endl;
-
-  // obtain list of particle effects
-  std::cout << "Obtaining list of particle effects" << std::endl;
-  json particles = getParticleEffectFromJson(particleListFilePath);
-  std::cout << "Obtained list of particle effects" << std::endl;
-
-  // extract particle effect from lyrics
-  std::cout << "Extracting particle effect from lyrics" << std::endl;
-  std::string particlePrompt = lyrics_setup + particleSelectionPrompt + "\n" + particles.dump();
-  std::string particleOutput = pipe.generate(particlePrompt, ov::genai::max_new_tokens(100));
-  std::cout << "Extracted particle effect from lyrics" << std::endl;
-
-  // extract objects from lyrics
-  std::cout << "Extracting objects from lyrics" << std::endl;
-  std::string objectPrompt = lyrics_setup + objectExtractionPrompt;
-  std::string objectOutput = pipe.generate(objectPrompt, ov::genai::max_new_tokens(500));
-  std::cout << "Extracted objects from lyrics" << std::endl;
-
-  // extract backgrounds from lyrics
-  std::cout << "Extracting backgrounds from lyrics" << std::endl;
-  std::string backgroundPrompt = lyrics_setup + backgroundExtractionPrompt;
-  std::string backgroundOutput = pipe.generate(backgroundPrompt, ov::genai::max_new_tokens(500));
-  std::cout << "Extracted backgrounds from lyrics" << std::endl;
-
-  // extract each object and background from the output
-  std::cout << "Extracting objects and backgrounds from output" << std::endl;
-  auto objects = getOptionsFromLlmOutput(objectOutput);
-  auto backgrounds = getOptionsFromLlmOutput(backgroundOutput);
-  std::cout << "Extracted objects and backgrounds from output" << std::endl;
-
-  // create image prompt for objects
-  std::cout << "Creating image prompt for objects" << std::endl;
-  std::vector<std::string> objectImagePromptList;
-  for (const auto &object : objects)
-  {
-    std::cout << object << "prompt generation started" << std::endl;
-    std::string objectImagePrompt = imageSetup + object + imageSettings;
-    std::string objectImageOutput = pipe.generate(objectImagePrompt, ov::genai::max_new_tokens(200));
-    objectImagePromptList.push_back(objectImageOutput);
-    std::cout << object << "Prompt generation done" << std::endl;
-  }
-  std::cout << "Created image prompt for objects" << std::endl;
-
-  // create image prompt for backgrounds
-  std::cout << "Creating image prompt for backgrounds" << std::endl;
-  std::vector<std::string> backgroundImagePromptList;
-  for (const auto &background : backgrounds)
-  {
-    std::cout << background << "prompt generation started" << std::endl;
-    std::string backgroundImagePrompt = imageSetup + background + imageSettings + backgroundSettings;
-    std::string backgroundImageOutput = pipe.generate(backgroundImagePrompt, ov::genai::max_new_tokens(200));
-    backgroundImagePromptList.push_back(backgroundImageOutput);
-    std::cout << background << "Prompt generation done" << std::endl;
-  }
-  std::cout << "Created image prompt for backgrounds" << std::endl;
-
-  // store data in json file
-  std::cout << "Storing data in json file" << std::endl;
-  jsonStoreData(colourOutput, particleOutput, objects, backgrounds, objectImagePromptList, backgroundImagePromptList);
-  std::cout << "Data stored in json file" << std::endl;
-}
 
 int main(int argc, char *argv[])
 {
-  // for logging
-  redirectConsoleOutput();
+  std::string songName = "let it go";
+  bool debug = false;
+  // declare supported options
+  po::options_description desc("Allowed options");
+  desc.add_options()("help", "produce help message")("debug", "enable debug mode")("song", po::value<std::string>(), "specify song name")("text_log", "enable text logging")("extractColour,c", "extract colours from lyrics")("extractParticle,p", "extract particle effect from lyrics")("extractObject,o", "extract objects from lyrics")("extractBackground,b", "extract backgrounds from lyrics")("generateObjectPrompts", "generate object image prompts")("generateBackgroundPrompts", "generate background image prompts")("all", "extract all features");
+
+  po::variables_map vm;
   try
   {
-    mainInference(argc, argv);
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::notify(vm);
+  }
+  catch (const po::error &e)
+  {
+    std::cerr << "Error: " << e.what() << std::endl;
+    return 1;
+  }
+
+  if (vm.count("help"))
+  {
+    std::cout << desc << std::endl;
+    return 0;
+  }
+
+  if (vm.count("text_log"))
+  {
+    redirectConsoleOutput();
+  }
+
+  if (vm.count("song"))
+  {
+    std::string songName = vm["song"].as<std::string>();
+  }
+
+  if (vm.count("debug"))
+  {
+    debug = true;
+  }
+
+  if (vm.count("all"))
+  {
+    vm.insert({"extractColour", po::variable_value()});
+    vm.insert({"extractParticle", po::variable_value()});
+    vm.insert({"extractObject", po::variable_value()});
+    vm.insert({"extractBackground", po::variable_value()});
+    vm.insert({"generateObjectPrompts", po::variable_value()});
+    vm.insert({"generateBackgroundPrompts", po::variable_value()});
+  }
+
+  std::cout << "Starting LLM Pipeline" << std::endl;
+  try
+  {
+    LLM llm(modelPath, songName, debug);
+    if (vm.count("extractColour"))
+    {
+      llm.extractColours();
+    }
+    if (vm.count("extractParticle"))
+    {
+      llm.extractParticleEffect();
+    }
+    if (vm.count("extractObject"))
+    {
+      llm.extractObjects();
+    }
+    if (vm.count("extractBackground"))
+    {
+      llm.extractBackgrounds();
+    }
+    if (vm.count("generateObjectPrompts"))
+    {
+      llm.generateObjectPrompts();
+    }
+    if (vm.count("generateBackgroundPrompts"))
+    {
+      llm.generateBackgroundPrompts();
+    }
+    llm.jsonStoreData();
   }
   catch (const std::exception &e)
   {
     std::cerr << "Error: " << e.what() << std::endl;
-  }
-  catch (...)
-  {
-    std::cerr << "Error: Unknown error" << std::endl;
+    cleanup();
+    return 1;
   }
 
-  // for logging
-  cleanup();
+  std::cout << "LLM Pipeline completed" << std::endl;
+
+  if (vm.count("text_log"))
+  {
+    cleanup();
+  }
   return 0;
 }
