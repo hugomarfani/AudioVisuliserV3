@@ -152,7 +152,8 @@ std::string getLyrics(std::string songName)
   return lyrics;
 }
 
-void jsonStoreData(std::string colourOutput, std::string particleOutput)
+void jsonStoreData(std::string colourOutput, std::string particleOutput, std::vector<std::string> objectList, std::vector<std::string> backgroundList,
+                   std::vector<std::string> objectPromptList, std::vector<std::string> backgroundPromptList)
 {
   // create empty json object
   json j;
@@ -171,6 +172,10 @@ void jsonStoreData(std::string colourOutput, std::string particleOutput)
   // store whole colour string in json object
   j["coloursReason"] = colourOutput;
   j["particleEffect"] = particleOutput;
+  j["objects"] = objectList;
+  j["backgrounds"] = backgroundList;
+  j["objectPrompts"] = objectPromptList;
+  j["backgroundPrompts"] = backgroundPromptList;
 
   // write json object to file
   std::ofstream o(outputFilePath);
@@ -199,7 +204,7 @@ auto getParticleEffectFromJson(std::string filePath)
   }
 }
 
-auto getOptionsFromLlmOutput(std::string llmOutput)
+std::vector<std::string> getOptionsFromLlmOutput(std::string llmOutput)
 {
   // regex to match all options, sandwiched by
   std::regex optionsRegex(": \$(.*?)\$");
@@ -211,6 +216,14 @@ auto getOptionsFromLlmOutput(std::string llmOutput)
   while (next != end)
   {
     std::smatch match = *next;
+    std::string unstrippedOption = match.str();
+    // strip the option of the leading and trailing characters (starts with ": $" and ends with "$")
+    // make sure length is at least 4 to avoid out of bounds error
+    if (unstrippedOption.size() < 4)
+    {
+      throw std::runtime_error("Invalid option format");
+    }
+    std::string option = unstrippedOption.substr(3, unstrippedOption.size() - 4);
     options.push_back(match.str());
     next++;
   }
@@ -246,9 +259,11 @@ void mainInference(int argc, char *argv[])
   // log lyrics has loaded
   std::cout << "Lyrics loaded" << std::endl;
 
+  std::string lyrics_setup = lyricsPrompt + " " + songName + "\n" + lyrics;
+
   // extract colours from lyrics
   std::cout << "Extracting colours from lyrics" << std::endl;
-  std::string colourPrompt = lyricsPrompt + " " + songName + "\n" + lyrics + colourExtractionPrompt;
+  std::string colourPrompt = lyrics_setup + colourExtractionPrompt;
   std::string colourOutput = pipe.generate(colourPrompt, ov::genai::max_new_tokens(500));
   std::cout << "Extracted colours from lyrics" << std::endl;
 
@@ -261,25 +276,57 @@ void mainInference(int argc, char *argv[])
 
   // extract particle effect from lyrics
   std::cout << "Extracting particle effect from lyrics" << std::endl;
-  std::string particlePrompt = lyricsPrompt + " " + songName + "\n" + lyrics + particleSelectionPrompt + "\n" + particles.dump();
+  std::string particlePrompt = lyrics_setup + particleSelectionPrompt + "\n" + particles.dump();
   std::string particleOutput = pipe.generate(particlePrompt, ov::genai::max_new_tokens(100));
   std::cout << "Extracted particle effect from lyrics" << std::endl;
 
   // extract objects from lyrics
   std::cout << "Extracting objects from lyrics" << std::endl;
-  std::string objectPrompt = lyricsPrompt + " " + songName + "\n" + lyrics + objectExtractionPrompt;
-  std::string objectOutput = pipe.generate(objectPrompt, ov::genai::max_new_tokens(100));
+  std::string objectPrompt = lyrics_setup + objectExtractionPrompt;
+  std::string objectOutput = pipe.generate(objectPrompt, ov::genai::max_new_tokens(500));
   std::cout << "Extracted objects from lyrics" << std::endl;
 
   // extract backgrounds from lyrics
   std::cout << "Extracting backgrounds from lyrics" << std::endl;
-  std::string backgroundPrompt = lyricsPrompt + " " + songName + "\n" + lyrics + backgroundExtractionPrompt;
-  std::string backgroundOutput = pipe.generate(backgroundPrompt, ov::genai::max_new_tokens(100));
+  std::string backgroundPrompt = lyrics_setup + backgroundExtractionPrompt;
+  std::string backgroundOutput = pipe.generate(backgroundPrompt, ov::genai::max_new_tokens(500));
   std::cout << "Extracted backgrounds from lyrics" << std::endl;
+
+  // extract each object and background from the output
+  std::cout << "Extracting objects and backgrounds from output" << std::endl;
+  auto objects = getOptionsFromLlmOutput(objectOutput);
+  auto backgrounds = getOptionsFromLlmOutput(backgroundOutput);
+  std::cout << "Extracted objects and backgrounds from output" << std::endl;
+
+  // create image prompt for objects
+  std::cout << "Creating image prompt for objects" << std::endl;
+  std::vector<std::string> objectImagePromptList;
+  for (const auto &object : objects)
+  {
+    std::cout << object << "prompt generation started" << std::endl;
+    std::string objectImagePrompt = imageSetup + object + imageSettings;
+    std::string objectImageOutput = pipe.generate(objectImagePrompt, ov::genai::max_new_tokens(200));
+    objectImagePromptList.push_back(objectImageOutput);
+    std::cout << object << "Prompt generation done" << std::endl;
+  }
+  std::cout << "Created image prompt for objects" << std::endl;
+
+  // create image prompt for backgrounds
+  std::cout << "Creating image prompt for backgrounds" << std::endl;
+  std::vector<std::string> backgroundImagePromptList;
+  for (const auto &background : backgrounds)
+  {
+    std::cout << background << "prompt generation started" << std::endl;
+    std::string backgroundImagePrompt = imageSetup + background + imageSettings + backgroundSettings;
+    std::string backgroundImageOutput = pipe.generate(backgroundImagePrompt, ov::genai::max_new_tokens(200));
+    backgroundImagePromptList.push_back(backgroundImageOutput);
+    std::cout << background << "Prompt generation done" << std::endl;
+  }
+  std::cout << "Created image prompt for backgrounds" << std::endl;
 
   // store data in json file
   std::cout << "Storing data in json file" << std::endl;
-  jsonStoreData(colourOutput, particleOutput);
+  jsonStoreData(colourOutput, particleOutput, objects, backgrounds, objectImagePromptList, backgroundImagePromptList);
   std::cout << "Data stored in json file" << std::endl;
 }
 
