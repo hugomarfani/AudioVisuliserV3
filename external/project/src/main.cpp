@@ -17,6 +17,7 @@ std::ofstream logFile;
 
 using json = nlohmann::json;
 
+// ----------------- Prompts -----------------
 std::string colourExtractionPrompt =
     "Analyze the lyrics of the song provided and extract 5 unique,"
     "unusual colors (avoid common colors like red, green, or blue) that are explicitly mentioned or strongly implied."
@@ -68,14 +69,21 @@ std::string backgroundSettings =
     "colour: colourful background"
     "suitable for children and family";
 
+// ----------------- paths -----------------
 std::filesystem::path currentDirectory = std::filesystem::current_path();
-
 std::string modelPath = (currentDirectory / "AiResources" / "gemma-2-9b-it-int4-ov").string();
 std::string outputFilePath = (currentDirectory / "AiResources" / "./output.json").string();
 std::string particleListFilePath = (currentDirectory / "AiResources" / "particleList.json").string();
 std::string logPath = (currentDirectory / "AiResources" / "./log.txt").string();
 std::filesystem::path lyricsDirPath = (currentDirectory / "AiResources" / "lyrics");
 
+// ----------------- settings -----------------
+struct Setting
+{
+  static bool debug;
+};
+
+// ----------------- Log Functions -----------------
 void redirectConsoleOutput()
 {
   logFile.open(logPath, std::ofstream::out | std::ofstream::trunc);
@@ -99,6 +107,18 @@ void cleanup()
   }
 }
 
+// ----------------- Helper Functions -----------------
+
+/**
+ * @brief Retrieves the model device to be used for computation.
+ *
+ * This function queries the available devices from the OpenVINO core and selects an appropriate device for computation.
+ * It prioritizes GPU devices if available, otherwise, it selects the first available device.
+ *
+ * @return std::string The name of the selected device.
+ *
+ * @throws std::runtime_error If no devices are available.
+ */
 std::string getModelDevice()
 {
   ov::Core core;
@@ -119,14 +139,27 @@ std::string getModelDevice()
 
   for (const auto &device : availableDevices)
   {
+    // use GPU if available
     if (device.find("GPU") != std::string::npos)
     {
+      std::cout << "Selected device: " << device << std::endl;
       return device;
     }
   }
+  std::cout << "Selected device: " << availableDevices[0] << std::endl;
   return availableDevices[0];
 }
 
+/**
+ * @brief Retrieves the lyrics of a given song from a text file.
+ *
+ * This function reads the lyrics of the specified song from a text file located
+ * in the lyrics directory. The file should be named as the song name with a .txt extension.
+ *
+ * @param songName The name of the song whose lyrics are to be retrieved.
+ * @return A string containing the lyrics of the song.
+ * @throws std::runtime_error If the lyrics file cannot be opened.
+ */
 std::string getLyrics(std::string songName)
 {
   // read in lyrics from lyrics folder under song.txt
@@ -207,7 +240,7 @@ auto getParticleEffectFromJson(std::string filePath)
 std::vector<std::string> getOptionsFromLlmOutput(std::string llmOutput)
 {
   // regex to match all options, sandwiched by
-  std::regex optionsRegex(": \$(.*?)\$");
+  std::regex optionsRegex(": \\$(.*?)\\$");
   // create iterator to iterate through matches
   std::sregex_iterator next(llmOutput.begin(), llmOutput.end(), optionsRegex);
   std::sregex_iterator end;
@@ -229,6 +262,31 @@ std::vector<std::string> getOptionsFromLlmOutput(std::string llmOutput)
   }
   return options;
 }
+
+class LLM
+{
+private:
+  const std::string device;
+  ov::genai::LLMPipeline pipe;
+  const std::string songName;
+  const std::string lyrics;
+  const Setting settings;
+
+public:
+  LLM(std::string modelPath, std::string songName, Setting settings)
+      : device(getModelDevice()), pipe(modelPath, device), songName(songName), lyrics(getLyrics(songName)), settings(settings)
+  {
+    std::cout << "LLM Pipeline initialised with the following settings: " << std::endl;
+    std::cout << "Model Path: " << modelPath << std::endl;
+    std::cout << "Device: " << device << std::endl;
+    std::cout << "Song Name: " << songName << std::endl;
+  }
+
+  std::string generate(std::string prompt, int max_new_tokens)
+  {
+    return pipe.generate(prompt, ov::genai::max_new_tokens(max_new_tokens));
+  }
+};
 
 void mainInference(int argc, char *argv[])
 {
