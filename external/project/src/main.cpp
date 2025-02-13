@@ -313,6 +313,7 @@ public:
     std::cout << "Song Name: " << songName << std::endl;
     lyricsSetup = lyricsPrompt + " " + songName + "\n" + lyrics;
     outputMap = std::unordered_map<LLMOutputType, std::vector<std::string>>();
+    retrieveCurrentOutput();
   }
 
   void extractColours()
