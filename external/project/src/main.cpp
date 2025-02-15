@@ -1,4 +1,5 @@
 #include <openvino/genai/llm_pipeline.hpp>
+#include <openvino/genai/whisper_pipeline.hpp>
 #include <openvino/openvino.hpp>
 #include <nlohmann/json.hpp>
 #include <boost/program_options.hpp>
@@ -77,10 +78,12 @@ std::string backgroundSettings =
 // ----------------- paths -----------------
 std::filesystem::path currentDirectory = std::filesystem::current_path();
 std::string modelPath = (currentDirectory / "AiResources" / "gemma-2-9b-it-int4-ov").string();
+std::filesystem::path whisperModelPath = (currentDirectory / "AiResources" / "distil-whisper-large-v3-int8-ov");
 std::string outputFilePath = (currentDirectory / "AiResources" / "./output.json").string();
 std::string particleListFilePath = (currentDirectory / "AiResources" / "particleList.json").string();
 std::string logPath = (currentDirectory / "AiResources" / "./log.txt").string();
 std::filesystem::path lyricsDirPath = (currentDirectory / "AiResources" / "lyrics");
+std::filesystem::path mp3DirPath = (currentDirectory / "AiResources" / "mp3");
 
 // ----------------- Log Functions -----------------
 void redirectConsoleOutput()
@@ -321,7 +324,6 @@ public:
     std ::cout << "Extracting colours from lyrics" << std::endl;
     std::string colourPrompt = lyricsSetup + colourExtractionPrompt;
     std::string colourOutput = generate(colourPrompt, 500);
-    std ::cout << "Extracted colours from lyrics" << std::endl;
 
     std::vector<std::string> colours;
     // regex to match hex colours
@@ -357,7 +359,6 @@ public:
       particlePrompt += particle + "\n";
     }
     std::string particleOutput = generate(particlePrompt, 100);
-    std::cout << "Obtained list of particle effects" << std::endl;
 
     outputMap[PARTICLES] = getOptionsFromLlmOutput(particleOutput);
     if (debug)
@@ -369,6 +370,7 @@ public:
 
   void extractObjects()
   {
+    std::cout << "Extracting objects from lyrics" << std::endl;
     std::string objectPrompt = lyricsSetup + objectExtractionPrompt;
     std::string objectOutput = generate(objectPrompt, 500);
     std::vector<std::string> objects = getOptionsFromLlmOutput(objectOutput);
@@ -389,6 +391,7 @@ public:
 
   void extractBackgrounds()
   {
+    std::cout << "Extracting backgrounds from lyrics" << std::endl;
     std::string backgroundPrompt = lyricsSetup + backgroundExtractionPrompt;
     std::string backgroundOutput = generate(backgroundPrompt, 500);
     std::vector<std::string> backgrounds = getOptionsFromLlmOutput(backgroundOutput);
@@ -409,6 +412,7 @@ public:
 
   void generateObjectPrompts()
   {
+    std::cout << "Generating object image prompts" << std::endl;
     std::vector<std::string> objectPromptList;
     // check if objects have been extracted
     if (outputMap.find(OBJECTS) == outputMap.end())
@@ -436,6 +440,7 @@ public:
 
   void generateBackgroundPrompts()
   {
+    std::cout << "Generating background image prompts" << std::endl;
     std::vector<std::string> backgroundPromptList;
     // check if backgrounds have been extracted
     if (outputMap.find(BACKGROUNDS) == outputMap.end())
@@ -463,6 +468,7 @@ public:
 
   void jsonStoreData()
   {
+    std::cout << "Storing data in json file" << std::endl;
     // create empty json object
     json j;
 
@@ -480,13 +486,77 @@ public:
   }
 };
 
+// ----------------- Whisper Class -----------------
+class Whisper
+{
+private:
+  const std::string device;
+  ov::genai::WhisperPipeline pipe;
+  const std::string songId;
+  const std::string const bool debug;
+
+public:
+  Whisper(std::string songId, bool debug)
+      : device(getModelDevice()), pipeline(whisperModelPath.string(), device), songId(songId), debug(debug)
+  {
+    std::cout << "Whisper Pipeline initialised with the following settings: " << std::endl;
+    std::cout << "Model Path: " << modelPath << std::endl;
+    std::cout << "Device: " << device << std::endl;
+    std::cout << "Song ID: " << songId << std::endl;
+  }
+
+  void generateLyrics()
+  {
+    std::cout << "Generating lyrics for song: " << songId << std::endl;
+    std::string mp3Path = (mp3DirPath / (songId + ".mp3")).string();
+    std::cout << "MP3 Path: " << mp3Path << std::endl;
+
+    // set configs
+    std::cout << "Setting generation config" << std::endl;
+    ov::genai::WhisperGenerationConfig config(whisperModelPath / "generation_config.json");
+    config.maxNewTokens = 500;
+    config.language = "<|en|>";
+    config.task = "transcribe";
+    config.return_timestamps = true;
+
+    // obtain raw speech input
+    std::cout << "Obtaining mp3 as raw input" << std::endl;
+    ov::genai::RawSpeechInput rawSpeech = pipe.getSpeechInput(mp3Path);
+
+    std::string lyrics = pipe.generate(mp3Path, );
+    std::cout << "Lyrics generated: " << std::endl;
+    std::cout << lyrics << std::endl;
+  }
+};
+
+// ----------------- Main Function -----------------
 int main(int argc, char *argv[])
 {
-  std::string songName = "let it go";
+  // default values for song and debug mode
+  std::string songId = "let it go";
   bool debug = false;
   // declare supported options
   po::options_description desc("Allowed options");
-  desc.add_options()("help", "produce help message")("debug", "enable debug mode")("song", po::value<std::string>(), "specify song name")("text_log", "enable text logging")("extractColour,c", "extract colours from lyrics")("extractParticle,p", "extract particle effect from lyrics")("extractObject,o", "extract objects from lyrics")("extractBackground,b", "extract backgrounds from lyrics")("generateObjectPrompts", "generate object image prompts")("generateBackgroundPrompts", "generate background image prompts")("all", "extract all features");
+  /*
+  Allowed options:
+  -h, --help: produce help message
+  -d, --debug: enable debug mode
+  -w, --whisper: use whisper mode
+  -l, --llm: use llm mode
+  -s, --stable-diffusion: use stable diffusion mode
+  --song: specify song id
+  --text_log: enable text logging
+
+  LLM only options
+    -c, --extractColour: extract colours from lyrics
+    -p, --extractParticle: extract particle effect from lyrics
+    -o, --extractObject: extract objects from lyrics
+    -b, --extractBackground: extract backgrounds from lyrics
+    --generateObjectPrompts: generate object image prompts
+    --generateBackgroundPrompts: generate background image prompts
+    --all: extract all llm features
+  */
+  desc.add_options()("help", "produce help message")("debug", "enable debug mode")("whisper,w", "use whisper mode")("llm,l", "use llm mode")("stable-diffusion,s", "use stable diffusion mode")("song", po::value<std::string>(), "specify song id")("text_log", "enable text logging")("extractColour,c", "extract colours from lyrics")("extractParticle,p", "extract particle effect from lyrics")("extractObject,o", "extract objects from lyrics")("extractBackground,b", "extract backgrounds from lyrics")("generateObjectPrompts", "generate object image prompts")("generateBackgroundPrompts", "generate background image prompts")("all", "extract all llm features");
 
   po::variables_map vm;
   try
@@ -500,22 +570,45 @@ int main(int argc, char *argv[])
     return 1;
   }
 
+  // if help flag is set, print help message and exit
   if (vm.count("help"))
   {
     std::cout << desc << std::endl;
     return 0;
   }
 
+  /* ----------------- Check Flag Errors -----------------
+  Checking flags for any errors before we go to main program
+  i.e. any required flags that are not set
+  */
+  // check if model type is specified
+  if (!vm.count("whisper") && !vm.count("llm") && !vm.count("stable-diffusion"))
+  {
+    std::cerr << "Error: Please specify a model type to use" << std::endl;
+    return 1;
+  }
+
+  // if whisper, song has to be set
+  if (vm.count("whisper") && !vm.count("song"))
+  {
+    std::cerr << "Error: Please specify a song id" << std::endl;
+    return 1;
+  }
+
+  // ----------------- Check Flag -----------------
+  // if text_log flag is set, redirect console output to log file
   if (vm.count("text_log"))
   {
     redirectConsoleOutput();
   }
 
+  // check if song is specified
   if (vm.count("song"))
   {
-    std::string songName = vm["song"].as<std::string>();
+    songId = vm["song"].as<std::string>();
   }
 
+  // check if debug flag is set
   if (vm.count("debug"))
   {
     debug = true;
@@ -531,45 +624,67 @@ int main(int argc, char *argv[])
     vm.insert({"generateBackgroundPrompts", po::variable_value()});
   }
 
-  std::cout << "Starting LLM Pipeline" << std::endl;
-  try
+  // ================== Whisper Pipeline ==================
+  if (vm.count("whisper"))
   {
-    LLM llm(modelPath, songName, debug);
-    if (vm.count("extractColour"))
+    std::cout << "Starting Whisper Pipeline" << std::endl;
+    try
     {
-      llm.extractColours();
+      ov::genai::Whisper whisper(whisperModelPath, songId, debug);
+      whisper.generateLyrics();
     }
-    if (vm.count("extractParticle"))
+    catch (const std::exception &e)
     {
-      llm.extractParticleEffect();
+      std::cerr << "Error: " << e.what() << std::endl;
+      cleanup();
+      return 1;
     }
-    if (vm.count("extractObject"))
-    {
-      llm.extractObjects();
-    }
-    if (vm.count("extractBackground"))
-    {
-      llm.extractBackgrounds();
-    }
-    if (vm.count("generateObjectPrompts"))
-    {
-      llm.generateObjectPrompts();
-    }
-    if (vm.count("generateBackgroundPrompts"))
-    {
-      llm.generateBackgroundPrompts();
-    }
-    llm.jsonStoreData();
   }
-  catch (const std::exception &e)
+
+  // ================== LLM Pipeline ==================
+  if (vm.count("llm"))
   {
-    std::cerr << "Error: " << e.what() << std::endl;
-    cleanup();
-    return 1;
+    std::cout << "Starting LLM Pipeline" << std::endl;
+    try
+    {
+      LLM llm(modelPath, songId, debug);
+      if (vm.count("extractColour"))
+      {
+        llm.extractColours();
+      }
+      if (vm.count("extractParticle"))
+      {
+        llm.extractParticleEffect();
+      }
+      if (vm.count("extractObject"))
+      {
+        llm.extractObjects();
+      }
+      if (vm.count("extractBackground"))
+      {
+        llm.extractBackgrounds();
+      }
+      if (vm.count("generateObjectPrompts"))
+      {
+        llm.generateObjectPrompts();
+      }
+      if (vm.count("generateBackgroundPrompts"))
+      {
+        llm.generateBackgroundPrompts();
+      }
+      llm.jsonStoreData();
+    }
+    catch (const std::exception &e)
+    {
+      std::cerr << "Error: " << e.what() << std::endl;
+      cleanup();
+      return 1;
+    }
   }
 
   std::cout << "LLM Pipeline completed" << std::endl;
 
+  // cleanup and close log file
   if (vm.count("text_log"))
   {
     cleanup();

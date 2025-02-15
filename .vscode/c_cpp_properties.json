@@ -3,7 +3,8 @@
         {
             "name": "windows-cygwin-gcc-x64",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "$C:\\Program Files (x86)\\Intel\\openvino_2024\\runtime"
             ],
             "compilerPath": "C:/cygwin64/bin/gcc.exe",
             "cStandard": "${default}",
