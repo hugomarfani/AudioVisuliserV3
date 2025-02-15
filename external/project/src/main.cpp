@@ -3,6 +3,7 @@
 #include <openvino/openvino.hpp>
 #include <nlohmann/json.hpp>
 #include <boost/program_options.hpp>
+#include "audio_utils.hpp"
 #include <iostream>
 #include <string>
 #include <tuple>
@@ -83,7 +84,7 @@ std::string outputFilePath = (currentDirectory / "AiResources" / "./output.json"
 std::string particleListFilePath = (currentDirectory / "AiResources" / "particleList.json").string();
 std::string logPath = (currentDirectory / "AiResources" / "./log.txt").string();
 std::filesystem::path lyricsDirPath = (currentDirectory / "AiResources" / "lyrics");
-std::filesystem::path mp3DirPath = (currentDirectory / "AiResources" / "mp3");
+std::filesystem::path wavDirPath = (currentDirectory / "AiResources" / "wav");
 
 // ----------------- Log Functions -----------------
 void redirectConsoleOutput()
@@ -495,6 +496,14 @@ private:
   const std::string songId;
   const std::string const bool debug;
 
+  void saveLyrics(std::string lyrics)
+  {
+    std::string outputFilePath = (lyricsDirPath / (songId + ".txt")).string();
+    std::ofstream outputFile(outputFilePath);
+    outputFile << lyrics;
+    outputFile.close();
+  }
+
 public:
   Whisper(std::string songId, bool debug)
       : device(getModelDevice()), pipeline(whisperModelPath.string(), device), songId(songId), debug(debug)
@@ -508,8 +517,8 @@ public:
   void generateLyrics()
   {
     std::cout << "Generating lyrics for song: " << songId << std::endl;
-    std::string mp3Path = (mp3DirPath / (songId + ".mp3")).string();
-    std::cout << "MP3 Path: " << mp3Path << std::endl;
+    std::string wavPath = (wavDirPath / (songId + ".mp3")).string();
+    std::cout << "wav Path: " << wavPath << std::endl;
 
     // set configs
     std::cout << "Setting generation config" << std::endl;
@@ -521,11 +530,14 @@ public:
 
     // obtain raw speech input
     std::cout << "Obtaining mp3 as raw input" << std::endl;
-    ov::genai::RawSpeechInput rawSpeech = pipe.getSpeechInput(mp3Path);
+    ov::genai::RawSpeechInput rawSpeech = utils::audio::read_wav(wavPath);
 
-    std::string lyrics = pipe.generate(mp3Path, );
+    std::string lyrics = pipe.generate(rawSpeech, config);
     std::cout << "Lyrics generated: " << std::endl;
     std::cout << lyrics << std::endl;
+
+    saveLyrics(lyrics);
+    std::cout << "Lyrics saved to file" << std::endl;
   }
 };
 

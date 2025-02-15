@@ -20,12 +20,19 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(Boost)
 
+if(NOT TARGET dr_libs)
+    FetchContent_Declare(dr_libs
+        URL https://github.com/mackron/dr_libs/archive/da35f9d6c7374a95353fd1df1d394d44ab66cf01.tar.gz
+        URL_HASH SHA256=2704d347f480ca1bc92233fb01747e4550cc8031735b6ea62ca9990ebb8851ae)
+    FetchContent_MakeAvailable(dr_libs)
+endif()
+
 
 set(TARGET_NAME test)
 
-add_executable(${TARGET_NAME} src/main.cpp)
+add_executable(${TARGET_NAME} src/main.cpp src/audio_utils.cpp)
 
 include_directories(${OpenVINO_INCLUDE_DIRS})
 include_directories(${OpenVINOGenAI_INCLUDE_DIRS})
-# include_directories("C:\\Program Files (x86)\\Intel\\openvino_2024\\runtime\\include")
 target_link_libraries(${TARGET_NAME} PRIVATE openvino::runtime openvino::genai nlohmann_json::nlohmann_json Boost::program_options)
+target_include_directories(${TARGET_NAME} PRIVATE "$<BUILD_INTERFACE:${dr_libs_SOURCE_DIR}>")
