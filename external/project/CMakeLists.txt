@@ -27,6 +27,14 @@ if(NOT TARGET dr_libs)
     FetchContent_MakeAvailable(dr_libs)
 endif()
 
+# Fetch libsamplerate
+FetchContent_Declare(
+    libsamplerate
+    GIT_REPOSITORY https://github.com/libsndfile/libsamplerate.git
+    GIT_TAG master
+)
+FetchContent_MakeAvailable(libsamplerate)
+
 
 set(TARGET_NAME test)
 
@@ -34,5 +42,5 @@ add_executable(${TARGET_NAME} src/main.cpp src/audio_utils.cpp)
 
 include_directories(${OpenVINO_INCLUDE_DIRS})
 include_directories(${OpenVINOGenAI_INCLUDE_DIRS})
-target_link_libraries(${TARGET_NAME} PRIVATE openvino::runtime openvino::genai nlohmann_json::nlohmann_json Boost::program_options)
+target_link_libraries(${TARGET_NAME} PRIVATE openvino::runtime openvino::genai nlohmann_json::nlohmann_json Boost::program_options samplerate)
 target_include_directories(${TARGET_NAME} PRIVATE "$<BUILD_INTERFACE:${dr_libs_SOURCE_DIR}>")
