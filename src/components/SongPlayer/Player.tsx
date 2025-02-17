@@ -15,6 +15,7 @@ const Player: React.FC<PlayerProps> = ({ track }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [hoverProgress, setHoverProgress] = useState<number | null>(null);
+  const [rotation, setRotation] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -40,6 +41,20 @@ const Player: React.FC<PlayerProps> = ({ track }) => {
       audio.removeEventListener('error', handleError);
     };
   }, []);
+
+  useEffect(() => {
+    let animationFrame: number;
+    const updateRotation = () => {
+      if (isPlaying) {
+        setRotation(prev => prev + 0.5);
+        animationFrame = requestAnimationFrame(updateRotation);
+      }
+    };
+    if (isPlaying) {
+      animationFrame = requestAnimationFrame(updateRotation);
+    }
+    return () => cancelAnimationFrame(animationFrame);
+  }, [isPlaying]);
 
   const togglePlayPause = () => {
     if (!audioRef.current) return;
@@ -128,6 +143,8 @@ const Player: React.FC<PlayerProps> = ({ track }) => {
             position: 'absolute', // position absolute to fill the corner
             top: '10px', // adjust top position
             left: '10px', // adjust left position
+            transform: `rotate(${rotation}deg)`,
+            transition: isPlaying ? 'none' : 'transform 0.1s linear',
           }}
         >
           <img
