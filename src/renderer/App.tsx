@@ -20,7 +20,15 @@ function Hello() {
         'download-wav',
         youtubeUrl,
       );
-      setStatus(`Successfully converted to 16kHz WAV! Saved to: ${result}`);
+      setStatus(
+        `Successfully converted to 16kHz WAV! Saved to: ${result}. Ready for Whisper!`,
+      );
+      const whisperResult = window.electron.ipcRenderer.invoke(
+        'run-whisper',
+        result,
+      );
+      console.log('Whisper result:', whisperResult);
+      setStatus('Successfully ran Whisper!');
     } catch (error) {
       setStatus(`Error: ${error.message || 'Unknown error occurred'}`);
     }

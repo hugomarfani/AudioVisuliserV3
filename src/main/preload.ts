@@ -6,7 +6,9 @@ export type Channels =
   | 'ipc-example'
   | 'run-gemma-test'
   | 'run-gemma-test-reply'
-  | 'download-wav';
+  | 'download-wav'
+  | 'download-mp3'
+  | 'run-whisper';
 
 const electronHandler = {
   ipcRenderer: {

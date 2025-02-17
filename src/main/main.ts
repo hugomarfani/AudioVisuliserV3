@@ -12,9 +12,9 @@ import path from 'path';
 import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
+import { exec, spawn } from 'child_process';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
-import { exec, spawn } from 'child_process';
 import { downloadYoutubeAudio } from '../youtube/youtubeToMP3';
 import { downloadYoutubeAudio as downloadYoutubeAudioWav } from '../youtube/youtubeToWav';
 
@@ -27,6 +27,12 @@ class AppUpdater {
 }
 
 let mainWindow: BrowserWindow | null = null;
+
+const ps1Path = path.join(
+  app.getAppPath(),
+  'AiResources/openvino_2025/setupvars.ps1',
+);
+const exePath = path.join(app.getAppPath(), 'test.exe');
 
 ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
@@ -54,21 +60,38 @@ ipcMain.handle('download-wav', async (_, url) => {
   }
 });
 
+ipcMain.handle('run-whisper', (event, songId) => {
+  console.log('Running whisper with songId:', songId);
+  const process = spawn('powershell', [
+    '-ExecutionPolicy',
+    'Bypass',
+    '-Command',
+    `& { . '${ps1Path}'; & ${exePath} -w --song ${songId}; }`,
+  ]);
+  process.stdout.on('data', (data) => {
+    console.log(`📜 stdout: ${data.toString()}`);
+  });
+  process.stderr.on('data', (data) => {
+    console.error(`⚠️ stderr: ${data.toString()}`);
+    throw new Error(data.toString());
+  });
+  process.on('close', (code) => {
+    console.log(`✅ Process exited with code ${code}`);
+    return code;
+  });
+});
+
 ipcMain.on('run-gemma-test', (event) => {
-  // Get absolute paths
-  const ps1Path = path.join(
-    app.getAppPath(),
-    '../../AiResources/openvino_2025/setupvars.ps1',
-  );
-  const exePath = path.join(app.getAppPath(), '../../test.exe');
   console.log(`Running Gemma test with ${ps1Path} and ${exePath}`);
+
+  const gemmaCommand = `${exePath} -l --all `;
 
   // running using spawn -> real time output
   const process = spawn('powershell', [
     '-ExecutionPolicy',
     'Bypass',
     '-Command',
-    `& { . '${ps1Path}'; & '${exePath}' }`,
+    `& { . '${ps1Path}'; & ${gemmaCommand} ;}`,
   ]);
 
   process.stdout.on('data', (data) => {
