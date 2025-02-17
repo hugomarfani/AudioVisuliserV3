@@ -4,8 +4,9 @@ import './App.css';
 import MeshGradientBackground from '../components/Backgrounds/MeshGradientBackground';
 import SongSelector from '../components/SongSelector/SongSelector';
 import SpotifyApp from '../components/Spotify/SpotifyApp';
-import Player from '../components/SongSelector/Player';
+import Player from '../components/SongPlayer/Player';
 import Login from '../components/Spotify/auth/Login'; // Assuming you have a Login component
+import frozenLetItGo from '../../assets/audio/frozen_let_it_go.mp3';
 
 // eslint-disable-next-line react/function-component-definition
 const App: React.FC = () => {
@@ -25,24 +26,31 @@ const App: React.FC = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={
-          <MeshGradientBackground>
-            {accessToken === '' ? (
-              <Login />
-            ) : (
-              <>
-                <SongSelector
-                  onTrackSelect={setSelectedTrackURI}
-                  accessToken={accessToken}
-                />
-                <Player
-                  accessToken={accessToken}
-                  trackURI={selectedTrackURI}
-                />
-              </>
-            )}
-          </MeshGradientBackground>
-        } />
+        <Route
+          path="/"
+          element={
+            <MeshGradientBackground>
+              {accessToken === '' ? (
+                <Login />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <SongSelector
+                    onTrackSelect={setSelectedTrackURI}
+                    accessToken={accessToken}
+                  />
+                  <Player
+                    track={{
+                      title: 'Let It Go',
+                      artist: 'Idina Menzel',
+                      albumArt: 'https://cdn-images.dzcdn.net/images/cover/f669aa7623ad8af5fbeb5a196346013a/500x500.jpg',
+                      audioSrc: frozenLetItGo, // Use the imported MP3 file
+                    }}
+                  />
+                </div>
+              )}
+            </MeshGradientBackground>
+          }
+        />
       </Routes>
     </Router>
   );
