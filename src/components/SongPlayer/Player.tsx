@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, CSSProperties } from 'react';
-import { Progress } from "flowbite-react";
 import { AiOutlineForward, AiOutlineBackward } from 'react-icons/ai';
 import { FaPlay, FaPause } from 'react-icons/fa';
 
@@ -164,14 +163,24 @@ const Player: React.FC<PlayerProps> = ({ track }) => {
           </div>
         </div>
 
-        {/* Bottom row: full-width progress bar */}
+        {/* Bottom row: full-width custom progress bar */}
         <div
           style={{
             width: '100%',
             padding: '0 1.5rem 0.5rem 1.5rem',
           }}
         >
-          <Progress progress={progress} style={{ height: '8px', borderRadius: '4px' }} color="red" />
+          <div style={{ height: '8px', borderRadius: '4px', background: '#e0e0e0', position: 'relative' }}>
+            <div
+              style={{
+                height: '100%',
+                width: `${progress}%`,
+                background: 'red',
+                borderRadius: '4px',
+                transition: 'width 0.1s linear',
+              }}
+            />
+          </div>
         </div>
 
         {/* Hidden audio element */}
