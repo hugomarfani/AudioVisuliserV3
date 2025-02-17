@@ -27,6 +27,10 @@ const electronHandler = {
     runGemmaTest() {
       ipcRenderer.send('run-gemma-test');
     },
+    // Add the invoke method
+    invoke(channel: Channels, ...args: unknown[]) {
+      return ipcRenderer.invoke(channel, ...args);
+    },
   },
 };
 
