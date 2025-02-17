@@ -14,6 +14,7 @@ interface PlayerProps {
 const Player: React.FC<PlayerProps> = ({ track }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [hoverProgress, setHoverProgress] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -71,10 +72,28 @@ const Player: React.FC<PlayerProps> = ({ track }) => {
     }
   };
 
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!audioRef.current) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const newTime = (clickX / rect.width) * audioRef.current.duration;
+    audioRef.current.currentTime = newTime;
+  };
+
+  const handleProgressMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const hoverX = e.clientX - rect.left;
+    const hoverPercentage = (hoverX / rect.width) * 100;
+    setHoverProgress(hoverPercentage);
+  };
+
+  const handleProgressMouseLeave = () => {
+    setHoverProgress(0);
+  };
+
   return (
     <div
       style={{
-        /* Minimal outer container – no gradient */
         minHeight: '10vh',
         display: 'flex',
         justifyContent: 'center',
@@ -137,7 +156,11 @@ const Player: React.FC<PlayerProps> = ({ track }) => {
               borderRadius: '4px',
               background: '#e0e0e0',
               position: 'relative',
+              cursor: 'pointer', // add cursor pointer to indicate interactivity
             }}
+            onClick={handleProgressClick} // add onClick event
+            onMouseMove={handleProgressMouseMove} // add onMouseMove event
+            onMouseLeave={handleProgressMouseLeave} // add onMouseLeave event
           >
             <div
               style={{
@@ -148,6 +171,21 @@ const Player: React.FC<PlayerProps> = ({ track }) => {
                 transition: 'width 0.1s linear',
               }}
             />
+            {hoverProgress !== null && (
+              <div
+                style={{
+                  height: '100%',
+                  width: `${hoverProgress}%`,
+                  background: 'rgba(85, 85, 85, 0.3)', // ghost bar color
+                  borderRadius: '4px',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  pointerEvents: 'none', // make sure it doesn't interfere with clicks
+                  transition: 'width 0.1s linear',
+                }}
+              />
+            )}
           </div>
         </div>
 
