@@ -31,6 +31,7 @@ npm install
 
 npm install p5
 npm i --save-dev @types/p5
+npm install yt-dlp-exec fluent-ffmpeg
 
 ```
 

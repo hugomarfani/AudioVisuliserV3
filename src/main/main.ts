@@ -15,6 +15,8 @@ import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 import { exec, spawn } from 'child_process';
+import { downloadYoutubeAudio } from '../youtube/youtubeToMP3';
+import { downloadYoutubeAudio as downloadYoutubeAudioWav } from '../youtube/youtubeToWav';
 
 class AppUpdater {
   constructor() {
@@ -30,6 +32,26 @@ ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
   console.log(msgTemplate(arg));
   event.reply('ipc-example', msgTemplate('pong'));
+});
+
+ipcMain.handle('download-mp3', async (event, url) => {
+  try {
+    const result = await downloadYoutubeAudio(url);
+    return result;
+  } catch (error) {
+    console.error('Error in download-mp3 handler:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('download-wav', async (_, url) => {
+  try {
+    const result = await downloadYoutubeAudioWav(url);
+    return result;
+  } catch (error) {
+    console.error('Error in download-wav handler:', error);
+    throw error;
+  }
 });
 
 ipcMain.on('run-gemma-test', (event) => {
