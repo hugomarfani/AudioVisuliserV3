@@ -6,6 +6,7 @@
 #include <iterator>
 #include <nlohmann/json.hpp>
 #include <openvino/genai/llm_pipeline.hpp>
+#include <openvino/genai/text2image_pipeline.hpp>
 #include <openvino/genai/whisper_pipeline.hpp>
 #include <openvino/openvino.hpp>
 #include <ranges>
@@ -17,6 +18,7 @@
 #include <vector>
 
 #include "audio_utils.hpp"
+#include "imwrite.hpp"
 
 std::ofstream logFile;
 
@@ -93,6 +95,10 @@ std::string backgroundSettings =
 std::filesystem::path currentDirectory = std::filesystem::current_path();
 std::string modelPath =
     (currentDirectory / "AiResources" / "gemma-2-9b-it-int4-ov").string();
+std::string stableDiffusionModelPath =
+    (currentDirectory / "AiResources" / "stable-diffusion-v1-5-int8-ov")
+        .string();
+// using whisper path again after this so needs to be filesystem::path
 std::filesystem::path whisperModelPath =
     (currentDirectory / "AiResources" / "distil-whisper-large-v3-int8-ov");
 std::string outputFilePath =
@@ -302,15 +308,15 @@ class LLM {
   }
 
  public:
-  LLM(std::string modelPath, std::string songName, bool debug)
+  LLM(std::string llmModelPath, std::string songName, bool debug)
       : device(getModelDevice()),
-        pipe(modelPath, device),
+        pipe(llmModelPath, device),
         songName(songName),
         lyrics(getLyrics(songName)),
         debug(debug) {
     std::cout << "LLM Pipeline initialised with the following settings: "
               << std::endl;
-    std::cout << "Model Path: " << modelPath << std::endl;
+    std::cout << "Model Path: " << llmModelPath << std::endl;
     std::cout << "Device: " << device << std::endl;
     std::cout << "Song Name: " << songName << std::endl;
     lyricsSetup = lyricsPrompt + " " + songName + "\n" + lyrics;
@@ -520,25 +526,75 @@ class Whisper {
   }
 };
 
+// ----------------- Stable Diffusion Class -----------------
+
+class StableDiffusion {
+ private:
+  const std::string device;
+  ov::genai::Text2ImagePipeline pipe;
+  const std::string songId;
+  const bool debug;
+
+ public:
+  StableDiffusion(std::string t2iPath, std::string songId, bool debug)
+      : device(getModelDevice()),
+        pipe(t2iPath, device),
+        songId(songId),
+        debug(debug) {
+    std::cout
+        << "Stable Diffusion Pipeline initialised with the following settings: "
+        << std::endl;
+    std::cout << "Model Path: " << t2iPath << std::endl;
+    std::cout << "Device: " << device << std::endl;
+    std::cout << "Song ID: " << songId << std::endl;
+  }
+
+  void generateImage(std::string prompt) {
+    try {
+      std::cout << "Generating image for prompt: " << prompt << std::endl;
+      ov::Tensor image =
+          pipe.generate(prompt, ov::genai::width(512), ov::genai::height(512),
+                        ov::genai::num_inference_steps(20),
+                        ov::genai::num_images_per_prompt(1));
+      imwrite("image_%d.bmp", image, true);
+      return EXIT_SUCCESS;
+    } catch (const std::exception &error) {
+      try {
+        std::cerr << error.what() << '\n';
+      } catch (const std::ios_base::failure &) {
+      }
+      return EXIT_FAILURE;
+    } catch (...) {
+      try {
+        std::cerr << "Non-exception object thrown\n";
+      } catch (const std::ios_base::failure &) {
+      }
+      return EXIT_FAILURE;
+    }
+  }
+}
+
 // ----------------- Main Function -----------------
 int main(int argc, char *argv[]) {
   // default values for song and debug mode
   std::string songId = "let it go";
   bool debug = false;
   // declare supported options
-  po::options_description desc("Allowed options");
   /*
   Allowed options:
   -h, --help: produce help message
   -d, --debug: enable debug mode
   -w, --whisper: use whisper mode
   -l, --llm: use llm mode
-  -s, --stable-diffusion: use stable diffusion mode
-  --song: specify song id
+  -sd, --stable-diffusion: use stable diffusion mode
+  -s, --song: specify song id
   --text_log: enable text logging
 
   Whisper only options
-    --fixSampleRate: fix sample rate of audio file
+    --fixSampleRate: fix sample rate of audio file to 16kHz
+
+  Stable diffusion only options
+    --prompt <arg>: prompt to generate image
 
   LLM only options
     -c, --extractColour: extract colours from lyrics
@@ -549,13 +605,21 @@ int main(int argc, char *argv[]) {
     --generateBackgroundPrompts: generate background image prompts
     --all: extract all llm features
   */
-  desc.add_options()("fixSampleRate", "fix sample rate of audio file")(
-      "help", "produce help message")("debug", "enable debug mode")(
-      "whisper,w", "use whisper mode")("llm,l", "use llm mode")(
-      "stable-diffusion,s", "use stable diffusion mode")(
-      "song", po::value<std::string>(), "specify song id")(
-      "text_log", "enable text logging")("extractColour,c",
-                                         "extract colours from lyrics")(
+  po::options_description general_options("Allowed options");
+  general_options.add_options()("help,h", "produce help message")(
+      "debug,d", "enable debug mode")("whisper,w", "use whisper mode")(
+      "llm,l", "use llm mode")("stable-diffusion,sd",
+                               "use stable diffusion mode")(
+      "song,s", po::value<std::string>(), "specify song id")(
+      "text_log", "enable text logging");
+
+  po::options_description whisper_options("Whisper only options");
+  whisper_options.add_options()("fixSampleRate",
+                                "fix sample rate of audio file");
+
+  po::options_description llm_options("LLM only options");
+
+  llm_options.add_options()("extractColour,c", "extract colours from lyrics")(
       "extractParticle,p", "extract particle effect from lyrics")(
       "extractObject,o", "extract objects from lyrics")(
       "extractBackground,b", "extract backgrounds from lyrics")(
@@ -563,9 +627,12 @@ int main(int argc, char *argv[]) {
       "generateBackgroundPrompts", "generate background image prompts")(
       "all", "extract all llm features");
 
+  po::options_description cmdline_options;
+  cmdline_options.add(general_options).add(whisper_options).add(llm_options);
+
   po::variables_map vm;
   try {
-    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::store(po::parse_command_line(argc, argv, cmdline_options), vm);
     po::notify(vm);
   } catch (const po::error &e) {
     std::cerr << "Error: " << e.what() << std::endl;
@@ -595,6 +662,12 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  // if stable diffusion, prompt has to be set
+  if (vm.count("stable-diffusion") && !vm.count("prompt")) {
+    std::cerr << "Error: Please specify a prompt" << std::endl;
+    return 1;
+  }
+
   // ----------------- Check Flag -----------------
   // if text_log flag is set, redirect console output to log file
   if (vm.count("text_log")) {
@@ -618,6 +691,19 @@ int main(int argc, char *argv[]) {
     vm.insert({"extractBackground", po::variable_value()});
     vm.insert({"generateObjectPrompts", po::variable_value()});
     vm.insert({"generateBackgroundPrompts", po::variable_value()});
+  }
+
+  // ================== Stable Diffusion Pipeline ==================
+  if (vm.count("stable-diffusion")) {
+    std::cout << "Starting Stable Diffusion Pipeline" << std::endl;
+    try {
+      StableDiffusion stableDiffusion(stableDiffusionModelPath, songId, debug);
+      stableDiffusion.generateImage(vm["prompt"].as<std::string>());
+    } catch (const std::exception &e) {
+      std::cerr << "Error: " << e.what() << std::endl;
+      cleanup();
+      return 1;
+    }
   }
 
   // ================== Whisper Pipeline ==================
@@ -679,8 +765,6 @@ int main(int argc, char *argv[]) {
   std::cout << "LLM Pipeline completed" << std::endl;
 
   // cleanup and close log file
-  if (vm.count("text_log")) {
-    cleanup();
-  }
+  cleanup();
   return 0;
 }

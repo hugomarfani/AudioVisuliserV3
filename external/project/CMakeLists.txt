@@ -38,7 +38,7 @@ FetchContent_MakeAvailable(libsamplerate)
 
 set(TARGET_NAME test)
 
-add_executable(${TARGET_NAME} src/main.cpp src/audio_utils.cpp)
+add_executable(${TARGET_NAME} src/main.cpp src/audio_utils.cpp src/imwrite.cpp)
 
 include_directories(${OpenVINO_INCLUDE_DIRS})
 include_directories(${OpenVINOGenAI_INCLUDE_DIRS})
