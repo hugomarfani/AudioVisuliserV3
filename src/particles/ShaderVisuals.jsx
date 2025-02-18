@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useState, Component } from 'react';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import GUI from 'lil-gui';
 import * as THREE from 'three';
@@ -6,6 +6,9 @@ import * as THREE from 'three';
 import texture from './Assets/bg.jpg';
 import t1 from './Assets/Test.png'
 import { lerp } from 'three/src/math/MathUtils';
+
+const audioPath = '../Assets/Test.wav';
+
 
 const loadImage = path => {
   return new Promise((resolve, reject) => {
@@ -74,6 +77,7 @@ class ShaderVisuals extends Component {
       this.getPixelDataFromImage(t1);
       this.setupFBO();
       this.mouseEvents();
+      this.visualiseMusic();
       this.addObjects();
       this.setupResize();
       this.animate(); // Start the animation loop
@@ -98,8 +102,6 @@ class ShaderVisuals extends Component {
       }
     }
 
-    console.log("pixels", pixels);
-
     // Create data texture
     const data = new Float32Array(4 * this.number);
     for (let i = 0; i < this.size; i++) {
@@ -120,8 +122,6 @@ class ShaderVisuals extends Component {
         data[index + 3] = 1;
       }
     }
-
-    console.log(data);
 
     let dataTexture = new THREE.DataTexture(
       data,
@@ -266,6 +266,34 @@ class ShaderVisuals extends Component {
     });
   }
 
+
+  visualiseMusic(){
+    let isPlaying = false;
+    const listeners = new THREE.AudioListener();
+    this.camera.add(listeners);
+
+    const sound = new THREE.Audio(listeners);
+    const audioLoader = new THREE.AudioLoader();
+    audioLoader.load(audioPath, buffer => {
+      if (!buffer) {
+        console.error('Error loading audio file:', audioPath);
+        return;
+      }
+      sound.setBuffer(buffer);
+      window.addEventListener('click', () => {
+        if (!isPlaying) {
+          sound.play();
+          isPlaying = true;
+        } else {
+          sound.stop();
+          isPlaying = false;
+        }
+      });
+    });
+
+    this.analyser = new THREE.AudioAnalyser(sound, 32);
+  }
+
   addObjects(){
     this.geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(this.number * 3);
@@ -347,8 +375,6 @@ class ShaderVisuals extends Component {
       transparent: true
     });
 
-    console.log(this.material.uniforms);
-
     this.mesh = new THREE.Points(this.geometry, this.material);
     this.scene.add(this.mesh);
   }
@@ -356,7 +382,6 @@ class ShaderVisuals extends Component {
   // Rename the animation loop method to 'animate'
   animate = () => {
     this.time += 0.01;
-    console.log(this.time);
 
     this.material.uniforms.time.value = this.time;
     this.simMaterial.uniforms.time.value = this.time;
