@@ -91,10 +91,13 @@ std::string backgroundSettings =
 
 // ----------------- paths -----------------
 std::filesystem::path currentDirectory = std::filesystem::current_path();
-std::string modelPath =
+std::string gemmaModelPath =
     (currentDirectory / "AiResources" / "gemma-2-9b-it-int4-ov").string();
+// std::string stableDiffusionModelPath =
+//     (currentDirectory / "AiResources" / "FLUX.1-schnell-int8-ov").string();
 std::string stableDiffusionModelPath =
-    (currentDirectory / "AiResources" / "FLUX.1-schnell-int8-ov").string();
+    (currentDirectory / "AiResources" / "dreamlike_anime_1_0_ov" / "FP16")
+        .string();
 // using whisper path again after this so needs to be filesystem::path
 std::filesystem::path whisperModelPath =
     (currentDirectory / "AiResources" / "distil-whisper-large-v3-int8-ov");
@@ -581,9 +584,10 @@ int main(int argc, char *argv[]) {
   -d, --debug: enable debug mode
   -w, --whisper: use whisper mode
   -l, --llm: use llm mode
-  -sd, --stable-diffusion: use stable diffusion mode
+  -S, --stable-diffusion: use stable diffusion mode
   -s, --song: specify song id
   --text_log: enable text logging
+  -m, --model: specify model name
 
   Whisper only options
     --fixSampleRate: fix sample rate of audio file to 16kHz
@@ -603,10 +607,11 @@ int main(int argc, char *argv[]) {
   po::options_description general_options("Allowed options");
   general_options.add_options()("help,h", "produce help message")(
       "debug,d", "enable debug mode")("whisper,w", "use whisper mode")(
-      "llm,l", "use llm mode")("stable-diffusion,sd",
+      "llm,l", "use llm mode")("stable-diffusion,S",
                                "use stable diffusion mode")(
       "song,s", po::value<std::string>(), "specify song id")(
-      "text_log", "enable text logging");
+      "text_log", "enable text logging")("model,m", po::value<std::string>(),
+                                         "specify model name");
 
   po::options_description stable_diffusion_options(
       "Stable Diffusion only options");
@@ -685,6 +690,16 @@ int main(int argc, char *argv[]) {
     songId = vm["song"].as<std::string>();
   }
 
+  // if model name is declared, set all paths to it
+  if (vm.count("model")) {
+    std::string modelName = vm["model"].as<std::string>();
+    std::string modelPath =
+        (currentDirectory / "AiResources" / modelName).string();
+    gemmaModelPath = modelPath;
+    stableDiffusionModelPath = modelPath;
+    whisperModelPath = modelPath;
+  }
+
   // check if debug flag is set
   if (vm.count("debug")) {
     debug = true;
@@ -703,7 +718,8 @@ int main(int argc, char *argv[]) {
   if (vm.count("stable-diffusion")) {
     std::cout << "Starting Stable Diffusion Pipeline" << std::endl;
     try {
-      std::string device = getModelDevice();
+      // std::string device = getModelDevice();
+      std::string device = "CPU";
       std::cout << "starting stable diffusion" << std::endl;
       std::cout << "model path: " << stableDiffusionModelPath << std::endl;
       std::cout << "device: " << device << std::endl;
@@ -751,7 +767,7 @@ int main(int argc, char *argv[]) {
   if (vm.count("llm")) {
     std::cout << "Starting LLM Pipeline" << std::endl;
     try {
-      LLM llm(modelPath, songId, debug);
+      LLM llm(gemmaModelPath, songId, debug);
       if (vm.count("extractColour")) {
         llm.extractColours();
       }
