@@ -5,8 +5,8 @@
 #include <iostream>
 #include <iterator>
 #include <nlohmann/json.hpp>
+#include <openvino/genai/image_generation/text2image_pipeline.hpp>
 #include <openvino/genai/llm_pipeline.hpp>
-#include <openvino/genai/text2image_pipeline.hpp>
 #include <openvino/genai/whisper_pipeline.hpp>
 #include <openvino/openvino.hpp>
 #include <ranges>
@@ -76,39 +76,38 @@ std::string backgroundExtractionPrompt =
     "Background 3: $Background name$";
 
 std::string imageSetup =
-    "Create a prompt to be passed to a text to image generation model to "
-    "generate an image of ";
+    "Create a detailed prompt to be passed to a text to image generation model "
+    "to generate an image of the song. There is no need to add more settings, "
+    "only the prompt is required.";
 
 std::string imageSettings =
     ". The prompt should include the following settings:";
 
-std::string objectSettings =
-    "colour: black object with white background"
-    "prompt: ";
+std::string objectSettings = "colour: black object with white background";
 
 std::string backgroundSettings =
     "colour: colourful background, "
-    "suitable for children and family"
-    "prompt: ";
+    "suitable for children and family";
 
 // ----------------- paths -----------------
 std::filesystem::path currentDirectory = std::filesystem::current_path();
 std::string modelPath =
     (currentDirectory / "AiResources" / "gemma-2-9b-it-int4-ov").string();
 std::string stableDiffusionModelPath =
-    (currentDirectory / "AiResources" / "stable-diffusion-v1-5-int8-ov")
-        .string();
+    (currentDirectory / "AiResources" / "FLUX.1-schnell-int8-ov").string();
 // using whisper path again after this so needs to be filesystem::path
 std::filesystem::path whisperModelPath =
     (currentDirectory / "AiResources" / "distil-whisper-large-v3-int8-ov");
 std::string outputFilePath =
-    (currentDirectory / "AiResources" / "./output.json").string();
+    (currentDirectory / "AiResources" / "output.json").string();
 std::string particleListFilePath =
     (currentDirectory / "AiResources" / "particleList.json").string();
-std::string logPath = (currentDirectory / "AiResources" / "./log.txt").string();
+std::string logPath = (currentDirectory / "AiResources" / "log.txt").string();
 std::filesystem::path lyricsDirPath =
     (currentDirectory / "AiResources" / "lyrics");
 std::filesystem::path wavDirPath = (currentDirectory / "AiResources" / "wav");
+std::filesystem::path imageDirPath =
+    (currentDirectory / "AiResources" / "images");
 
 // ----------------- Log Functions -----------------
 void redirectConsoleOutput() {
@@ -536,15 +535,12 @@ class StableDiffusion {
   const bool debug;
 
  public:
-  StableDiffusion(std::string t2iPath, std::string songId, bool debug)
-      : device(getModelDevice()),
-        pipe(t2iPath, device),
-        songId(songId),
-        debug(debug) {
+  StableDiffusion(ov::genai::Text2ImagePipeline pipe, std::string device,
+                  std::string songId, bool debug)
+      : device(device), pipe(pipe), songId(songId), debug(debug) {
     std::cout
         << "Stable Diffusion Pipeline initialised with the following settings: "
         << std::endl;
-    std::cout << "Model Path: " << t2iPath << std::endl;
     std::cout << "Device: " << device << std::endl;
     std::cout << "Song ID: " << songId << std::endl;
   }
@@ -556,23 +552,22 @@ class StableDiffusion {
           pipe.generate(prompt, ov::genai::width(512), ov::genai::height(512),
                         ov::genai::num_inference_steps(20),
                         ov::genai::num_images_per_prompt(1));
-      imwrite("image_%d.bmp", image, true);
-      return EXIT_SUCCESS;
+      std::string imageFilePath =
+          (imageDirPath / (songId + "_%d.bmp")).string();
+      imwrite(imageFilePath, image, true);
     } catch (const std::exception &error) {
       try {
         std::cerr << error.what() << '\n';
       } catch (const std::ios_base::failure &) {
       }
-      return EXIT_FAILURE;
     } catch (...) {
       try {
         std::cerr << "Non-exception object thrown\n";
       } catch (const std::ios_base::failure &) {
       }
-      return EXIT_FAILURE;
     }
   }
-}
+};
 
 // ----------------- Main Function -----------------
 int main(int argc, char *argv[]) {
@@ -613,6 +608,11 @@ int main(int argc, char *argv[]) {
       "song,s", po::value<std::string>(), "specify song id")(
       "text_log", "enable text logging");
 
+  po::options_description stable_diffusion_options(
+      "Stable Diffusion only options");
+  stable_diffusion_options.add_options()("prompt", po::value<std::string>(),
+                                         "prompt to generate image");
+
   po::options_description whisper_options("Whisper only options");
   whisper_options.add_options()("fixSampleRate",
                                 "fix sample rate of audio file");
@@ -628,7 +628,10 @@ int main(int argc, char *argv[]) {
       "all", "extract all llm features");
 
   po::options_description cmdline_options;
-  cmdline_options.add(general_options).add(whisper_options).add(llm_options);
+  cmdline_options.add(general_options)
+      .add(stable_diffusion_options)
+      .add(whisper_options)
+      .add(llm_options);
 
   po::variables_map vm;
   try {
@@ -641,7 +644,10 @@ int main(int argc, char *argv[]) {
 
   // if help flag is set, print help message and exit
   if (vm.count("help")) {
-    std::cout << desc << std::endl;
+    std::cout << general_options << std::endl;
+    std::cout << stable_diffusion_options << std::endl;
+    std::cout << whisper_options << std::endl;
+    std::cout << llm_options << std::endl;
     return 0;
   }
 
@@ -697,10 +703,20 @@ int main(int argc, char *argv[]) {
   if (vm.count("stable-diffusion")) {
     std::cout << "Starting Stable Diffusion Pipeline" << std::endl;
     try {
-      StableDiffusion stableDiffusion(stableDiffusionModelPath, songId, debug);
+      std::string device = getModelDevice();
+      std::cout << "starting stable diffusion" << std::endl;
+      std::cout << "model path: " << stableDiffusionModelPath << std::endl;
+      std::cout << "device: " << device << std::endl;
+      ov::genai::Text2ImagePipeline t2iPipe(stableDiffusionModelPath, device);
+      std::cout << "pipe created" << std::endl;
+      StableDiffusion stableDiffusion(t2iPipe, device, songId, debug);
       stableDiffusion.generateImage(vm["prompt"].as<std::string>());
     } catch (const std::exception &e) {
       std::cerr << "Error: " << e.what() << std::endl;
+      cleanup();
+      return 1;
+    } catch (...) {
+      std::cerr << "Error: Unknown error" << std::endl;
       cleanup();
       return 1;
     }
