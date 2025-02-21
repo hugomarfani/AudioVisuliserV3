@@ -7,7 +7,7 @@ import texture from './Assets/bg.jpg';
 import t1 from './Assets/Test.png'
 import { lerp } from 'three/src/math/MathUtils';
 
-const audioPath = '../Assets/Test.wav';
+const audioPath = '../../assets/audio/frozen_let_it_go.mp3';
 
 
 const loadImage = path => {
@@ -148,6 +148,7 @@ class ShaderVisuals extends Component {
       const intersects = this.raycaster.intersectObjects([this.planeMesh]);
       if(intersects.length > 0){
           console.log(intersects[0].point);
+          console.log(this.analyser.getAverageFrequency());
           this.simMaterial.uniforms.uMouse.value = intersects[0].point;
       }
     });
@@ -337,11 +338,11 @@ class ShaderVisuals extends Component {
           vec4 color = texture2D( uTexture, vUv );
           newpos.xy = color.xy;
 
-          // float radius = sqrt( newpos.x * newpos.x + newpos.y * newpos.y );
-          // float angle = atan( newpos.y, newpos.x ) + time * 0.1;
+          float radius = sqrt( newpos.x * newpos.x + newpos.y * newpos.y );
+          float angle = atan( newpos.y, newpos.x ) + time * 0.1;
 
-          // float f = normalizeFrequency(uFrequency);
-          // newpos = expelParticlesByFrequency(f, newpos);
+          float f = normalizeFrequency(uFrequency);
+          newpos = expelParticlesByFrequency(f, newpos);
 
           vec4 mvPosition = modelViewMatrix * vec4( newpos, 1.0 );
           gl_PointSize = (2.0 / -mvPosition.z );
@@ -365,8 +366,8 @@ class ShaderVisuals extends Component {
     this.material = new THREE.ShaderMaterial({
       uniforms: {
         time: {value: 0},
-        uTexture: {value: this.positions}
-        // uFrequency: {value: this.analyser.getAverageFrequency()}
+        uTexture: {value: this.positions},
+        uFrequency: {value: this.analyser.getAverageFrequency()}
       },
       vertexShader: vertexShader,
       fragmentShader: fragmentShader,
@@ -385,7 +386,7 @@ class ShaderVisuals extends Component {
 
     this.material.uniforms.time.value = this.time;
     this.simMaterial.uniforms.time.value = this.time;
-    // this.material.uniforms.uFrequency.value = this.analyser.getAverageFrequency();
+    this.material.uniforms.uFrequency.value = this.analyser.getAverageFrequency();
 
     this.renderer.setRenderTarget(this.renderTarget);
     this.renderer.render(this.sceneFBO, this.cameraFBO);
