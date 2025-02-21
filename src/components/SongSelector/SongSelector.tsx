@@ -4,6 +4,8 @@ import SongCard from './SongCard';
 import { songs } from './SongData';
 import colors from '../../theme/colors';
 import axios from 'axios';
+import { FaMusic } from 'react-icons/fa'; // Import music notes icon
+import Library from '../Library/Library'; // Import Library component
 
 interface SongSelectorProps {
   onTrackSelect: (uri: string) => void;
@@ -19,6 +21,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken 
   const [filter, setFilter] = useState<'Blue' | 'Green' | 'Yellow' | 'Red'>('Green');
   const [devices, setDevices] = useState<Device[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false); // State to manage library popup
 
   useEffect(() => {
     async function fetchDevices() {
@@ -48,42 +51,46 @@ const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken 
         // maxWidth: '400px', // Optional: Ensures the panel has a max width
         margin: '0 auto', // Centers the panel horizontally
         boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', // Subtle shadow for depth
+        position: 'relative', // Add position relative for absolute positioning of the button
       }}
     >
+      {/* Library Button */}
+      <button
+        style={{
+          position: 'absolute',
+          top: '1rem',
+          right: '1rem',
+          backgroundColor: colors.grey2,
+          color: colors.white,
+          border: 'none',
+          borderRadius: '9999px', // Change to pill shape
+          padding: '0.5rem 1rem', // Adjust padding for pill shape
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+        onClick={() => setIsLibraryOpen(true)} // Open library popup on click
+      >
+        <FaMusic />
+        <span style={{ marginLeft: '0.5rem' }}>Library</span>
+      </button>
+
+      {/* Library Popup */}
+      {isLibraryOpen && <Library onClose={() => setIsLibraryOpen(false)} />} {/* Render Library component when isLibraryOpen is true */}
+
       {/* Header */}
       <div
         style={{
           color: colors.black,
           marginBottom: '1.5rem',
+          marginTop: 0, // Remove margin above
         }}
       >
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Welcome Back</h1>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginTop: 0 }}>Welcome Back</h1>
         <p style={{ fontSize: '1rem', color: '#6B7280' }}>
           Say or search a song to begin
         </p>
-      </div>
-
-      {/* Device Selector */}
-      <div style={{ marginBottom: '1rem' }}>
-        <select
-          onChange={(e) => setSelectedDevice(e.target.value)}
-          value={selectedDevice || ""}
-          style={{
-            padding: '0.5rem',
-            borderRadius: '8px',
-            border: '1px solid #ccc',
-            width: '100%',
-          }}
-        >
-          <option value="" disabled>
-            Select a device
-          </option>
-          {devices.map((device) => (
-            <option key={device.id} value={device.id}>
-              {device.name}
-            </option>
-          ))}
-        </select>
       </div>
 
       {/* Filter Buttons */}
