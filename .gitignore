@@ -33,6 +33,7 @@ npm-debug.log.*
 external/openvino_2025/
 external/gemma-2-9b-it-int4-ov/
 external/build/
+external/python/sd_env
 
 # Moved to AiResources folder
 AiResources/

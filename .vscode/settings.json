@@ -134,6 +134,17 @@
     "typeindex": "cpp",
     "typeinfo": "cpp",
     "valarray": "cpp",
-    "variant": "cpp"
-  }
+    "variant": "cpp",
+    "barrier": "cpp",
+    "cfenv": "cpp",
+    "charconv": "cpp",
+    "coroutine": "cpp",
+    "rope": "cpp",
+    "slist": "cpp",
+    "future": "cpp",
+    "latch": "cpp",
+    "scoped_allocator": "cpp",
+    "shared_mutex": "cpp",
+    "syncstream": "cpp"
+}
 }

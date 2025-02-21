@@ -1,3 +1,5 @@
+
+
 #include <algorithm>
 #include <boost/program_options.hpp>
 #include <filesystem>
@@ -9,6 +11,7 @@
 #include <openvino/genai/llm_pipeline.hpp>
 #include <openvino/genai/whisper_pipeline.hpp>
 #include <openvino/openvino.hpp>
+#include <random>
 #include <ranges>
 #include <regex>
 #include <stdexcept>
@@ -70,7 +73,7 @@ std::string backgroundExtractionPrompt =
     "Analyze the lyrics of the song provided and extract 3 unique, unusual "
     "backgrounds that are explicitly mentioned or strongly implied."
     "Give the output in the following exact format for easy extraction using "
-    "regex:"
+    "regex. The Background Name must have a $ sign before and after the word:"
     "Background 1: $Background name$"
     "Background 2: $Background name$"
     "Background 3: $Background name$";
@@ -111,6 +114,12 @@ std::filesystem::path lyricsDirPath =
 std::filesystem::path wavDirPath = (currentDirectory / "AiResources" / "wav");
 std::filesystem::path imageDirPath =
     (currentDirectory / "AiResources" / "images");
+
+// ----------------- Temp ONNX Paths -----------------
+// std::filesystem::path sdPath =
+//     (currentDirectory / "AiResources" / "sd-v1-5-int8-onnx");
+// std::string textEncoderPath = (sdPath / "text_encoder" /
+// "model.onnx").string(); std::string
 
 // ----------------- Log Functions -----------------
 void redirectConsoleOutput() {
@@ -725,8 +734,8 @@ int main(int argc, char *argv[]) {
       std::cout << "device: " << device << std::endl;
       ov::genai::Text2ImagePipeline t2iPipe(stableDiffusionModelPath, device);
       std::cout << "pipe created" << std::endl;
-      StableDiffusion stableDiffusion(t2iPipe, device, songId, debug);
-      stableDiffusion.generateImage(vm["prompt"].as<std::string>());
+      // StableDiffusion stableDiffusion(t2iPipe, device, songId, debug);
+      // stableDiffusion.generateImage(vm["prompt"].as<std::string>());
     } catch (const std::exception &e) {
       std::cerr << "Error: " << e.what() << std::endl;
       cleanup();

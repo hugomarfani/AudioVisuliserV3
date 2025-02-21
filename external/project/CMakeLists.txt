@@ -35,6 +35,22 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(libsamplerate)
 
+# # Fetch ONNX Runtime
+# FetchContent_Declare(
+#     onnxruntime
+#     GIT_REPOSITORY https://github.com/microsoft/onnxruntime.git
+#     GIT_TAG v1.16.0  # Latest stable version
+# )
+# FetchContent_MakeAvailable(onnxruntime)
+
+# # Fetch stb_image_write for saving images
+# FetchContent_Declare(
+#     stb
+#     GIT_REPOSITORY https://github.com/nothings/stb.git
+#     GIT_TAG master
+# )
+# FetchContent_MakeAvailable(stb)
+
 
 set(TARGET_NAME test)
 
@@ -44,3 +60,9 @@ include_directories(${OpenVINO_INCLUDE_DIRS})
 include_directories(${OpenVINOGenAI_INCLUDE_DIRS})
 target_link_libraries(${TARGET_NAME} PRIVATE openvino::runtime openvino::genai nlohmann_json::nlohmann_json Boost::program_options samplerate)
 target_include_directories(${TARGET_NAME} PRIVATE "$<BUILD_INTERFACE:${dr_libs_SOURCE_DIR}>")
+
+# # Include ONNX Runtime and stb_image_write headers
+# target_include_directories(stable_diffusion PRIVATE ${onnxruntime_SOURCE_DIR}/include ${stb_SOURCE_DIR})
+
+# # Link ONNX Runtime
+# target_link_libraries(stable_diffusion PRIVATE onnxruntime)
