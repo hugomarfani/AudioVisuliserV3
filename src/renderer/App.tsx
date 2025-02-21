@@ -30,7 +30,7 @@ const App: React.FC = () => {
           path="/"
           element={
             <MeshGradientBackground>
-              {accessToken === '' ? (
+              {accessToken === '123' ? (
                 <Login />
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>

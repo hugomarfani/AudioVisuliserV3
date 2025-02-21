@@ -14,6 +14,10 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
+import initDatabase from '../database/init';
+import { UserDB } from '../database/models/User';
+import { db } from '../database/config';
+import Song from '../database/models/Song';
 
 class AppUpdater {
   constructor() {
@@ -29,6 +33,49 @@ ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
   console.log(msgTemplate(arg));
   event.reply('ipc-example', msgTemplate('pong'));
+});
+
+ipcMain.handle('user:create', async (_, user) => {
+  return UserDB.create(user);
+});
+
+ipcMain.handle('user:getAll', async () => {
+  return UserDB.getAll();
+});
+
+ipcMain.handle('user:getById', async (_, id) => {
+  return UserDB.getById(id);
+});
+
+ipcMain.handle('user:update', async (_, user) => {
+  return UserDB.update(user);
+});
+
+ipcMain.handle('user:delete', async (_, id) => {
+  return UserDB.delete(id);
+});
+
+ipcMain.handle('fetch-songs', async () => {
+  try {
+    const songs = await Song.findAll({
+      order: [['createdAt', 'DESC']]
+    });
+    console.log('Fetched songs:', JSON.stringify(songs, null, 2));
+    return songs;
+  } catch (error) {
+    console.error('Error fetching songs:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('add-song', async (_event, songData) => {
+  try {
+    const song = await Song.create(songData);
+    return song;
+  } catch (error) {
+    console.error('Error adding song:', error);
+    throw error;
+  }
 });
 
 if (process.env.NODE_ENV === 'production') {
@@ -74,6 +121,7 @@ const createWindow = async () => {
     width: 1024,
     height: 728,
     icon: getAssetPath('icon.png'),
+    title: 'App (Database: Initializing...)',
     webPreferences: {
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
@@ -126,12 +174,33 @@ app.on('window-all-closed', () => {
 
 app
   .whenReady()
-  .then(() => {
+  .then(async () => {
+    try {
+      await initDatabase();
+      console.log('✨ Database system ready!');
+      if (mainWindow) {
+        mainWindow.setTitle('App (Database: Connected)');
+      }
+    } catch (error) {
+      console.error('💥 Failed to initialize database:', error);
+      if (mainWindow) {
+        mainWindow.setTitle('App (Database: Error)');
+      }
+    }
+    
     createWindow();
     app.on('activate', () => {
-      // On macOS it's common to re-create a window in the app when the
-      // dock icon is clicked and there are no other windows open.
       if (mainWindow === null) createWindow();
     });
   })
   .catch(console.log);
+
+app.on('before-quit', () => {
+  db.close((err) => {
+    if (err) {
+      console.error('Error closing database:', err);
+    } else {
+      console.log('Database connection closed');
+    }
+  });
+});

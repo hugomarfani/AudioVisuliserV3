@@ -22,6 +22,10 @@ const electronHandler = {
       ipcRenderer.once(channel, (_event, ...args) => func(...args));
     },
   },
+  database: {
+    fetchSongs: () => ipcRenderer.invoke('fetch-songs'),
+    addSong: (data: any) => ipcRenderer.invoke('add-song', data),
+  },
 };
 
 contextBridge.exposeInMainWorld('electron', electronHandler);

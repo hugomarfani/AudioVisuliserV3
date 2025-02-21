@@ -4,7 +4,8 @@ import SongCard from './SongCard';
 import { songs } from './SongData';
 import colors from '../../theme/colors';
 import axios from 'axios';
-import { FaMusic } from 'react-icons/fa'; // Import music notes icon
+import { FaMusic, FaDatabase } from 'react-icons/fa'; // Import music notes icon
+import Database from '../Database/Database'; // Import Database component
 import Library from '../Library/Library'; // Import Library component
 
 interface SongSelectorProps {
@@ -21,6 +22,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken 
   const [filter, setFilter] = useState<'Blue' | 'Green' | 'Yellow' | 'Red'>('Green');
   const [devices, setDevices] = useState<Device[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
+  const [isDatabaseOpen, setIsDatabaseOpen] = useState(false); // State to manage database popup
   const [isLibraryOpen, setIsLibraryOpen] = useState(false); // State to manage library popup
 
   useEffect(() => {
@@ -54,6 +56,31 @@ const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken 
         position: 'relative', // Add position relative for absolute positioning of the button
       }}
     >
+      {/* Database Button */}
+      <button
+        style={{
+          position: 'absolute',
+          top: '1rem',
+          right: '7rem',
+          backgroundColor: colors.grey2,
+          color: colors.white,
+          border: 'none',
+          borderRadius: '9999px', // Change to pill shape
+          padding: '0.5rem 1rem', // Adjust padding for pill shape
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+        onClick={() => setIsDatabaseOpen(true)} // Open library popup on click
+      >
+        <FaDatabase />
+        <span style={{ marginLeft: '0.5rem' }}>Database</span>
+      </button>
+
+      {/* Database Popup */}
+      {isDatabaseOpen && <Database onClose={() => setIsDatabaseOpen(false)} />} {/* Render Database component when isDatabaseOpen
+      
       {/* Library Button */}
       <button
         style={{
