@@ -81,7 +81,9 @@ std::string backgroundExtractionPrompt =
 std::string imageSetup =
     "Create a detailed prompt to be passed to a text to image generation model "
     "to generate an image of the song. There is no need to add more settings, "
-    "only the prompt is required.";
+    "only the prompt is required. The prompt should be in a text format and "
+    "have no markdown or HTML tags. The prompt should be detailed and "
+    "specific, with each detail separated by a comma.";
 
 std::string imageSettings =
     ". The prompt should include the following settings:";
