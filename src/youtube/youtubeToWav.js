@@ -82,4 +82,26 @@ const downloadYoutubeAudio = async (url) => {
   }
 };
 
-module.exports = { downloadYoutubeAudio };
+const getYoutubeMetadata = async (url) => {
+  try {
+    const metadata = await ytdlp(url, {
+      dumpSingleJson: true,
+      noCheckCertificates: true,
+      preferFreeFormats: true,
+      verbose: true,
+    });
+
+    const title = metadata.title;
+    const artist = metadata.uploader;
+
+    console.log('Title:', title);
+    console.log('Artist:', artist);
+
+    return { title, artist };
+  } catch (error) {
+    console.error('Error fetching metadata:', error);
+    throw error;
+  }
+};
+
+module.exports = { downloadYoutubeAudio, getYoutubeMetadata };
