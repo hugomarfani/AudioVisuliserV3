@@ -27,7 +27,7 @@ interface SongModel
   objects_prompts: string[];
   particles: string[];
   backgrounds: string[];
-  background_prompts: string;
+  background_prompts: string[];
   createdAt: CreationOptional<Date>;
   updatedAt: CreationOptional<Date>;
 }
@@ -91,7 +91,7 @@ const Song = sequelize.define<SongModel>('Song', {
     defaultValue: [],
   },
   background_prompts: {
-    type: DataTypes.STRING,
+    type: DataTypes.JSON,
     allowNull: true,
     defaultValue: [],
   },
@@ -124,7 +124,7 @@ const saveSongAsJson = async (song: SongModel) => {
     objects_prompts: song.objects_prompts,
     particles: song.particles,
     backgrounds: song.backgrounds,
-    background_reason: song.background_reason,
+    background_prompts: song.background_prompts,
     createdAt: song.createdAt,
     updatedAt: song.updatedAt,
   };

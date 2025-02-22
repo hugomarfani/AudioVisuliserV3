@@ -121,8 +121,10 @@ ipcMain.handle('download-wav', async (_, url) => {
       objects_prompts: [],
       backgrounds: [],
       background_prompts: [],
+      particles: [],
     });
     saveSongAsJson(song);
+    console.log('Song entry created:', song);
     return id;
   } catch (error) {
     console.error('Error in download-wav handler:', error);
