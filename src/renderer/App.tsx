@@ -1,22 +1,22 @@
-import { MemoryRouter as Router, Routes, Route } from "react-router-dom";
-import { useEffect, useState } from "react";
-import icon from "../../assets/icon.svg";
-import "./App.css";
-import MeshGradientBackground from "../components/Backgrounds/MeshGradientBackground";
-import SongSelector from "../components/SongSelector/SongSelector";
-import SpotifyApp from "../components/Spotify/SpotifyApp";
-import Player from "../components/SongPlayer/Player";
-import Login from "../components/Spotify/auth/Login"; // Assuming you have a Login component
-import frozenLetItGo from "../../assets/audio/frozen_let_it_go.mp3";
+import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import icon from '../../assets/icon.svg';
+import './App.css';
+import MeshGradientBackground from '../components/Backgrounds/MeshGradientBackground';
+import SongSelector from '../components/SongSelector/SongSelector';
+import SpotifyApp from '../components/Spotify/SpotifyApp';
+import Player from '../components/SongPlayer/Player';
+import Login from '../components/Spotify/auth/Login'; // Assuming you have a Login component
+import frozenLetItGo from '../../assets/audio/frozen_let_it_go.mp3';
 
 // eslint-disable-next-line react/function-component-definition
 const App: React.FC = () => {
-  const [accessToken, setAccessToken] = useState<string>("");
+  const [accessToken, setAccessToken] = useState<string>('');
   const [selectedTrackURI, setSelectedTrackURI] = useState<string | null>(null);
 
   useEffect(() => {
     async function getToken() {
-      const response = await fetch("http://localhost:5001/auth/token");
+      const response = await fetch('http://localhost:5001/auth/token');
       const json = await response.json();
       setAccessToken(json.access_token);
     }
@@ -55,34 +55,34 @@ const App: React.FC = () => {
   //     }
   //   };
 
-  return (
-    <div>
-      <div className="Hello">
-        <img width="200" alt="icon" src={icon} />
-      </div>
-      <h1>Group 1</h1>
-      {/* <div className="particle-container" id="particle-container">
-      </div> */}
-      <div className="converter-container">
-        <form onSubmit={handleConvert}>
-          <input
-            type="text"
-            value={youtubeUrl}
-            onChange={(e) => setYoutubeUrl(e.target.value)}
-            placeholder="Enter YouTube URL"
-            className="youtube-input"
-          />
-          <button type="submit" className="convert-button">
-            Convert to WAV
-          </button>
-        </form>
-        {status && <p className="status-message">{status}</p>}
-      </div>
-    </div>
-  );
-};
+  //   return (
+  //     <div>
+  //       <div className="Hello">
+  //         <img width="200" alt="icon" src={icon} />
+  //       </div>
+  //       <h1>Group 1</h1>
+  //       {/* <div className="particle-container" id="particle-container">
+  //       </div> */}
+  //       <div className="converter-container">
+  //         <form onSubmit={handleConvert}>
+  //           <input
+  //             type="text"
+  //             value={youtubeUrl}
+  //             onChange={(e) => setYoutubeUrl(e.target.value)}
+  //             placeholder="Enter YouTube URL"
+  //             className="youtube-input"
+  //           />
+  //           <button type="submit" className="convert-button">
+  //             Convert to WAV
+  //           </button>
+  //         </form>
+  //         {status && <p className="status-message">{status}</p>}
+  //       </div>
+  //     </div>
+  //   );
+  // };
 
-export default function App() {
+  // export default function App() {
   return (
     <Router>
       <Routes>
@@ -90,14 +90,14 @@ export default function App() {
           path="/"
           element={
             <MeshGradientBackground>
-              {accessToken === "123" ? (
+              {accessToken === '123' ? (
                 <Login />
               ) : (
                 <div
                   style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
                   }}
                 >
                   <SongSelector
@@ -106,10 +106,10 @@ export default function App() {
                   />
                   <Player
                     track={{
-                      title: "Let It Go",
-                      artist: "Idina Menzel",
+                      title: 'Let It Go',
+                      artist: 'Idina Menzel',
                       albumArt:
-                        "https://cdn-images.dzcdn.net/images/cover/f669aa7623ad8af5fbeb5a196346013a/500x500.jpg",
+                        'https://cdn-images.dzcdn.net/images/cover/f669aa7623ad8af5fbeb5a196346013a/500x500.jpg',
                       audioSrc: frozenLetItGo, // Use the imported MP3 file
                     }}
                   />
@@ -121,6 +121,6 @@ export default function App() {
       </Routes>
     </Router>
   );
-}
+};
 
 export default App;
