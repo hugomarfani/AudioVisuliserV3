@@ -11,3 +11,12 @@ window.electron.ipcRenderer.once('ipc-example', (arg) => {
   console.log(arg);
 });
 window.electron.ipcRenderer.sendMessage('ipc-example', ['ping']);
+
+window.electron.ipcRenderer.on('run-gemma-test', () => {
+  console.log('Gemma text triggered from menu!');
+  window.electron.ipcRenderer.runGemmaTest();
+});
+
+window.electron.ipcRenderer.on('run-gemma-test-reply', (response) => {
+  console.log('Gemma test response:', response);
+});

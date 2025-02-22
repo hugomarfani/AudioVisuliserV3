@@ -10,3 +10,4 @@
 *.ttf   binary
 *.woff  binary
 *.woff2 binary
+*.bin filter=lfs diff=lfs merge=lfs -text
