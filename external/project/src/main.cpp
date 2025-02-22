@@ -106,16 +106,13 @@ std::string stableDiffusionModelPath =
 // using whisper path again after this so needs to be filesystem::path
 std::filesystem::path whisperModelPath =
     (currentDirectory / "AiResources" / "distil-whisper-large-v3-int8-ov");
-std::string outputFilePath =
-    (currentDirectory / "AiResources" / "output.json").string();
+std::filesystem::path songDataPath = (currentDirectory / "assets" / "songData");
 std::string particleListFilePath =
-    (currentDirectory / "AiResources" / "particleList.json").string();
-std::string logPath = (currentDirectory / "AiResources" / "log.txt").string();
-std::filesystem::path lyricsDirPath =
-    (currentDirectory / "AiResources" / "lyrics");
-std::filesystem::path wavDirPath = (currentDirectory / "AiResources" / "wav");
-std::filesystem::path imageDirPath =
-    (currentDirectory / "AiResources" / "images");
+    (currentDirectory / "assets" / "particleList.json").string();
+std::string logPath = (currentDirectory / "assets" / "aiLog.txt").string();
+std::filesystem::path lyricsDirPath = (currentDirectory / "assets" / "lyrics");
+std::filesystem::path wavDirPath = (currentDirectory / "assets" / "audio");
+std::filesystem::path imageDirPath = (currentDirectory / "assets" / "images");
 
 // ----------------- Temp ONNX Paths -----------------
 // std::filesystem::path sdPath =
@@ -296,6 +293,7 @@ class LLM {
   const std::string lyrics;
   const bool debug;
   std::string lyricsSetup;
+  std::string outputFilePath;
 
   std::unordered_map<LLMOutputType, std::vector<std::string>> outputMap;
 
@@ -326,12 +324,15 @@ class LLM {
         pipe(llmModelPath, device),
         songName(songName),
         lyrics(getLyrics(songName)),
-        debug(debug) {
+        debug(debug),
+        outputFilePath((songDataPath / (songName + ".json")).string()) {
     std::cout << "LLM Pipeline initialised with the following settings: "
               << std::endl;
     std::cout << "Model Path: " << llmModelPath << std::endl;
     std::cout << "Device: " << device << std::endl;
     std::cout << "Song Name: " << songName << std::endl;
+    std::cout << "Lyrics: " << lyrics << std::endl;
+    std::cout << "Output File Path: " << outputFilePath << std::endl;
     lyricsSetup = lyricsPrompt + " " + songName + "\n" + lyrics;
     outputMap = std::unordered_map<LLMOutputType, std::vector<std::string>>();
     retrieveCurrentOutput();

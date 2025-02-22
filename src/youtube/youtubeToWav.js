@@ -6,14 +6,14 @@ const { app } = require('electron');
 
 const ffmpegPath = path.join(
   app.getAppPath(),
-  'external',
+  'assets',
   'ffmpeg',
   'bin',
   'ffmpeg.exe',
 );
 const ffprobePath = path.join(
   app.getAppPath(),
-  'external',
+  'assets',
   'ffmpeg',
   'bin',
   'ffprobe.exe',
@@ -32,7 +32,7 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 ffmpeg.setFfprobePath(ffprobePath);
 
 const downloadYoutubeAudio = async (url) => {
-  const downloadsPath = path.join(app.getAppPath(), 'AiResources', 'wav');
+  const downloadsPath = path.join(app.getAppPath(), 'assets', 'audio');
 
   if (!fs.existsSync(downloadsPath)) {
     fs.mkdirSync(downloadsPath, { recursive: true });

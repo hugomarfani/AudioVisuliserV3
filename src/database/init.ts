@@ -1,7 +1,7 @@
 import { db, dbAsync, sequelize } from './config';
 import fs from 'fs';
 import path from 'path';
-import Song from './models/Song';
+import { Song } from './models/Song';
 import { app } from 'electron';
 
 // const sampleSongs = [
