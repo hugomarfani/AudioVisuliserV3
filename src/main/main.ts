@@ -20,9 +20,13 @@ import { db } from '../database/config';
 import Song from '../database/models/Song';
 import axios from 'axios';
 import https from 'https';
+import bonjour from 'bonjour';
+import net from 'net';
+import { v3, LightState } from 'node-hue-api';
 
-const HUE_BRIDGE_IP = process.env.HUE_BRIDGE_IP || '192.168.1.37'; // change to your actual IP
-const HUE_USERNAME = process.env.HUE_USERNAME || '-nUQmRphqf5UBxZswMQIqiUH912baNXN9fhtAYc8';
+// Change these to mutable variables so they can be updated
+let currentHueBridgeIP = process.env.HUE_BRIDGE_IP || ''; // default IP
+let currentHueUsername = process.env.HUE_USERNAME || '';
 
 // Create an HTTPS agent that ignores invalid certificates
 const httpsAgent = new https.Agent({ rejectUnauthorized: false });
@@ -91,12 +95,12 @@ ipcMain.handle('add-song', async (_event, songData) => {
 
 // Updated Handler to turn on a specified light by ID
 ipcMain.handle('hue:turnOn', async (_event, lightId: string) => {
-  const url = `https://${HUE_BRIDGE_IP}/clip/v2/resource/light/${lightId}`;
+  const url = `https://${currentHueBridgeIP}/clip/v2/resource/light/${lightId}`;
   try {
     const response = await axios.put(url, {
       on: { on: true }
     }, {
-      headers: { 'hue-application-key': HUE_USERNAME },
+      headers: { 'hue-application-key': currentHueUsername },
       httpsAgent, // use custom agent
     });
     console.log(`Turned on light ${lightId}:`, response.data);
@@ -109,12 +113,12 @@ ipcMain.handle('hue:turnOn', async (_event, lightId: string) => {
 
 // Updated Handler to turn off a specified light by ID
 ipcMain.handle('hue:turnOff', async (_event, lightId: string) => {
-  const url = `https://${HUE_BRIDGE_IP}/clip/v2/resource/light/${lightId}`;
+  const url = `https://${currentHueBridgeIP}/clip/v2/resource/light/${lightId}`;
   try {
     const response = await axios.put(url, {
       on: { on: false }
     }, {
-      headers: { 'hue-application-key': HUE_USERNAME },
+      headers: { 'hue-application-key': currentHueUsername },
       httpsAgent, // use custom agent
     });
     console.log(`Turned off light ${lightId}:`, response.data);
@@ -127,8 +131,8 @@ ipcMain.handle('hue:turnOff', async (_event, lightId: string) => {
 
 // Function to get light RIDs from Hue devices
 async function getLightRids(): Promise<string[]> {
-  const url = `https://${HUE_BRIDGE_IP}/clip/v2/resource/device`;
-  const response = await axios.get(url, { headers: { 'hue-application-key': HUE_USERNAME }, httpsAgent });
+  const url = `https://${currentHueBridgeIP}/clip/v2/resource/device`;
+  const response = await axios.get(url, { headers: { 'hue-application-key': currentHueUsername }, httpsAgent });
   const lightRids: string[] = [];
   for (const device of response.data.data) {
     // Check each service for rtype "light"
@@ -149,6 +153,106 @@ ipcMain.handle('hue:getLightRids', async () => {
     return rids;
   } catch (error) {
     console.error('Error retrieving light RIDs:', error);
+    throw error;
+  }
+});
+
+// Function to get an authorization key by calling /api on the bridge
+async function getAuthorizationKey(bridgeIp: string): Promise<string> {
+  // Post a devicetype; user must press the link button on the bridge first
+  const url = `http://${bridgeIp}/api`;
+  const payload = { devicetype: 'my_hue_app#electron' };
+  const response = await axios.post(url, payload);
+  // Expecting a response array, e.g. [{ success: { username: "newusername" } }]
+  const result = response.data;
+  if (Array.isArray(result) && result[0]?.success?.username) {
+    return result[0].success.username;
+  }
+  throw new Error('Failed to obtain authorization key from the Hue Bridge.');
+}
+
+// mDNS discovery for Hue Bridge
+async function discoverBridge(): Promise<string | null> {
+  return new Promise((resolve) => {
+    const b = bonjour();
+    console.log('Starting bonjour discovery for service type: _hue._tcp');
+
+    // Start looking for _hue._tcp services
+    const browser = b.find({ type: '_hue._tcp' });
+
+    let found = false;
+
+    // When a service goes "up", it has been discovered
+    browser.on('up', (service) => {
+      console.log('Service found:', service);
+
+      // We can look for an IPv4 address explicitly
+      if (service.addresses && service.addresses.length > 0) {
+        const ipv4 = service.addresses.find((addr) => net.isIPv4(addr));
+        if (ipv4) {
+          console.log('Using IPv4 address:', ipv4);
+          found = true;
+          browser.stop();
+          b.destroy();
+          resolve(ipv4);
+        }
+      }
+    });
+
+    // Fallback if no service is discovered within 10 seconds
+    setTimeout(() => {
+      if (!found) {
+        console.warn('Timeout reached, no bridge discovered');
+        browser.stop();
+        b.destroy();
+        resolve(null);
+      }
+    }, 10000);
+  });
+}
+
+// Updated helper function to get a connected Hue API instance with extra logging
+async function getHueApi() {
+  // Discover bridges using nupnpSearch
+  const discoveredBridges = await v3.discovery.nupnpSearch();
+  if (discoveredBridges.length === 0) {
+    throw new Error('No Hue Bridge found');
+  }
+  // Log the entire discoveredBridges object and the mapped IP addresses
+  console.log("Discovered Bridges:", discoveredBridges);
+  console.log("Discovered Bridge IPs:", discoveredBridges.map(bridge => bridge.ipaddress));
+
+  const errors: string[] = [];
+  for (const bridge of discoveredBridges) {
+    try {
+      currentHueBridgeIP = bridge.ipaddress;
+      let api;
+      // If no username set, create one
+      if (!currentHueUsername) {
+        api = await v3.api.createLocal(currentHueBridgeIP).connect();
+        const createdUser = await api.users.createUser('my_hue_app', 'electron');
+        currentHueUsername = createdUser.username;
+      }
+      // Connect using the username
+      api = await v3.api.createLocal(currentHueBridgeIP).connect(currentHueUsername);
+      // Test the connection (e.g. get configuration)
+      await api.configuration.getConfiguration();
+      return api;
+    } catch (err: any) {
+      errors.push(`Bridge ${bridge.ipaddress}: ${err.message}`);
+    }
+  }
+  throw new Error(`All discovered bridges failed: ${errors.join(', ')}`);
+}
+
+ipcMain.handle('hue:discoverBridge', async () => {
+  try {
+    // Use the getHueApi function to perform discovery and connection
+    const api = await getHueApi();
+    console.log('getHueApi successfully connected. Bridge IP:', currentHueBridgeIP);
+    return currentHueBridgeIP;
+  } catch (error) {
+    console.error('Error in hue:discoverBridge via getHueApi:', error);
     throw error;
   }
 });

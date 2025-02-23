@@ -40,6 +40,27 @@ const configuration: webpack.Configuration = {
     'sqlite3': 'commonjs sqlite3',
   },
 
+  resolve: {
+    extensions: ['.js', '.ts', '.tsx', '.mjs'] // added '.mjs'
+  },
+
+  module: {
+    rules: [
+      {
+        test: /\.mjs$/,
+        include: /node_modules/,
+        type: 'javascript/auto'
+      },
+      {
+        test: /\.js$/,
+        include: /node_modules[\\\/]node-hue-api[\\\/]dist[\\\/]esm/,
+        resolve: {
+          fullySpecified: false
+        }
+      }
+    ]
+  },
+
   plugins: [
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
