@@ -18,6 +18,14 @@ import initDatabase from '../database/init';
 import { UserDB } from '../database/models/User';
 import { db } from '../database/config';
 import Song from '../database/models/Song';
+import axios from 'axios';
+import https from 'https';
+
+const HUE_BRIDGE_IP = process.env.HUE_BRIDGE_IP || '192.168.1.37'; // change to your actual IP
+const HUE_USERNAME = process.env.HUE_USERNAME || '-nUQmRphqf5UBxZswMQIqiUH912baNXN9fhtAYc8';
+
+// Create an HTTPS agent that ignores invalid certificates
+const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 class AppUpdater {
   constructor() {
@@ -74,6 +82,73 @@ ipcMain.handle('add-song', async (_event, songData) => {
     return song;
   } catch (error) {
     console.error('Error adding song:', error);
+    throw error;
+  }
+});
+
+
+// Phillips Hue Controls
+
+// Updated Handler to turn on a specified light by ID
+ipcMain.handle('hue:turnOn', async (_event, lightId: string) => {
+  const url = `https://${HUE_BRIDGE_IP}/clip/v2/resource/light/${lightId}`;
+  try {
+    const response = await axios.put(url, {
+      on: { on: true }
+    }, {
+      headers: { 'hue-application-key': HUE_USERNAME },
+      httpsAgent, // use custom agent
+    });
+    console.log(`Turned on light ${lightId}:`, response.data);
+    return response.data;
+  } catch (error) {
+    console.error(`Error turning on light ${lightId}:`, error);
+    throw error;
+  }
+});
+
+// Updated Handler to turn off a specified light by ID
+ipcMain.handle('hue:turnOff', async (_event, lightId: string) => {
+  const url = `https://${HUE_BRIDGE_IP}/clip/v2/resource/light/${lightId}`;
+  try {
+    const response = await axios.put(url, {
+      on: { on: false }
+    }, {
+      headers: { 'hue-application-key': HUE_USERNAME },
+      httpsAgent, // use custom agent
+    });
+    console.log(`Turned off light ${lightId}:`, response.data);
+    return response.data;
+  } catch (error) {
+    console.error(`Error turning off light ${lightId}:`, error);
+    throw error;
+  }
+});
+
+// Function to get light RIDs from Hue devices
+async function getLightRids(): Promise<string[]> {
+  const url = `https://${HUE_BRIDGE_IP}/clip/v2/resource/device`;
+  const response = await axios.get(url, { headers: { 'hue-application-key': HUE_USERNAME }, httpsAgent });
+  const lightRids: string[] = [];
+  for (const device of response.data.data) {
+    // Check each service for rtype "light"
+    for (const service of device.services) {
+      if (service.rtype === 'light') {
+        lightRids.push(service.rid);
+      }
+    }
+  }
+  return lightRids;
+}
+
+// IPC handler to retrieve light RIDs
+ipcMain.handle('hue:getLightRids', async () => {
+  try {
+    const rids = await getLightRids();
+    console.log('Light RIDs:', rids);
+    return rids;
+  } catch (error) {
+    console.error('Error retrieving light RIDs:', error);
     throw error;
   }
 });
@@ -187,7 +262,7 @@ app
         mainWindow.setTitle('App (Database: Error)');
       }
     }
-    
+
     createWindow();
     app.on('activate', () => {
       if (mainWindow === null) createWindow();
