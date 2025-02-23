@@ -62,16 +62,6 @@ const HueControlPanel: React.FC = () => {
     fetchLights();
   }, [fetchLights]);
 
-  // Convert Hue brightness (0-254) to percentage (0-100)
-  const hueBrightnessToPercent = (brightness: number): number => {
-    return Math.round((brightness / 254) * 100);
-  };
-
-  // Convert percentage (0-100) to Hue brightness (0-254)
-  const percentToHueBrightness = (percent: number): number => {
-    return Math.round((percent / 100) * 254);
-  };
-
   // Process updates sequentially
   const processUpdateQueue = useCallback(async () => {
     if (isProcessing.current) return;
@@ -115,7 +105,7 @@ const HueControlPanel: React.FC = () => {
         try {
           await window.electron.ipcRenderer.invoke('hue:setLightState', {
             lightId: id,
-            brightness: percentToHueBrightness(newState.brightness as number)
+            brightness: newState.brightness // Use value directly, no conversion
           });
           // Only fetch lights after successful brightness update
           setTimeout(fetchLights, 100);
@@ -145,7 +135,7 @@ const HueControlPanel: React.FC = () => {
     };
 
     queueUpdate(update);
-  }, [fetchLights, queueUpdate, percentToHueBrightness]);
+  }, [fetchLights, queueUpdate]);
 
   return (
     <Box sx={{ p: 2 }}>
@@ -167,12 +157,12 @@ const HueControlPanel: React.FC = () => {
             Turn {light.on ? 'Off' : 'On'}
           </Button>
           <Typography variant="body2">
-            Brightness: {localBrightness[light.id] ?? hueBrightnessToPercent(light.brightness)}%
+            Brightness: {localBrightness[light.id] ?? light.brightness}
           </Typography>
           <Slider
-            value={localBrightness[light.id] ?? hueBrightnessToPercent(light.brightness)}
+            value={localBrightness[light.id] ?? light.brightness}
             min={0}
-            max={100}
+            max={254}
             onChange={(_, value) => updateLight(light.id, { brightness: value as number })}
             sx={{ mb: 1 }}
           />
