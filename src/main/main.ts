@@ -22,7 +22,8 @@ import axios from 'axios';
 import https from 'https';
 import bonjour from 'bonjour';
 import net from 'net';
-import { v3, LightState } from 'node-hue-api';
+import * as hueApi from 'node-hue-api'; // Import entire module
+const { v3 } = hueApi; // Extract v3
 
 // Change these to mutable variables so they can be updated
 let currentHueBridgeIP = process.env.HUE_BRIDGE_IP || ''; // default IP
@@ -129,26 +130,50 @@ ipcMain.handle('hue:turnOff', async (_event, lightId: string) => {
   }
 });
 
-// Function to get light RIDs from Hue devices
+// Update the getLightRids function to use CLIP v2 API
 async function getLightRids(): Promise<string[]> {
-  const url = `https://${currentHueBridgeIP}/clip/v2/resource/device`;
-  const response = await axios.get(url, { headers: { 'hue-application-key': currentHueUsername }, httpsAgent });
-  const lightRids: string[] = [];
-  for (const device of response.data.data) {
-    // Check each service for rtype "light"
-    for (const service of device.services) {
-      if (service.rtype === 'light') {
-        lightRids.push(service.rid);
-      }
-    }
+  try {
+    // Use CLIP v2 API to get lights
+    const response = await axios.get(`https://${currentHueBridgeIP}/clip/v2/resource/light`, {
+      headers: {
+        'hue-application-key': currentHueUsername
+      },
+      httpsAgent
+    });
+
+    // Extract the UUIDs from the response
+    const lights = response.data.data || [];
+    return lights.map((light: any) => light.id);
+  } catch (error) {
+    console.error('Error getting light RIDs:', error);
+    throw error;
   }
-  return lightRids;
+}
+
+// Add a function to validate credentials
+async function validateStoredCredentials(): Promise<boolean> {
+  if (!currentHueBridgeIP || !currentHueUsername) return false;
+
+  try {
+    const api = await v3.api.createLocal(currentHueBridgeIP).connect(currentHueUsername);
+    await api.configuration.getConfiguration();
+    return true;
+  } catch (error) {
+    console.error('Stored credentials validation failed:', error);
+    return false;
+  }
 }
 
 // IPC handler to retrieve light RIDs
 ipcMain.handle('hue:getLightRids', async () => {
+  if (!await validateStoredCredentials()) {
+    throw new Error('No valid credentials');
+  }
+
   try {
-    const rids = await getLightRids();
+    const api = await v3.api.createLocal(currentHueBridgeIP).connect(currentHueUsername);
+    const lights = await api.lights.getAll();
+    const rids = lights.map(light => light.id);
     console.log('Light RIDs:', rids);
     return rids;
   } catch (error) {
@@ -211,8 +236,20 @@ async function discoverBridge(): Promise<string | null> {
   });
 }
 
-// Updated helper function to get a connected Hue API instance with extra logging
+// Updated helper function to get a connected Hue API instance
 async function getHueApi() {
+  if (currentHueBridgeIP && currentHueUsername) {
+    try {
+      const api = await v3.api.createLocal(currentHueBridgeIP).connect(currentHueUsername);
+      await api.configuration.getConfiguration();
+      return api;
+    } catch (error) {
+      // If stored credentials fail, fall through to discovery
+      console.error('Stored credentials failed:', error);
+    }
+  }
+
+  // Only perform discovery if we don't have working credentials
   const discoveredBridges = await v3.discovery.nupnpSearch();
   if (discoveredBridges.length === 0) {
     throw new Error('No Hue Bridge found');
@@ -244,14 +281,21 @@ async function getHueApi() {
   throw new Error(`All discovered bridges failed: ${errors.join(', ')}`);
 }
 
+// Update the discover bridge handler to check credentials first
 ipcMain.handle('hue:discoverBridge', async () => {
+  // If we have valid credentials, return the current IP without discovery
+  if (await validateStoredCredentials()) {
+    console.log('Using existing credentials, skipping discovery');
+    return currentHueBridgeIP;
+  }
+
+  // Only perform discovery if validation failed
   try {
-    // Use the getHueApi function to perform discovery and connection
     const api = await getHueApi();
-    console.log('getHueApi successfully connected. Bridge IP:', currentHueBridgeIP);
+    console.log('New bridge discovered and connected. Bridge IP:', currentHueBridgeIP);
     return currentHueBridgeIP;
   } catch (error) {
-    console.error('Error in hue:discoverBridge via getHueApi:', error);
+    console.error('Error in hue:discoverBridge:', error);
     throw error;
   }
 });
@@ -270,6 +314,86 @@ ipcMain.handle('hue:setManualBridge', async (_event, manualIp: string) => {
     return { ip: currentHueBridgeIP, username: currentHueUsername };
   } catch (error) {
     console.error('Error setting manual bridge IP:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('hue:setCredentials', async (_, credentials: { ip: string; username: string }) => {
+  try {
+    currentHueBridgeIP = credentials.ip;
+    currentHueUsername = credentials.username;
+
+    // Validate the credentials immediately
+    const isValid = await validateStoredCredentials();
+    if (!isValid) {
+      // If validation fails, clear the credentials
+      currentHueBridgeIP = '';
+      currentHueUsername = '';
+      throw new Error('Invalid credentials');
+    }
+
+    console.log('Credentials set successfully:', { ip: currentHueBridgeIP, username: currentHueUsername });
+    return true;
+  } catch (error) {
+    console.error('Error setting credentials:', error);
+    throw error;
+  }
+});
+
+// Updated IPC handler to get light details using the CLIP v2 API
+ipcMain.handle('hue:getLightDetails', async () => {
+  try {
+    const response = await axios.get(`https://${currentHueBridgeIP}/clip/v2/resource/light`, {
+      headers: { 'hue-application-key': currentHueUsername },
+      httpsAgent,
+      // Add timeout and max retries
+      timeout: 5000,
+      maxRedirects: 0
+    });
+
+    const lights = response.data.data || [];
+    return lights.map((light: any) => ({
+      id: light.id,
+      name: light.metadata?.name || 'Unknown',
+      on: light.on?.on || false,
+      brightness: light.dimming?.brightness || 0,
+      xy: (light.color && light.color.xy) ? light.color.xy : [0, 0]
+    }));
+  } catch (error: any) {
+    // Handle rate limiting explicitly
+    if (error.response?.status === 429) {
+      throw new Error('Rate limit reached. Please wait a few seconds before trying again.');
+    }
+    console.error('Error getting light details:', error);
+    throw error;
+  }
+});
+
+// New IPC handler to set light state using CLIP v2 API directly
+ipcMain.handle('hue:setLightState', async (_event, { lightId, on, brightness, xy }: { lightId: string, on?: boolean, brightness?: number, xy?: number[] }) => {
+  try {
+    const url = `https://${currentHueBridgeIP}/clip/v2/resource/light/${lightId}`;
+    const state: any = {};
+
+    if (on !== undefined) {
+      state.on = { on };
+    }
+    if (brightness !== undefined) {
+      state.dimming = { brightness };
+    }
+    if (xy && xy.length === 2) {
+      state.color = { xy };
+    }
+
+    const response = await axios.put(url, state, {
+      headers: { 'hue-application-key': currentHueUsername },
+      httpsAgent
+    });
+
+    console.log(`Updated light ${lightId} with state:`, response.data);
+    return response.data;
+  } catch (error) {
+    console.error(`Error setting state for light ${lightId}:`, error);
     throw error;
   }
 });
