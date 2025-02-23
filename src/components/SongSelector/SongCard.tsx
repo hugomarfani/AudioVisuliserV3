@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FaInfoCircle } from 'react-icons/fa';
 import colors from '../../theme/colors';
 import { SongModel } from '../../database/models/Song';
+import { useNavigate } from 'react-router-dom';
 
 type SongCardProps = {
   uri: string;
@@ -25,9 +26,36 @@ function SongCard({
   onSelect,
   onDetailsClick,
 }: SongCardProps): JSX.Element {
+  const navigate = useNavigate();
+  const [isHovered, setIsHovered] = useState(false);
+
   if (!songDetails) {
     return <div>Song not found</div>;
   }
+
+  const handleParticlesClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const songWithAudio = {
+      ...songDetails,
+      audioSrc: songDetails.audioSrc || '',
+    };
+    navigate(`/particles/${encodeURIComponent(uri)}`, { 
+      state: { songDetails: songWithAudio } 
+    });
+  };
+
+  const handleAidenClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const songWithAudio = {
+      ...songDetails,
+      audioSrc: songDetails.audioSrc || '',
+    };
+    navigate(`/aiden/${encodeURIComponent(uri)}`, { 
+      state: { songDetails: songWithAudio } 
+    });
+  };
 
   const handleDetailsClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -36,6 +64,8 @@ function SongCard({
 
   return (
     <div
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       onClick={() => onSelect(uri)}
       style={{
         display: 'flex',
@@ -113,6 +143,52 @@ function SongCard({
       >
         <FaInfoCircle size={16} />
       </button>
+      <div
+        style={{
+          position: 'absolute',
+          right: isHovered ? '0' : '-120px',
+          top: 0,
+          height: '100%',
+          width: '120px',
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-evenly',
+          transition: 'right 0.3s ease-in-out',
+          borderTopRightRadius: '24px',
+          borderBottomRightRadius: '24px',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          style={{
+            padding: '4px 8px',
+            backgroundColor: colors.blue,
+            color: 'white',
+            border: 'none',
+            borderRadius: '12px',
+            cursor: 'pointer',
+            fontSize: '0.75rem',
+          }}
+          onClick={handleParticlesClick}
+        >
+          Particles
+        </button>
+        <button
+          style={{
+            padding: '4px 8px',
+            backgroundColor: colors.green,
+            color: 'white',
+            border: 'none',
+            borderRadius: '12px',
+            cursor: 'pointer',
+            fontSize: '0.75rem',
+          }}
+          onClick={handleAidenClick}
+        >
+          Aiden
+        </button>
+      </div>
     </div>
   );
 }

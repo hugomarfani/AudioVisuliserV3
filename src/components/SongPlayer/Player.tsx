@@ -29,18 +29,26 @@ const Player: React.FC<PlayerProps> = ({ track }) => {
     };
 
     const handleError = (e: Event) => {
-      console.error('Failed to load audio source', e);
+      const audioElement = e.target as HTMLAudioElement;
+      console.error('Audio error:', {
+        error: audioElement.error,
+        src: audioElement.src,
+        readyState: audioElement.readyState,
+      });
       setIsPlaying(false);
     };
 
     audio.addEventListener('timeupdate', updateProgress);
     audio.addEventListener('error', handleError);
+    
+    // Log the audio source when it changes
+    console.log('Audio source:', track.audioSrc);
 
     return () => {
       audio.removeEventListener('timeupdate', updateProgress);
       audio.removeEventListener('error', handleError);
     };
-  }, []);
+  }, [track.audioSrc]);
 
   useEffect(() => {
     let animationFrame: number;
