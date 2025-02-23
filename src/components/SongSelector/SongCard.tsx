@@ -1,7 +1,6 @@
-import React, { JSX } from 'react';
+import React from 'react';
+import { FaInfoCircle } from 'react-icons/fa';
 import colors from '../../theme/colors';
-
-// type StatusColor = keyof typeof colors;
 import { SongModel } from '../../database/models/Song';
 
 type SongCardProps = {
@@ -10,6 +9,7 @@ type SongCardProps = {
   onSelect: (uri: string) => void;
   accessToken: string;
   selectedDevice: string | null;
+  onDetailsClick: (songID: string) => void;
 };
 
 const statusMap: Record<string, string> = {
@@ -19,10 +19,21 @@ const statusMap: Record<string, string> = {
   red: colors.red,
 };
 
-function SongCard({ uri, songDetails, onSelect }: SongCardProps): JSX.Element {
+function SongCard({
+  uri,
+  songDetails,
+  onSelect,
+  onDetailsClick,
+}: SongCardProps): JSX.Element {
   if (!songDetails) {
     return <div>Song not found</div>;
   }
+
+  const handleDetailsClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDetailsClick(uri);
+  };
+
   return (
     <div
       onClick={() => onSelect(uri)}
@@ -37,6 +48,7 @@ function SongCard({ uri, songDetails, onSelect }: SongCardProps): JSX.Element {
         margin: '0 auto 1rem',
         overflow: 'hidden',
         cursor: 'pointer',
+        position: 'relative',
       }}
     >
       <img
@@ -87,6 +99,20 @@ function SongCard({ uri, songDetails, onSelect }: SongCardProps): JSX.Element {
           }}
         />
       </div>
+      <button
+        onClick={handleDetailsClick}
+        style={{
+          position: 'absolute',
+          top: '0.5rem',
+          right: '0.5rem',
+          backgroundColor: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          color: colors.grey2,
+        }}
+      >
+        <FaInfoCircle size={16} />
+      </button>
     </div>
   );
 }

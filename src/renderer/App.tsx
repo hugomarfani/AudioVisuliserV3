@@ -9,6 +9,8 @@ import Player from '../components/SongPlayer/Player';
 import Login from '../components/Spotify/auth/Login'; // Assuming you have a Login component
 import frozenLetItGo from '../../assets/audio/frozen_let_it_go.mp3';
 import DYWBAS from '../../assets/audio/TeQ_TTyLGMs.wav';
+import SongDetails from '../components/SongDetails/SongDetails';
+import { Song } from '../database/models/Song';
 
 // eslint-disable-next-line react/function-component-definition
 const App: React.FC = () => {
@@ -82,6 +84,7 @@ const App: React.FC = () => {
             </MeshGradientBackground>
           }
         />
+        <Route path="/song-details/:id" element={<SongDetails />} />
       </Routes>
     </Router>
   );

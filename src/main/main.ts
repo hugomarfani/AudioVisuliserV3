@@ -161,6 +161,28 @@ ipcMain.handle('run-whisper', (event, songId) => {
   });
 });
 
+ipcMain.on('run-gemma', (event, songId: string) => {
+  console.log('Running Gemma with songId:', songId);
+  const process = spawn('powershell', [
+    '-ExecutionPolicy',
+    'Bypass',
+    '-Command',
+    `& { . '${ps1Path}'; & ${exePath} -l -s ${songId} --all; }`,
+  ]);
+  process.stdout.on('data', (data) => {
+    console.log(`📜 stdout: ${data.toString()}`);
+  });
+  process.stderr.on('data', (data) => {
+    console.error(`⚠️ stderr: ${data.toString()}`);
+    throw new Error(data.toString());
+  });
+  process.on('close', (code) => {
+    console.log(`✅ Process exited with code ${code}`);
+    event.reply('run-gemma-reply', `Process exited with code ${code}`);
+    return;
+  });
+});
+
 ipcMain.on('run-gemma-test', (event) => {
   console.log(`Running Gemma test with ${ps1Path} and ${exePath}`);
 
@@ -186,25 +208,6 @@ ipcMain.on('run-gemma-test', (event) => {
     console.log(`✅ Process exited with code ${code}`);
     event.reply('run-gemma-test-reply', `Process exited with code ${code}`);
   });
-
-  // // Run PowerShell and execute both commands in the same session
-  // const command = `powershell -ExecutionPolicy Bypass -NoExit -Command "& { . '${ps1Path}'; & '${exePath}' }"`;
-
-  // exec(command, (error, stdout, stderr) => {
-  //   if (error) {
-  //     console.error(`Error running script: ${error.message}`);
-  //     event.reply('run-gemma-test-reply', `Error: ${error.message}`);
-  //     return;
-  //   }
-  //   if (stderr) {
-  //     console.error(`PowerShell Stderr: ${stderr}`);
-  //     event.reply('run-gemma-test-reply', `Stderr: ${stderr}`);
-  //     return;
-  //   }
-
-  //   console.log(`PowerShell Output: ${stdout}`);
-  //   event.reply('run-gemma-test-reply', stdout);
-  // });
 });
 
 if (process.env.NODE_ENV === 'production') {

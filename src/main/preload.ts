@@ -8,7 +8,9 @@ export type Channels =
   | 'run-gemma-test-reply'
   | 'download-wav'
   | 'download-mp3'
-  | 'run-whisper';
+  | 'run-whisper'
+  | 'run-gemma'
+  | 'run-gemma-reply';
 
 const electronHandler = {
   ipcRenderer: {

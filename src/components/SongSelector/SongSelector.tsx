@@ -8,6 +8,7 @@ import axios from 'axios';
 import { FaMusic, FaDatabase, FaSync } from 'react-icons/fa'; // Import music notes icon
 import Database from '../Database/Database'; // Import Database component
 import Library from '../Library/Library'; // Import Library component
+import SongDetails from '../SongDetails/SongDetails'; // Import SongDetails component
 
 interface SongSelectorProps {
   onTrackSelect: (uri: string) => void;
@@ -31,6 +32,8 @@ const SongSelector: React.FC<SongSelectorProps> = ({
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isDatabaseOpen, setIsDatabaseOpen] = useState(false); // State to manage database popup
   const [isLibraryOpen, setIsLibraryOpen] = useState(false); // State to manage library popup
+  const [isSongDetailsOpen, setIsSongDetailsOpen] = useState(false); // State to manage song details popup
+  const [selectedSongId, setSelectedSongId] = useState<string | null>(null); // State to store selected song ID
   const { songs, loading, error, refetch } = useSongs();
 
   const toggleFilter = (color: 'Blue' | 'Green' | 'Yellow' | 'Red') => {
@@ -72,14 +75,19 @@ const SongSelector: React.FC<SongSelectorProps> = ({
       selectedFilters.includes(
         song.dataValues.status as 'Blue' | 'Green' | 'Yellow' | 'Red',
       );
-    console.log('Matches filter:', matchesFilter);
+    // console.log('Matches filter:', matchesFilter);
     const matchesSearch =
       searchTerm === '' ||
       song.dataValues.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       song.dataValues.uploader.toLowerCase().includes(searchTerm.toLowerCase());
-    console.log('Matches search:', matchesSearch);
+    // console.log('Matches search:', matchesSearch);
     return matchesFilter && matchesSearch;
   });
+
+  const handleSongDetailsOpen = (songId: string) => {
+    setSelectedSongId(songId);
+    setIsSongDetailsOpen(true);
+  };
 
   return (
     <div
@@ -143,7 +151,12 @@ const SongSelector: React.FC<SongSelectorProps> = ({
       </button>
       {/* Library Popup */}
       {isLibraryOpen && (
-        <Library onClose={() => setIsLibraryOpen(false)} />
+        <Library
+          onClose={() => {
+            setIsLibraryOpen(false);
+            refetch();
+          }}
+        />
       )}{' '}
       {/* Render Library component when isLibraryOpen is true */}
       {/* Reload Button */}
@@ -236,6 +249,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
               onSelect={onTrackSelect}
               accessToken={accessToken}
               selectedDevice={selectedDevice}
+              onDetailsClick={handleSongDetailsOpen} // Pass the handleSongDetailsOpen function
             />
           ))
         ) : (
@@ -251,6 +265,13 @@ const SongSelector: React.FC<SongSelectorProps> = ({
           </div>
         )}
       </div>
+      {/* Song Details Popup */}
+      {isSongDetailsOpen && selectedSongId && (
+        <SongDetails
+          onClose={() => setIsSongDetailsOpen(false)}
+          songId={selectedSongId}
+        />
+      )}
     </div>
   );
 };
