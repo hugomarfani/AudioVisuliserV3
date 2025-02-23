@@ -19,8 +19,10 @@ interface SongModel
   title: string;
   uploader: string;
   audioPath: string;
+  jacket: string;
   images: string[];
   moods: string[];
+  status: string;
   colours: string[];
   colours_reason: string[];
   objects: string[];
@@ -50,10 +52,20 @@ const Song = sequelize.define<SongModel>('Song', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  jacket: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: '',
+  },
   images: {
     type: DataTypes.JSON,
     allowNull: true,
     defaultValue: [],
+  },
+  status: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    defaultValue: 'Blue',
   },
   moods: {
     type: DataTypes.JSON,
@@ -116,8 +128,10 @@ const saveSongAsJson = async (song: SongModel) => {
     title: song.title,
     uploader: song.uploader,
     audioPath: song.audioPath,
+    jacket: song.jacket,
     images: song.images,
     moods: song.moods,
+    status: song.status,
     colours: song.colours,
     colours_reason: song.colours_reason,
     objects: song.objects,
@@ -139,4 +153,4 @@ const saveSongAsJson = async (song: SongModel) => {
   console.log(`Song saved as JSON file: ${filePath}`);
 };
 
-export { Song, saveSongAsJson };
+export { SongModel, Song, saveSongAsJson };

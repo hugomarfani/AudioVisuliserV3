@@ -50,7 +50,9 @@ const AddSongForm: React.FC<AddSongFormProps> = ({ onSubmit }) => {
         resultID,
       );
       console.log('Whisper result:', whisperResult);
-      setStatus('Successfully ran Whisper!');
+      setStatus('Running Whisper analysis...');
+      await whisperResult;
+      setStatus('Successfully analyzed with Whisper!');
       onSubmit({ url, prompt: selectedPrompt, moods: selectedMoods });
       setUrl('');
       setSelectedPrompt('');

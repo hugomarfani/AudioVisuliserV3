@@ -1,21 +1,28 @@
 import React, { JSX } from 'react';
 import colors from '../../theme/colors';
-import { songs } from './SongData';
+
+// type StatusColor = keyof typeof colors;
+import { SongModel } from '../../database/models/Song';
 
 type SongCardProps = {
   uri: string;
+  songDetails: SongModel;
   onSelect: (uri: string) => void;
   accessToken: string;
   selectedDevice: string | null;
 };
 
-function SongCard({ uri, onSelect }: SongCardProps): JSX.Element {
-  const songDetails = songs.find(song => song.id === uri);
+const statusMap: Record<string, string> = {
+  blue: colors.blue,
+  green: colors.green,
+  yellow: colors.yellow,
+  red: colors.red,
+};
 
+function SongCard({ uri, songDetails, onSelect }: SongCardProps): JSX.Element {
   if (!songDetails) {
     return <div>Song not found</div>;
   }
-
   return (
     <div
       onClick={() => onSelect(uri)}
@@ -33,7 +40,7 @@ function SongCard({ uri, onSelect }: SongCardProps): JSX.Element {
       }}
     >
       <img
-        src={songDetails.image}
+        src={songDetails.jacket}
         alt={songDetails.title}
         style={{
           borderRadius: '15px',
@@ -66,7 +73,7 @@ function SongCard({ uri, onSelect }: SongCardProps): JSX.Element {
             textOverflow: 'ellipsis',
           }}
         >
-          {songDetails.artist}
+          {songDetails.uploader}
         </p>
       </div>
       <div>
@@ -75,8 +82,8 @@ function SongCard({ uri, onSelect }: SongCardProps): JSX.Element {
             display: 'inline-block',
             width: '12px',
             height: '12px',
+            backgroundColor: statusMap[songDetails.status.toLowerCase()],
             borderRadius: '50%',
-            backgroundColor: colors[songDetails.status.toLowerCase()],
           }}
         />
       </div>

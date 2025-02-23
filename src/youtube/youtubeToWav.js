@@ -95,6 +95,7 @@ const getYoutubeMetadata = async (url) => {
 
     const title = metadata.title;
     const artist = metadata.uploader;
+    // console.log('Metadata:', metadata);
 
     console.log('Title:', title);
     console.log('Artist:', artist);

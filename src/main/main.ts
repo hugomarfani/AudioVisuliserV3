@@ -108,13 +108,21 @@ ipcMain.handle('download-wav', async (_, url) => {
       `Downloaded WAV with id: ${id}, title: ${title}, artist: ${artist}`,
     );
     // create song entry in database
+    // temporarily assign random status
+    const statuses = ['Blue', 'Yellow', 'Red', 'Green'];
+    const randomStatus: 'Blue' | 'Yellow' | 'Red' | 'Green' = statuses[
+      Math.floor(Math.random() * statuses.length)
+    ] as 'Blue' | 'Yellow' | 'Red' | 'Green';
+
     const song = await Song.create({
       id: id,
       title: title,
-      uploader: 'assets',
+      uploader: artist,
       audioPath: 'assets/' + id + '.wav',
+      jacket: 'assets/icon.png',
       images: [],
       moods: [],
+      status: randomStatus,
       colours: [],
       colours_reason: [],
       objects: [],

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import FilterButton from './FilterButton';
 import SongCard from './SongCard';
-import { songs } from './SongData';
+import { SongModel } from '../../database/models/Song'; // Import Song type
+import { useSongs } from '../../hooks/useSongs';
 import colors from '../../theme/colors';
 import axios from 'axios';
-import { FaMusic, FaDatabase } from 'react-icons/fa'; // Import music notes icon
+import { FaMusic, FaDatabase, FaSync } from 'react-icons/fa'; // Import music notes icon
 import Database from '../Database/Database'; // Import Database component
 import Library from '../Library/Library'; // Import Library component
 
@@ -18,18 +19,24 @@ interface Device {
   name: string;
 }
 
-const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken }) => {
-  const [selectedFilters, setSelectedFilters] = useState<Array<'Blue' | 'Green' | 'Yellow' | 'Red'>>([]);
+const SongSelector: React.FC<SongSelectorProps> = ({
+  onTrackSelect,
+  accessToken,
+}) => {
+  const [selectedFilters, setSelectedFilters] = useState<
+    Array<'Blue' | 'Green' | 'Yellow' | 'Red'>
+  >([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [devices, setDevices] = useState<Device[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isDatabaseOpen, setIsDatabaseOpen] = useState(false); // State to manage database popup
   const [isLibraryOpen, setIsLibraryOpen] = useState(false); // State to manage library popup
+  const { songs, loading, error, refetch } = useSongs();
 
   const toggleFilter = (color: 'Blue' | 'Green' | 'Yellow' | 'Red') => {
-    setSelectedFilters(prevFilters => {
+    setSelectedFilters((prevFilters) => {
       if (prevFilters.includes(color)) {
-        return prevFilters.filter(f => f !== color);
+        return prevFilters.filter((f) => f !== color);
       } else {
         return [...prevFilters, color];
       }
@@ -39,14 +46,17 @@ const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken 
   useEffect(() => {
     async function fetchDevices() {
       try {
-        const response = await axios.get("https://api.spotify.com/v1/me/player/devices", {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
+        const response = await axios.get(
+          'https://api.spotify.com/v1/me/player/devices',
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
           },
-        });
+        );
         setDevices(response.data.devices);
       } catch (error) {
-        console.error("Error fetching devices:", error);
+        console.error('Error fetching devices:', error);
       }
     }
 
@@ -57,10 +67,17 @@ const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken 
 
   // Filter songs based on both color filters and search term
   const filteredSongs = songs.filter((song) => {
-    const matchesFilter = selectedFilters.length === 0 || selectedFilters.includes(song.status);
-    const matchesSearch = searchTerm === '' || 
-      song.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      song.artist.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter =
+      selectedFilters.length === 0 ||
+      selectedFilters.includes(
+        song.dataValues.status as 'Blue' | 'Green' | 'Yellow' | 'Red',
+      );
+    console.log('Matches filter:', matchesFilter);
+    const matchesSearch =
+      searchTerm === '' ||
+      song.dataValues.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      song.dataValues.uploader.toLowerCase().includes(searchTerm.toLowerCase());
+    console.log('Matches search:', matchesSearch);
     return matchesFilter && matchesSearch;
   });
 
@@ -97,10 +114,12 @@ const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken 
         <FaDatabase />
         <span style={{ marginLeft: '0.5rem' }}>Database</span>
       </button>
-
       {/* Database Popup */}
-      {isDatabaseOpen && <Database onClose={() => setIsDatabaseOpen(false)} />} {/* Render Database component when isDatabaseOpen
-      
+      {isDatabaseOpen && (
+        <Database onClose={() => setIsDatabaseOpen(false)} />
+      )}{' '}
+      {/* Render Database component when isDatabaseOpen
+
       {/* Library Button */}
       <button
         style={{
@@ -122,10 +141,32 @@ const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken 
         <FaMusic />
         <span style={{ marginLeft: '0.5rem' }}>Library</span>
       </button>
-
       {/* Library Popup */}
-      {isLibraryOpen && <Library onClose={() => setIsLibraryOpen(false)} />} {/* Render Library component when isLibraryOpen is true */}
-
+      {isLibraryOpen && (
+        <Library onClose={() => setIsLibraryOpen(false)} />
+      )}{' '}
+      {/* Render Library component when isLibraryOpen is true */}
+      {/* Reload Button */}
+      <button
+        style={{
+          position: 'absolute',
+          top: '1rem',
+          right: '13rem',
+          backgroundColor: colors.grey2,
+          color: colors.white,
+          border: 'none',
+          borderRadius: '9999px', // Change to pill shape
+          padding: '0.5rem 1rem', // Adjust padding for pill shape
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+        onClick={refetch} // Call fetchSongs on click
+      >
+        <FaSync />
+        <span style={{ marginLeft: '0.5rem' }}>Reload</span>
+      </button>
       {/* Header with Search */}
       <div
         style={{
@@ -134,7 +175,9 @@ const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken 
           marginTop: 0, // Remove margin above
         }}
       >
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginTop: 0 }}>Welcome Back</h1>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginTop: 0 }}>
+          Welcome Back
+        </h1>
         <div style={{ position: 'relative' }}>
           <input
             type="text"
@@ -154,7 +197,6 @@ const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken 
           />
         </div>
       </div>
-
       {/* Filter Buttons */}
       <div
         style={{
@@ -168,12 +210,15 @@ const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken 
           <FilterButton
             key={color}
             label={color}
-            onClick={() => toggleFilter(color as 'Blue' | 'Green' | 'Yellow' | 'Red')}
-            isActive={selectedFilters.includes(color as 'Blue' | 'Green' | 'Yellow' | 'Red')}
+            onClick={() =>
+              toggleFilter(color as 'Blue' | 'Green' | 'Yellow' | 'Red')
+            }
+            isActive={selectedFilters.includes(
+              color as 'Blue' | 'Green' | 'Yellow' | 'Red',
+            )}
           />
         ))}
       </div>
-
       {/* Song List with No Results Message */}
       <div
         style={{
@@ -185,20 +230,23 @@ const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken 
         {filteredSongs.length > 0 ? (
           filteredSongs.map((song) => (
             <SongCard
-              key={song.id}
-              uri={song.id}
+              key={song.dataValues.id}
+              uri={song.dataValues.id}
+              songDetails={song.dataValues}
               onSelect={onTrackSelect}
               accessToken={accessToken}
               selectedDevice={selectedDevice}
             />
           ))
         ) : (
-          <div style={{
-            gridColumn: '1 / -1',
-            textAlign: 'center',
-            padding: '2rem',
-            color: '#6B7280',
-          }}>
+          <div
+            style={{
+              gridColumn: '1 / -1',
+              textAlign: 'center',
+              padding: '2rem',
+              color: '#6B7280',
+            }}
+          >
             No songs found
           </div>
         )}
