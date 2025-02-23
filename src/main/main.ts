@@ -382,7 +382,7 @@ ipcMain.handle('hue:setLightState', async (_event, { lightId, on, brightness, xy
       state.dimming = { brightness };
     }
     if (xy && xy.length === 2) {
-      state.color = { xy };
+      state.color = { xy: { x: xy[0], y: xy[1] } }; // Wrap xy as an object
     }
 
     const response = await axios.put(url, state, {
