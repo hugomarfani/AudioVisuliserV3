@@ -213,12 +213,10 @@ async function discoverBridge(): Promise<string | null> {
 
 // Updated helper function to get a connected Hue API instance with extra logging
 async function getHueApi() {
-  // Discover bridges using nupnpSearch
   const discoveredBridges = await v3.discovery.nupnpSearch();
   if (discoveredBridges.length === 0) {
     throw new Error('No Hue Bridge found');
   }
-  // Log the entire discoveredBridges object and the mapped IP addresses
   console.log("Discovered Bridges:", discoveredBridges);
   console.log("Discovered Bridge IPs:", discoveredBridges.map(bridge => bridge.ipaddress));
 
@@ -227,18 +225,19 @@ async function getHueApi() {
     try {
       currentHueBridgeIP = bridge.ipaddress;
       let api;
-      // If no username set, create one
       if (!currentHueUsername) {
         api = await v3.api.createLocal(currentHueBridgeIP).connect();
         const createdUser = await api.users.createUser('my_hue_app', 'electron');
         currentHueUsername = createdUser.username;
       }
-      // Connect using the username
       api = await v3.api.createLocal(currentHueBridgeIP).connect(currentHueUsername);
-      // Test the connection (e.g. get configuration)
       await api.configuration.getConfiguration();
       return api;
     } catch (err: any) {
+      // Check if error indicates a rate limit (HTTP 429)
+      if ((err.response && err.response.status === 429) || err.message.includes("429")) {
+        throw new Error("Too many requests - please wait a few minutes before trying again.");
+      }
       errors.push(`Bridge ${bridge.ipaddress}: ${err.message}`);
     }
   }
@@ -253,6 +252,24 @@ ipcMain.handle('hue:discoverBridge', async () => {
     return currentHueBridgeIP;
   } catch (error) {
     console.error('Error in hue:discoverBridge via getHueApi:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('hue:setManualBridge', async (_event, manualIp: string) => {
+  try {
+    currentHueBridgeIP = manualIp;
+    // Always create a new user when manually setting the bridge
+    let api = await v3.api.createLocal(manualIp).connect();
+    const createdUser = await api.users.createUser('my_hue_app', 'electron');
+    currentHueUsername = createdUser.username;
+    // Reconnect using the new username
+    api = await v3.api.createLocal(manualIp).connect(currentHueUsername);
+    await api.configuration.getConfiguration();
+    console.log("Manual bridge set successfully. Bridge IP:", currentHueBridgeIP, "Username:", currentHueUsername);
+    return { ip: currentHueBridgeIP, username: currentHueUsername };
+  } catch (error) {
+    console.error('Error setting manual bridge IP:', error);
     throw error;
   }
 });
