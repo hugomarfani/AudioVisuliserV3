@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Box, Typography, Button, Slider } from '@mui/material';
 
 interface LightDetail {
@@ -41,6 +41,10 @@ const hexToRgb = (hex: string): number[] => {
 const HueControlPanel: React.FC = () => {
   const [lights, setLights] = useState<LightDetail[]>([]);
   const [error, setError] = useState<string>('');
+  const updateQueue = useRef<Array<() => Promise<void>>>([]);
+  const isProcessing = useRef(false);
+  const brightnessDebounceTimer = useRef<NodeJS.Timeout>();
+  const [localBrightness, setLocalBrightness] = useState<{[key: string]: number}>({});
 
   // Fetch light details from main process
   const fetchLights = useCallback(async () => {
@@ -58,53 +62,90 @@ const HueControlPanel: React.FC = () => {
     fetchLights();
   }, [fetchLights]);
 
-  // Debounced update function
-  const debouncedUpdate = useCallback((id: string, newState: Partial<LightDetail>) => {
-    // Set a timeout to prevent too many rapid requests
-    setTimeout(async () => {
-      try {
-        let brightnessValue = newState.brightness;
-        if (brightnessValue !== undefined) {
-          brightnessValue = Math.round((brightnessValue * 254) / 100);
-        }
+  // Convert Hue brightness (0-254) to percentage (0-100)
+  const hueBrightnessToPercent = (brightness: number): number => {
+    return Math.round((brightness / 254) * 100);
+  };
 
-        await window.electron.ipcRenderer.invoke('hue:setLightState', {
-          lightId: id,
-          on: newState.on,
-          brightness: brightnessValue,
-          xy: newState.xy
-        });
+  // Convert percentage (0-100) to Hue brightness (0-254)
+  const percentToHueBrightness = (percent: number): number => {
+    return Math.round((percent / 100) * 254);
+  };
 
-        // Wait a bit before refreshing the light states
-        setTimeout(fetchLights, 500);
-      } catch (err) {
-        console.error(`Failed to update light ${id}:`, err);
-        if (err.toString().includes('429')) {
-          setError('Too many requests. Please wait a few seconds before trying again.');
+  // Process updates sequentially
+  const processUpdateQueue = useCallback(async () => {
+    if (isProcessing.current) return;
+
+    isProcessing.current = true;
+    while (updateQueue.current.length > 0) {
+      const update = updateQueue.current.shift();
+      if (update) {
+        try {
+          await update();
+          // Wait 1 second between updates to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (err) {
+          console.error('Error processing update:', err);
         }
       }
-    }, 250); // Add a small delay before sending the update
-  }, [fetchLights]);
+    }
+    isProcessing.current = false;
+  }, []);
 
-  // Update light state with debouncing
-  const updateLight = async (id: string, newState: Partial<LightDetail>) => {
-    // For on/off states, update immediately
-    if (newState.on !== undefined) {
-      try {
-        await window.electron.ipcRenderer.invoke('hue:setLightState', {
-          lightId: id,
-          on: newState.on
-        });
-        setTimeout(fetchLights, 500);
-      } catch (err) {
-        console.error(`Failed to update light ${id}:`, err);
+  // Queue an update
+  const queueUpdate = useCallback((updateFn: () => Promise<void>) => {
+    updateQueue.current.push(updateFn);
+    processUpdateQueue();
+  }, [processUpdateQueue]);
+
+  // Update light state with queuing
+  const updateLight = useCallback(async (id: string, newState: Partial<LightDetail>) => {
+    // Handle brightness changes with local state and debouncing
+    if (newState.brightness !== undefined) {
+      // Update local state immediately for smooth slider movement
+      setLocalBrightness(prev => ({ ...prev, [id]: newState.brightness as number }));
+
+      // Clear any existing timer
+      if (brightnessDebounceTimer.current) {
+        clearTimeout(brightnessDebounceTimer.current);
       }
+
+      // Set new timer for actual API call
+      brightnessDebounceTimer.current = setTimeout(async () => {
+        try {
+          await window.electron.ipcRenderer.invoke('hue:setLightState', {
+            lightId: id,
+            brightness: percentToHueBrightness(newState.brightness as number)
+          });
+          // Only fetch lights after successful brightness update
+          setTimeout(fetchLights, 100);
+        } catch (err: any) {
+          console.error(`Failed to update brightness for light ${id}:`, err);
+          if (err.toString().includes('429')) {
+            setError('Too many requests. Please wait a few seconds before trying again.');
+          }
+        }
+      }, 100); // Small delay for debouncing
       return;
     }
 
-    // For brightness and color changes, use debounced update
-    debouncedUpdate(id, newState);
-  };
+    // Handle other state changes (on/off, color) with existing queue
+    const update = async () => {
+      try {
+        await window.electron.ipcRenderer.invoke('hue:setLightState', {
+          lightId: id,
+          on: newState.on,
+          xy: newState.xy
+        });
+        setTimeout(fetchLights, 100);
+      } catch (err: any) {
+        console.error(`Failed to update light ${id}:`, err);
+        setError(err.message);
+      }
+    };
+
+    queueUpdate(update);
+  }, [fetchLights, queueUpdate, percentToHueBrightness]);
 
   return (
     <Box sx={{ p: 2 }}>
@@ -125,9 +166,11 @@ const HueControlPanel: React.FC = () => {
           >
             Turn {light.on ? 'Off' : 'On'}
           </Button>
-          <Typography variant="body2">Brightness: {Math.round((light.brightness * 100) / 254)}%</Typography>
+          <Typography variant="body2">
+            Brightness: {localBrightness[light.id] ?? hueBrightnessToPercent(light.brightness)}%
+          </Typography>
           <Slider
-            value={(light.brightness * 100) / 254}
+            value={localBrightness[light.id] ?? hueBrightnessToPercent(light.brightness)}
             min={0}
             max={100}
             onChange={(_, value) => updateLight(light.id, { brightness: value as number })}
@@ -139,7 +182,10 @@ const HueControlPanel: React.FC = () => {
             onChange={(e) => {
               const rgb = hexToRgb(e.target.value);
               const xy = rgbToXy(rgb[0], rgb[1], rgb[2]);
-              updateLight(light.id, { xy });
+              // Debounce color updates more aggressively
+              if (updateQueue.current.length === 0) {
+                updateLight(light.id, { xy });
+              }
             }}
             style={{ width: '100%', height: '50px', marginTop: '8px' }}
           />
