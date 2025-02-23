@@ -1,11 +1,10 @@
 {
-  "audioPath": "assets/TeQ_TTyLGMs.wav",
-  "background_prompts": [],
-  "backgrounds": [],
+  "id": "TeQ_TTyLGMs",
+  "title": "Do You Want to Build a Snowman? (From \"Frozen\"/Sing-Along)",
+  "audioPath": "assets/audio/TeQ_TTyLGMs.wav",
   "colours": [],
   "colours_reason": [],
   "createdAt": "2025-02-23T13:01:20.255Z",
-  "id": "TeQ_TTyLGMs",
   "images": [],
   "jacket": "icon.png",
   "moods": [],
@@ -13,7 +12,6 @@
   "objects": ["ctures on the walls", "ke", "owman"],
   "particles": [],
   "status": "Yellow",
-  "title": "Do You Want to Build a Snowman? (From \"Frozen\"/Sing-Along)",
   "updatedAt": "2025-02-23T13:01:20.257Z",
   "uploader": "assets"
 }

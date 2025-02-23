@@ -11,6 +11,8 @@ import frozenLetItGo from '../../assets/audio/frozen_let_it_go.mp3';
 import DYWBAS from '../../assets/audio/TeQ_TTyLGMs.wav';
 import SongDetails from '../components/SongDetails/SongDetails';
 import { Song } from '../database/models/Song';
+import Particles from '../components/Particles/Particles';
+import Aiden from '../components/Aiden/Aiden';
 
 // eslint-disable-next-line react/function-component-definition
 const App: React.FC = () => {
@@ -61,30 +63,14 @@ const App: React.FC = () => {
                     onTrackSelect={setSelectedTrackURI}
                     accessToken={accessToken}
                   />
-                  {/* <Player
-                    track={{
-                      title: 'Let It Go',
-                      artist: 'Idina Menzel',
-                      albumArt:
-                        'https://cdn-images.dzcdn.net/images/cover/f669aa7623ad8af5fbeb5a196346013a/500x500.jpg',
-                      audioSrc: frozenLetItGo, // Use the imported MP3 file
-                    }}
-                  /> */}
-                  <Player
-                    track={{
-                      title: 'Do You Want To Build A Snowman',
-                      artist: 'Kristen Bell, Agatha Lee Monn, and Katie Lopez',
-                      albumArt:
-                        'https://i.scdn.co/image/ab67616d0000b273c9b5b9c6f0b6b1c9c4c3e1d1',
-                      audioSrc: DYWBAS, // Use the imported wav file
-                    }}
-                  />
                 </div>
               )}
             </MeshGradientBackground>
           }
         />
         <Route path="/song-details/:id" element={<SongDetails />} />
+        <Route path="/particles/:id" element={<Particles />} />
+        <Route path="/aiden/:id" element={<Aiden />} />
       </Routes>
     </Router>
   );
