@@ -30,7 +30,7 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
         'run-gemma',
         songId,
       );
-      setGemmaStatus(`Gemma completed: ${result}`);
+      setGemmaStatus(`Gemma running ... ${result}`);
       refetch();
     } catch (error) {
       setGemmaStatus(`Error: ${error.message || 'Unknown error occurred'}`);

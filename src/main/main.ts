@@ -126,7 +126,7 @@ ipcMain.handle('download-wav', async (_, url) => {
       colours: [],
       colours_reason: [],
       objects: [],
-      objects_prompts: [],
+      object_prompts: [],
       backgrounds: [],
       background_prompts: [],
       particles: [],
@@ -161,7 +161,7 @@ ipcMain.handle('run-whisper', (event, songId) => {
   });
 });
 
-ipcMain.on('run-gemma', (event, songId: string) => {
+ipcMain.handle('run-gemma', (event, songId: string) => {
   console.log('Running Gemma with songId:', songId);
   const process = spawn('powershell', [
     '-ExecutionPolicy',
@@ -174,12 +174,10 @@ ipcMain.on('run-gemma', (event, songId: string) => {
   });
   process.stderr.on('data', (data) => {
     console.error(`⚠️ stderr: ${data.toString()}`);
-    throw new Error(data.toString());
   });
   process.on('close', (code) => {
     console.log(`✅ Process exited with code ${code}`);
-    event.reply('run-gemma-reply', `Process exited with code ${code}`);
-    return;
+    return code;
   });
 });
 
