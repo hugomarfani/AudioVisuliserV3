@@ -10,9 +10,9 @@ const HueDebugOverlay: React.FC = () => {
 
   const scanBridge = useCallback(async () => {
     try {
-      // Invoke discovery via IPC which uses getHueApi internally.
       const discoveredIp: string = await window.electron.ipcRenderer.invoke('hue:discoverBridge');
-      setBridgeInfo({ ip: discoveredIp, username: '' }); // You may update username if available.
+      // Only update bridgeInfo if current info is absent or incomplete.
+      setBridgeInfo(prev => (prev && prev.username ? prev : { ip: discoveredIp, username: '' }));
       setBridgeError(null);
       const rids: string[] = await window.electron.ipcRenderer.invoke('hue:getLightRids');
       setLightRids(rids);
@@ -23,6 +23,16 @@ const HueDebugOverlay: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    // Attempt to load stored credentials
+    const stored = localStorage.getItem("hueBridgeInfo");
+    if (stored) {
+      const info = JSON.parse(stored);
+      if (info && info.username) {
+        setBridgeInfo(info);
+        window.electron.ipcRenderer.invoke('hue:getLightRids').then((rids: string[]) => setLightRids(rids));
+        return;
+      }
+    }
     scanBridge();
   }, [scanBridge]);
 
@@ -63,8 +73,8 @@ const HueDebugOverlay: React.FC = () => {
                 onClick={async () => {
                   try {
                     const result = await window.electron.ipcRenderer.invoke('hue:setManualBridge', manualIp);
-                    // Update state with the returned IP and username.
                     setBridgeInfo(result);
+                    localStorage.setItem("hueBridgeInfo", JSON.stringify(result)); // persist credentials
                     const rids: string[] = await window.electron.ipcRenderer.invoke('hue:getLightRids');
                     setLightRids(rids);
                     setBridgeError('');
