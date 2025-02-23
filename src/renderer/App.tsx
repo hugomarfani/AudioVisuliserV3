@@ -9,12 +9,14 @@ import Login from '../components/Spotify/auth/Login'; // Assuming you have a Log
 import frozenLetItGo from '../../assets/audio/frozen_let_it_go.mp3';
 import { Button, Modal, Box } from '@mui/material';
 import PhillipsHueControls from '../components/Hue/PhillipsHueControls';
+import HueDebugOverlay from '../components/Hue/HueDebugOverlay';
 
 // eslint-disable-next-line react/function-component-definition
 const App: React.FC = () => {
   const [accessToken, setAccessToken] = useState<string>('');
   const [selectedTrackURI, setSelectedTrackURI] = useState<string | null>(null);
   const [hueModalOpen, setHueModalOpen] = useState(false);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
 
   useEffect(() => {
     async function getToken() {
@@ -42,6 +44,13 @@ const App: React.FC = () => {
     position: 'fixed',
     bottom: 16,
     left: 16,
+    zIndex: 1000,
+  };
+
+  const settingsButtonStyle = {
+    position: 'fixed',
+    bottom: 16,
+    right: 16,
     zIndex: 1000,
   };
 
@@ -79,12 +88,29 @@ const App: React.FC = () => {
                     Hue Dev Controls
                   </Button>
 
+                  <Button
+                    variant="contained"
+                    sx={settingsButtonStyle}
+                    onClick={() => setSettingsModalOpen(true)}
+                  >
+                    Settings
+                  </Button>
+
                   <Modal
                     open={hueModalOpen}
                     onClose={() => setHueModalOpen(false)}
                   >
                     <Box sx={modalStyle}>
                       <PhillipsHueControls lightId={'4738d2a5-4b1a-4699-9054-6b1028aa5140'} />
+                    </Box>
+                  </Modal>
+
+                  <Modal
+                    open={settingsModalOpen}
+                    onClose={() => setSettingsModalOpen(false)}
+                  >
+                    <Box sx={modalStyle}>
+                      <HueDebugOverlay />
                     </Box>
                   </Modal>
                 </>
@@ -98,3 +124,5 @@ const App: React.FC = () => {
 };
 
 export default App;
+
+
