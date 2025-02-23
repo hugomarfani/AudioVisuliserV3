@@ -19,11 +19,22 @@ interface Device {
 }
 
 const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken }) => {
-  const [filter, setFilter] = useState<'Blue' | 'Green' | 'Yellow' | 'Red'>('Green');
+  const [selectedFilters, setSelectedFilters] = useState<Array<'Blue' | 'Green' | 'Yellow' | 'Red'>>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [devices, setDevices] = useState<Device[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isDatabaseOpen, setIsDatabaseOpen] = useState(false); // State to manage database popup
   const [isLibraryOpen, setIsLibraryOpen] = useState(false); // State to manage library popup
+
+  const toggleFilter = (color: 'Blue' | 'Green' | 'Yellow' | 'Red') => {
+    setSelectedFilters(prevFilters => {
+      if (prevFilters.includes(color)) {
+        return prevFilters.filter(f => f !== color);
+      } else {
+        return [...prevFilters, color];
+      }
+    });
+  };
 
   useEffect(() => {
     async function fetchDevices() {
@@ -43,6 +54,15 @@ const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken 
       fetchDevices();
     }
   }, [accessToken]);
+
+  // Filter songs based on both color filters and search term
+  const filteredSongs = songs.filter((song) => {
+    const matchesFilter = selectedFilters.length === 0 || selectedFilters.includes(song.status);
+    const matchesSearch = searchTerm === '' || 
+      song.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      song.artist.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
 
   return (
     <div
@@ -106,7 +126,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken 
       {/* Library Popup */}
       {isLibraryOpen && <Library onClose={() => setIsLibraryOpen(false)} />} {/* Render Library component when isLibraryOpen is true */}
 
-      {/* Header */}
+      {/* Header with Search */}
       <div
         style={{
           color: colors.black,
@@ -115,9 +135,24 @@ const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken 
         }}
       >
         <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginTop: 0 }}>Welcome Back</h1>
-        <p style={{ fontSize: '1rem', color: '#6B7280' }}>
-          Say or search a song to begin
-        </p>
+        <div style={{ position: 'relative' }}>
+          <input
+            type="text"
+            placeholder="Say or search a song to begin"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              width: '95%',
+              padding: '0.75rem',
+              fontSize: '1rem',
+              color: '#6B7280',
+              backgroundColor: colors.grey5,
+              border: 'none',
+              borderRadius: '12px',
+              outline: 'none',
+            }}
+          />
+        </div>
       </div>
 
       {/* Filter Buttons */}
@@ -133,15 +168,13 @@ const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken 
           <FilterButton
             key={color}
             label={color}
-            onClick={() =>
-              setFilter(color as 'Blue' | 'Green' | 'Yellow' | 'Red')
-            }
-            isActive={filter === color}
+            onClick={() => toggleFilter(color as 'Blue' | 'Green' | 'Yellow' | 'Red')}
+            isActive={selectedFilters.includes(color as 'Blue' | 'Green' | 'Yellow' | 'Red')}
           />
         ))}
       </div>
 
-      {/* Song List */}
+      {/* Song List with No Results Message */}
       <div
         style={{
           display: 'grid',
@@ -149,9 +182,8 @@ const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken 
           gap: '1rem',
         }}
       >
-        {songs
-          .filter((song) => song.status === filter)
-          .map((song) => (
+        {filteredSongs.length > 0 ? (
+          filteredSongs.map((song) => (
             <SongCard
               key={song.id}
               uri={song.id}
@@ -159,7 +191,17 @@ const SongSelector: React.FC<SongSelectorProps> = ({ onTrackSelect, accessToken 
               accessToken={accessToken}
               selectedDevice={selectedDevice}
             />
-          ))}
+          ))
+        ) : (
+          <div style={{
+            gridColumn: '1 / -1',
+            textAlign: 'center',
+            padding: '2rem',
+            color: '#6B7280',
+          }}>
+            No songs found
+          </div>
+        )}
       </div>
     </div>
   );

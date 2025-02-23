@@ -30,4 +30,13 @@ npm-debug.log.*
 *.sass.d.ts
 *.scss.d.ts
 
-AiResources/*
+
+# external unwanted files -> files which are too big
+external/openvino_2025/
+external/gemma-2-9b-it-int4-ov/
+external/build/
+external/python/sd_env
+
+# Moved to AiResources folder
+AiResources/
+resources/
