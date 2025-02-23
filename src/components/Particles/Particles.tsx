@@ -20,10 +20,10 @@ const Particles: React.FC = () => {
     // Start the entrance animation sequence
     const timeline = async () => {
       setIsCurtainOpen(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       setIsVisible(true);
     };
-    
+
     timeline();
 
     return () => {
@@ -34,9 +34,9 @@ const Particles: React.FC = () => {
 
   const handleBack = async () => {
     setIsVisible(false);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
     setIsCurtainOpen(false);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     navigate('/');
   };
 
@@ -45,15 +45,24 @@ const Particles: React.FC = () => {
   }
 
   // Construct the full audio path
-  const fullAudioPath = songDetails.audioPath ? `../../${songDetails.audioPath}` : '';
+  const [fullAudioPath, setFullAudioPath] = React.useState<string>('');
 
+  React.useEffect(() => {
+    const findAudioPath = async () => {
+      const response = await window.electron.fileSystem.mergeAssetPath(
+        songDetails.audioPath,
+      );
+      setFullAudioPath(response);
+    };
+    findAudioPath();
+  }, [songDetails.audioPath]);
   return (
     <>
       <div className={`curtain curtain-left${isCurtainOpen ? ' open' : ''}`} />
       <div className={`curtain curtain-right${isCurtainOpen ? ' open' : ''}`} />
       <div className={`visualization-page${isVisible ? ' visible' : ''}`}>
         <div style={{ position: 'absolute', top: 20, left: 20 }}>
-          <button 
+          <button
             onClick={handleBack}
             style={{
               padding: '8px 16px',
@@ -68,30 +77,36 @@ const Particles: React.FC = () => {
             Back
           </button>
         </div>
-        
-        <div style={{ 
-          position: 'absolute', 
-          bottom: 0, 
-          width: '100%',
-          opacity: isVisible ? 1 : 0,
-          transition: 'opacity 0.5s ease-in-out',
-        }}>
+
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            width: '100%',
+            opacity: isVisible ? 1 : 0,
+            transition: 'opacity 0.5s ease-in-out',
+          }}
+        >
           <Player
             track={{
               title: songDetails.title,
               artist: songDetails.uploader,
               albumArt: songDetails.jacket,
-              audioSrc: fullAudioPath,  // Use the constructed audio path
+              audioSrc: fullAudioPath, // Use the constructed audio path
             }}
           />
         </div>
-        
-        <div style={{ 
-          padding: '60px 20px',
-          opacity: isVisible ? 1 : 0,
-          transition: 'opacity 0.5s ease-in-out',
-        }}>
-          <h1 style={{ color: 'white' }}>{songDetails.title} - Particles Visualization</h1>
+
+        <div
+          style={{
+            padding: '60px 20px',
+            opacity: isVisible ? 1 : 0,
+            transition: 'opacity 0.5s ease-in-out',
+          }}
+        >
+          <h1 style={{ color: 'white' }}>
+            {songDetails.title} - Particles Visualization
+          </h1>
           {/* Add your particles visualization here */}
         </div>
       </div>
