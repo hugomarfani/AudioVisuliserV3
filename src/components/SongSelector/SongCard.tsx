@@ -33,6 +33,17 @@ function SongCard({
     e.stopPropagation();
     onDetailsClick(uri);
   };
+  const [imagePath, setImagePath] = React.useState<string>('');
+
+  React.useEffect(() => {
+    const findImagePath = async () => {
+      const response = await window.electron.fileSystem.mergeAssetPath(
+        songDetails.jacket,
+      );
+      setImagePath(response);
+    };
+    findImagePath();
+  }, [songDetails.jacket]);
 
   return (
     <div
@@ -52,7 +63,7 @@ function SongCard({
       }}
     >
       <img
-        src={songDetails.jacket}
+        src={imagePath}
         alt={songDetails.title}
         style={{
           borderRadius: '15px',

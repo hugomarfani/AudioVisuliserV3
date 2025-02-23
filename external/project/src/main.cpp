@@ -257,7 +257,7 @@ std::vector<std::string> getOptionsFromLlmOutput(std::string llmOutput) {
       throw std::runtime_error("Invalid option format");
     }
     std::string option =
-        unstrippedOption.substr(3, unstrippedOption.size() - 4);
+        unstrippedOption.substr(1, unstrippedOption.size() - 1);
     options.push_back(option);
     next++;
   }

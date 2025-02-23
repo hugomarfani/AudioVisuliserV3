@@ -43,6 +43,13 @@ const electronHandler = {
   database: {
     fetchSongs: () => ipcRenderer.invoke('fetch-songs'),
     addSong: (data: any) => ipcRenderer.invoke('add-song', data),
+    reloadSongs: () => ipcRenderer.invoke('reload-songs'),
+  },
+  fileSystem: {
+    mergeAssetPath: (path: string) =>
+      ipcRenderer.invoke('merge-asset-path', path),
+    downloadWav: (url: string) => ipcRenderer.invoke('download-wav', url),
+    downloadMp3: (url: string) => ipcRenderer.invoke('download-mp3', url),
   },
 };
 

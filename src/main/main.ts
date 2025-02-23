@@ -90,6 +90,24 @@ ipcMain.handle('add-song', async (_event, songData) => {
   }
 });
 
+ipcMain.handle('merge-asset-path', async (_, pathToAdd) => {
+  return path.join(app.getAppPath(), 'assets', pathToAdd);
+});
+
+ipcMain.handle('reload-songs', async () => {
+  try {
+    initDatabase();
+    const songs = await Song.findAll({
+      order: [['createdAt', 'DESC']],
+    });
+    console.log('Reloaded songs:', JSON.stringify(songs, null, 2));
+    return songs;
+  } catch (error) {
+    console.error('Error reloading songs:', error);
+    throw error;
+  }
+});
+
 // ipcMain.handle("download-mp3", async (event, url) => {
 //   try {
 //     const result = await downloadYoutubeAudio(url);
@@ -256,6 +274,7 @@ const createWindow = async () => {
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
+      webSecurity: false,
     },
   });
 

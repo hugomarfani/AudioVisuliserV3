@@ -89,6 +89,15 @@ const SongSelector: React.FC<SongSelectorProps> = ({
     setIsSongDetailsOpen(true);
   };
 
+  const reloadSongs = async () => {
+    try {
+      await window.electron.database.reloadSongs();
+      refetch();
+    } catch (error) {
+      console.error('Error reloading songs:', error);
+    }
+  };
+
   return (
     <div
       style={{
@@ -175,7 +184,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
         }}
-        onClick={refetch} // Call fetchSongs on click
+        onClick={reloadSongs} // Call fetchSongs on click
       >
         <FaSync />
         <span style={{ marginLeft: '0.5rem' }}>Reload</span>
