@@ -38,6 +38,15 @@ const hexToRgb = (hex: string): number[] => {
   ] : [0, 0, 0];
 };
 
+// Conversion functions
+const hueBrightnessToPercent = (brightness: number): number => {
+  return Math.round((brightness / 254) * 100);
+};
+
+const percentToHueBrightness = (percent: number): number => {
+  return Math.round((percent / 100) * 254);
+};
+
 const HueControlPanel: React.FC = () => {
   const [lights, setLights] = useState<LightDetail[]>([]);
   const [error, setError] = useState<string>('');
@@ -157,12 +166,12 @@ const HueControlPanel: React.FC = () => {
             Turn {light.on ? 'Off' : 'On'}
           </Button>
           <Typography variant="body2">
-            Brightness: {localBrightness[light.id] ?? light.brightness}
+            Brightness: {localBrightness[light.id] ?? hueBrightnessToPercent(light.brightness)}%
           </Typography>
           <Slider
-            value={localBrightness[light.id] ?? light.brightness}
+            value={localBrightness[light.id] ?? hueBrightnessToPercent(light.brightness)}
             min={0}
-            max={254}
+            max={100}  // Changed max from 254 to 100
             onChange={(_, value) => updateLight(light.id, { brightness: value as number })}
             sx={{ mb: 1 }}
           />
