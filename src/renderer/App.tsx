@@ -12,11 +12,16 @@ import SongDetails from '../components/SongDetails/SongDetails';
 import { Song } from '../database/models/Song';
 import Particles from '../components/Particles/Particles';
 import Aiden from '../components/Aiden/Aiden';
+import { Button, Modal, Box } from '@mui/material';
+import PhillipsHueControls from '../components/Hue/PhillipsHueControls';
+import HueDebugOverlay from '../components/Hue/HueDebugOverlay';
 
 // eslint-disable-next-line react/function-component-definition
 const App: React.FC = () => {
   const [accessToken, setAccessToken] = useState<string>('');
   const [selectedTrackURI, setSelectedTrackURI] = useState<string | null>(null);
+  const [hueModalOpen, setHueModalOpen] = useState(false);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
 
   // useEffect(() => {
   //   async function getToken() {
@@ -41,6 +46,33 @@ const App: React.FC = () => {
   //       {/* <div className="particle-container" id="particle-container">
   //       </div> */}
 
+
+  const modalStyle = {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: 400,
+    bgcolor: 'background.paper',
+    boxShadow: 24,
+    p: 4,
+    borderRadius: 2,
+  };
+
+  const hueButtonStyle = {
+    position: 'fixed',
+    bottom: 16,
+    left: 16,
+    zIndex: 1000,
+  };
+
+  const settingsButtonStyle = {
+    position: 'fixed',
+    bottom: 16,
+    right: 16,
+    zIndex: 1000,
+  };
+
   return (
     <Router>
       <Routes>
@@ -62,6 +94,14 @@ const App: React.FC = () => {
                     onTrackSelect={setSelectedTrackURI}
                     accessToken={accessToken}
                   />
+                  <Modal
+                    open={settingsModalOpen}
+                    onClose={() => setSettingsModalOpen(false)}
+                  >
+                    <Box sx={modalStyle}>
+                      <HueDebugOverlay />
+                    </Box>
+                  </Modal>
                 </div>
               )}
             </MeshGradientBackground>
@@ -76,3 +116,5 @@ const App: React.FC = () => {
 };
 
 export default App;
+
+

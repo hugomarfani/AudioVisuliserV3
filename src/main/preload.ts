@@ -32,6 +32,7 @@ const electronHandler = {
     once(channel: Channels, func: (...args: unknown[]) => void): void {
       ipcRenderer.once(channel, (_event, ...args) => func(...args));
     },
+    invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args),
     runGemmaTest() {
       ipcRenderer.send('run-gemma-test');
     },
