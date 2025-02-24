@@ -25,25 +25,48 @@ const AddSongForm: React.FC<AddSongFormProps> = ({ onSubmit }) => {
   const [url, setUrl] = useState('');
   const [selectedPrompt, setSelectedPrompt] = useState('');
   const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
+  const [status, setStatus] = useState<string>('');
 
   const isValidYouTubeUrl = (url: string) => {
     const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
     return youtubeRegex.test(url);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValidYouTubeUrl(url)) {
+      setStatus('Invalid YouTube URL');
       return;
     }
-    onSubmit({ url, prompt: selectedPrompt, moods: selectedMoods });
-    setUrl('');
-    setSelectedPrompt('');
-    setSelectedMoods([]);
+    setStatus('Downloading and converting to WAV...');
+    try {
+      const resultID = await window.electron.ipcRenderer.invoke(
+        'download-wav',
+        url,
+      );
+      setStatus(`Successfully converted to WAV! Saved to: ${resultID}`);
+      const whisperResult = await window.electron.ipcRenderer.invoke(
+        'run-whisper',
+        resultID,
+      );
+      console.log('Whisper result:', whisperResult);
+      setStatus('Running Whisper analysis...');
+      await whisperResult;
+      setStatus('Successfully analyzed with Whisper!');
+      onSubmit({ url, prompt: selectedPrompt, moods: selectedMoods });
+      setUrl('');
+      setSelectedPrompt('');
+      setSelectedMoods([]);
+    } catch (error) {
+      setStatus(`Error: ${error.message || 'Unknown error occurred'}`);
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <form
+      onSubmit={handleSubmit}
+      style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+    >
       <input
         type="url"
         value={url}
@@ -86,7 +109,9 @@ const AddSongForm: React.FC<AddSongFormProps> = ({ onSubmit }) => {
       </select>
 
       <div>
-        <p style={{ marginBottom: '0.5rem', color: colors.grey2 }}>Select Moods (Optional)</p>
+        <p style={{ marginBottom: '0.5rem', color: colors.grey2 }}>
+          Select Moods (Optional)
+        </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
           {MOOD_OPTIONS.map((mood) => (
             <label
@@ -98,8 +123,12 @@ const AddSongForm: React.FC<AddSongFormProps> = ({ onSubmit }) => {
                 border: 'none',
                 borderRadius: '999px',
                 cursor: 'pointer',
-                backgroundColor: selectedMoods.includes(mood.id) ? colors.blue : colors.grey5,
-                color: selectedMoods.includes(mood.id) ? colors.white : colors.black,
+                backgroundColor: selectedMoods.includes(mood.id)
+                  ? colors.blue
+                  : colors.grey5,
+                color: selectedMoods.includes(mood.id)
+                  ? colors.white
+                  : colors.black,
                 fontSize: '0.9rem',
                 transition: 'all 0.2s ease',
               }}
@@ -112,7 +141,7 @@ const AddSongForm: React.FC<AddSongFormProps> = ({ onSubmit }) => {
                   setSelectedMoods(
                     e.target.checked
                       ? [...selectedMoods, mood.id]
-                      : selectedMoods.filter(id => id !== mood.id)
+                      : selectedMoods.filter((id) => id !== mood.id),
                   );
                 }}
                 style={{ display: 'none' }}
@@ -141,6 +170,10 @@ const AddSongForm: React.FC<AddSongFormProps> = ({ onSubmit }) => {
       >
         Add Song
       </button>
+
+      {status && (
+        <p style={{ color: colors.grey2, textAlign: 'center' }}>{status}</p>
+      )}
     </form>
   );
 };
