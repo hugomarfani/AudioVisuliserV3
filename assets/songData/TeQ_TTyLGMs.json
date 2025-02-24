@@ -41,7 +41,7 @@
         "bike$",
         "snowman$"
     ],
-    "particles": [],
+    "particles": ["snowflakes", "musicNotes"],
     "status": "Yellow",
     "title": "Do You Want to Build a Snowman? (From \"Frozen\"/Sing-Along)",
     "updatedAt": "2025-02-23T13:01:20.257Z",

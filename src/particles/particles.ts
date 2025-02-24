@@ -86,13 +86,13 @@ class Particle {
     if (this.img) {
       this.p.imageMode(this.p.CENTER);
       this.p.tint(255, this.lifespan * 0.5); // Add fade effect based on lifespan
-      this.p.image(this.img, this.pos.x, this.pos.y, 30, 30);
+      this.p.image(this.img, this.pos.x, this.pos.y, 90, 90);
       this.p.noTint(); // Reset tint
     } else {
       // Fallback display while image is loading or if it failed to load
       this.p.fill(255, this.lifespan * 0.5);
       this.p.noStroke();
-      this.p.ellipse(this.pos.x, this.pos.y, 30, 30);
+      this.p.ellipse(this.pos.x, this.pos.y, 90, 90);
     }
     this.p.pop();
   }
@@ -186,7 +186,7 @@ class Particle {
 class ParticleSystem {
   particles: Particle[] = [];
   p: p5;
-  maxParticles = 10;  // Changed from 50 to 10
+  maxParticles = 30;  // Changed from 50 to 10
 
   constructor(p: p5) {
     console.log('Initializing ParticleSystem');

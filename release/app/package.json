@@ -16,7 +16,6 @@
   },
   "dependencies": {
     "@types/sequelize": "^4.28.20",
-    "electron-react-boilerplate": "file:",
     "sequelize": "^6.37.5",
     "sqlite3": "^5.1.7"
   }
