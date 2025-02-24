@@ -22,19 +22,34 @@ const loadImage = path => {
 class ShaderVisuals extends Component {
   constructor(props) {
     super(props);
+    this.requestID = null;
     this.track = props.track
-    this.progress = 0
-    this.hoverProgress = 10;
+    this.hoverProgress = 0;
     this.rotation = 0
     this.mountRef = React.createRef();
     this.audio = null;
+    this.clock = new THREE.Clock();
 
     this.state = {
       isPlaying: false,
-      rotation: 0
+      rotation: 0,
+      progress: 0
     };
 
     this.togglePlayPause = this.togglePlayPause.bind(this);
+    this.updateRotation = this.updateRotation.bind(this);
+    this.updateProgress = this.updateProgress.bind(this);
+  }
+
+  updateProgress() {
+    const currentProgress = (this.time / this.audio.buffer.duration) * 100;
+    this.setState(() => ({ progress: currentProgress }));
+  }
+
+  updateRotation() {
+    if(this.state.isPlaying){
+      this.setState((prevState) => ({ rotation: prevState.rotation + 0.1 }));
+    };
   }
 
   togglePlayPause() {
@@ -63,7 +78,6 @@ class ShaderVisuals extends Component {
       alpha: true,
       antialias: true
     });
-    this.renderer.setClearColor(0xffffff, 1);
     this.renderer.setSize(this.width, this.height);
     this.mountRef.current.appendChild(this.renderer.domElement);
 
@@ -99,7 +113,7 @@ class ShaderVisuals extends Component {
       this.setupResize();
       this.animate(); // Start the animation loop
     });
-
+    console.log("test")
   }
 
   async getPixelDataFromImage(url) {
@@ -388,12 +402,13 @@ class ShaderVisuals extends Component {
 
   // Rename the animation loop method to 'animate'
   animate = () => {
-    this.time += 0.01;
+    this.time += this.clock.getDelta();
 
     this.material.uniforms.time.value = this.time;
     this.simMaterial.uniforms.time.value = this.time;
     this.material.uniforms.uFrequency.value = this.analyser.getAverageFrequency();
 
+    this.requestID = requestAnimationFrame(this.animate);
     this.renderer.setRenderTarget(this.renderTarget);
     this.renderer.render(this.sceneFBO, this.cameraFBO);
     this.renderer.setRenderTarget(null);
@@ -406,18 +421,24 @@ class ShaderVisuals extends Component {
 
     this.material.uniforms.uTexture.value = this.renderTarget.texture;
     this.simMaterial.uniforms.uCurrentPosition.value = this.renderTarget1.texture;
-    window.requestAnimationFrame(this.animate);
+
+    this.updateRotation();
+    if(this.audio && this.audio.isPlaying){
+      this.updateProgress();
+      console.log(this.state.progress)
+    };
   };
 
   componentWillUnmount() {
     // Cancel the animation frame if it's running
     cancelAnimationFrame(this.requestID);
-    // Remove any event listeners if added (e.g., resize)
-    // window.removeEventListener('resize', this.handleResize);
-    // Clean up the DOM by removing the renderer's canvas
-    if (this.mountRef.current && this.renderer.domElement.parentNode === this.mountRef.current) {
+    // Remove Three.js canvas
+    if (this.mountRef.current) {
       this.mountRef.current.removeChild(this.renderer.domElement);
     }
+    // if (this.mountRef.current && this.renderer.domElement.parentNode === this.mountRef.current) {
+    //   this.mountRef.current.removeChild(this.renderer.domElement);
+    // }
   }
 
 
@@ -436,6 +457,7 @@ class ShaderVisuals extends Component {
             padding: 0
           }}
         />
+
         <div
         style={{
           position: 'fixed',
@@ -491,7 +513,7 @@ class ShaderVisuals extends Component {
                   position: 'absolute', // position absolute to fill the corner
                   top: '10px', // adjust top position
                   left: '10px', // adjust left position
-                  transform: `rotate(${this.rotation}deg)`,
+                  transform: `rotate(${this.state.rotation}deg)`,
                   transition: this.isPlaying ? 'none' : 'transform 0.1s linear',
                 }}
               >
@@ -530,7 +552,7 @@ class ShaderVisuals extends Component {
                   <div
                     style={{
                       height: '100%',
-                      width: `${this.progress}%`,
+                      width: `${this.state.progress}%`,
                       background: '#000', // pick any colour you like
                       borderRadius: '4px',
                       transition: 'width 0.1s linear',
