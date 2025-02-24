@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import Song from '../database/models/Song';
+import { SongModel } from '../database/models/Song';
 
 export const useSongs = () => {
-  const [songs, setSongs] = useState<Song[]>([]);
+  const [songs, setSongs] = useState<SongModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
