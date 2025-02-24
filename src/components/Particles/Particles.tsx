@@ -19,6 +19,7 @@ const Particles: React.FC = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [songDuration, setSongDuration] = useState(0);
   const playerRef = useRef<any>(null);
+  const [hueLights, setHueLights] = useState<string[]>([]);
 
   useEffect(() => {
     const loadAssets = async () => {
@@ -94,6 +95,32 @@ const Particles: React.FC = () => {
     }
   }, [backgroundImages]);
 
+  // Fetch connected Hue lights on mount
+  useEffect(() => {
+    window.electron.ipcRenderer.invoke('hue:getLightRids')
+      .then((ids: string[]) => {
+        console.log('Retrieved Hue lights:', ids);
+        setHueLights(ids);
+      })
+      .catch((err: any) => console.error('Error fetching Hue lights:', err));
+  }, []);
+
+  // Flash Hue lights on and off every second while particles are active
+  useEffect(() => {
+    if (!isActive || hueLights.length === 0) return;
+    let flashOn = false;
+    const flashInterval = setInterval(() => {
+      flashOn = !flashOn;
+      hueLights.forEach((lightId) => {
+        const action = flashOn ? 'hue:turnOn' : 'hue:turnOff';
+        window.electron.ipcRenderer.invoke(action, lightId)
+          .then((res: any) => console.log(`Light ${lightId} ${flashOn ? 'on' : 'off'}`, res))
+          .catch((err: any) => console.error(`Error toggling light ${lightId}:`, err));
+      });
+    }, 1000);
+    return () => clearInterval(flashInterval);
+  }, [hueLights, isActive]);
+
   // Handle leaving the page
   const handleBack = () => {
     setIsActive(false); // Stop particle generation
@@ -110,7 +137,7 @@ const Particles: React.FC = () => {
       console.log('No background images available');
       return;
     }
-    
+
     if (duration !== songDuration) {
       setSongDuration(duration);
       console.log('Song duration:', duration);
@@ -122,7 +149,7 @@ const Particles: React.FC = () => {
       Math.floor(currentTime / intervalDuration),
       backgroundImages.length - 1
     );
-    
+
     if (newIndex !== currentImageIndex) {
       console.log('Switching to image index:', newIndex);
       console.log('Current image path:', backgroundImages[newIndex]);
@@ -134,8 +161,8 @@ const Particles: React.FC = () => {
 
   return (
     <div className={`page-transition ${isVisible ? 'visible' : ''}`}
-      style={{ 
-        width: '100vw', 
+      style={{
+        width: '100vw',
         height: '100vh',
         position: 'fixed',
         top: 0,
@@ -163,9 +190,9 @@ const Particles: React.FC = () => {
       )}
 
       {/* Particle container on top of background */}
-      <div 
-        ref={containerRef} 
-        style={{ 
+      <div
+        ref={containerRef}
+        style={{
           position: 'fixed',
           top: 0,
           left: 0,
@@ -173,9 +200,9 @@ const Particles: React.FC = () => {
           height: '100%',
           zIndex: 1,
           background: 'transparent',
-        }} 
+        }}
       />
-      
+
       {/* Back button and player with highest z-index */}
       <button
         onClick={handleBack}
@@ -197,7 +224,7 @@ const Particles: React.FC = () => {
       </button>
 
       {fullAudioPath && (
-        <div 
+        <div
           className={`player-wrapper ${isVisible ? 'visible' : ''}`}
           style={{
             position: 'fixed', // Change to fixed
@@ -224,10 +251,10 @@ const Particles: React.FC = () => {
       {/* Force image preloading */}
       <div style={{ display: 'none', position: 'absolute' }}>
         {backgroundImages.map((imagePath, index) => (
-          <img 
-            key={index} 
-            src={imagePath} 
-            alt="" 
+          <img
+            key={index}
+            src={imagePath}
+            alt=""
             onLoad={() => console.log(`Preloaded image ${index} loaded successfully:`, imagePath)}
             onError={(e) => console.error(`Error loading image ${index}:`, e)}
           />
