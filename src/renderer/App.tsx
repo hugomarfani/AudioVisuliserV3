@@ -12,6 +12,9 @@ import SongDetails from '../components/SongDetails/SongDetails';
 import { Song } from '../database/models/Song';
 import Particles from '../components/Particles/Particles';
 import Aiden from '../components/Aiden/Aiden';
+import ShaderVisuals from '../shader/ShaderVisuals';
+import PlayScene from '../components/SongPlayer/PlayScene';
+import ThreeTest from './threetest';
 
 // eslint-disable-next-line react/function-component-definition
 const App: React.FC = () => {
@@ -69,7 +72,13 @@ const App: React.FC = () => {
         />
         <Route path="/song-details/:id" element={<SongDetails />} />
         <Route path="/particles/:id" element={<Particles />} />
-        <Route path="/aiden/:id" element={<Aiden />} />
+        {/* <Route path="/aiden/:id" element={<ThreeTest />} /> */}
+        <Route path="/aiden/:id" element={<ShaderVisuals track={{
+              title: 'Let It Go',
+              artist: 'Idina Menzel',
+              albumArt:
+                'https://cdn-images.dzcdn.net/images/cover/f669aa7623ad8af5fbeb5a196346013a/500x500.jpg',
+            }} />} />
       </Routes>
     </Router>
   );
