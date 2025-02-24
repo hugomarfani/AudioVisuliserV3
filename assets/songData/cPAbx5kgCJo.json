@@ -16,8 +16,8 @@
   ],
   "createdAt": "2025-02-23T16:48:04.802Z",
   "id": "cPAbx5kgCJo",
-  "images": [],
-  "jacket": "icon.png",
+  "images": ["images/How Far I'll Go/moana.png", "images/How Far I'll Go/moana2.png"],
+  "jacket": "images/How Far I'll Go/moana.png",
   "moods": [],
   "object_prompts": [
     "\n\n* **Song Title:** \"Bohemian Rhapsody\" by Queen\n* **Visual Style:** Art Deco, vibrant colors, geometric shapes, stylized figures\n* **Scene:** A grand opera house, red velvet curtains, ornate chandeliers, a spotlight illuminating the stage\n* **Characters:** Freddie Mercury, Brian May, John Deacon, Roger Taylor, all in flamboyant Art Deco costumes\n* **Action:** Performing the song with dramatic expressions and gestures, Freddie Mercury in a powerful pose, spotlight shining on him\n* **Mood:** Theatrical, dramatic, energetic, powerful\n\nBohemian Rhapsody, Art Deco, vibrant colors, geometric shapes, stylized figures, grand opera house, red velvet curtains, ornate chandeliers, a spotlight illuminating the stage, Freddie Mercury, Brian May, John Deacon, Roger Taylor, flamboyant Art Deco costumes, performing the song with dramatic expressions and gestures, Freddie Mercury in a powerful pose, spotlight shining on him, theatrical, dramatic, energetic, powerful \n\n\n",
