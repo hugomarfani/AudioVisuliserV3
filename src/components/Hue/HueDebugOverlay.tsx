@@ -46,17 +46,19 @@ const HueDebugOverlay: React.FC = () => {
   }, []); // Empty dependency array - only run once on mount
 
   const scanBridge = useCallback(async () => {
-    if (!bridgeInfo?.username) {
-      try {
-        const discoveredIp: string = await window.electron.ipcRenderer.invoke('hue:discoverBridge');
-        setBridgeInfo({ ip: discoveredIp, username: '' });
-        setBridgeError(null);
-      } catch (error: any) {
-        setBridgeError(error.message);
-        console.error('Error in HueDebugOverlay:', error);
-      }
+    try {
+      // Discover the bridge IP…
+      const discoveredIp: string = await window.electron.ipcRenderer.invoke('hue:discoverBridge');
+      // Automatically set up credentials using the discovered IP
+      const credentials = await window.electron.ipcRenderer.invoke('hue:setManualBridge', discoveredIp);
+      setBridgeInfo(credentials);
+      localStorage.setItem("hueBridgeInfo", JSON.stringify(credentials));
+      setBridgeError(null);
+    } catch (error: any) {
+      setBridgeError(error.message);
+      console.error('Error in HueDebugOverlay:', error);
     }
-  }, [bridgeInfo]);
+  }, []);
 
   return (
     <Box sx={{ p: 2 }}>
