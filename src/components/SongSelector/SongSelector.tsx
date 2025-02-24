@@ -110,7 +110,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
         position: 'relative', // Add position relative for absolute positioning of the button
       }}
     >
-      {/* Database Button */}
+      {/* Database Button
       <button
         style={{
           position: 'absolute',
@@ -132,11 +132,10 @@ const SongSelector: React.FC<SongSelectorProps> = ({
         <span style={{ marginLeft: '0.5rem' }}>Database</span>
       </button>
       {/* Database Popup */}
-      {isDatabaseOpen && (
+      {/* {isDatabaseOpen && (
         <Database onClose={() => setIsDatabaseOpen(false)} />
-      )}{' '}
-      {/* Render Database component when isDatabaseOpen
-
+      )}{' '} */}
+      {/* Render Database component when isDatabaseOpen */}
       {/* Library Button */}
       <button
         style={{
@@ -156,7 +155,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
         onClick={() => setIsLibraryOpen(true)} // Open library popup on click
       >
         <FaMusic />
-        <span style={{ marginLeft: '0.5rem' }}>Library</span>
+        <span style={{ marginLeft: '0.5rem' }}>New Song</span>
       </button>
       {/* Library Popup */}
       {isLibraryOpen && (
@@ -169,7 +168,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
       )}{' '}
       {/* Render Library component when isLibraryOpen is true */}
       {/* Reload Button */}
-      <button
+      {/* <button
         style={{
           position: 'absolute',
           top: '1rem',
@@ -188,7 +187,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
       >
         <FaSync />
         <span style={{ marginLeft: '0.5rem' }}>Reload</span>
-      </button>
+      </button> */}
       {/* Header with Search */}
       <div
         style={{
