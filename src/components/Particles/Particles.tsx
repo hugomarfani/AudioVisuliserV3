@@ -5,6 +5,25 @@ import Player from '../SongPlayer/Player';
 import { initializeSketch } from '../../particles/sketch';
 import p5 from 'p5';
 
+// Added conversion helpers from particles.ts
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const result = /^#?([A-Fa-f0-9]{2})([A-Fa-f0-9]{2})([A-Fa-f0-9]{2})$/.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
+}
+
+function rgbToXy(r: number, g: number, b: number): number[] {
+  const red = r / 255, green = g / 255, blue = b / 255;
+  const X = red * 0.664511 + green * 0.154324 + blue * 0.162028;
+  const Y = red * 0.283881 + green * 0.668433 + blue * 0.047685;
+  const Z = red * 0.000088 + green * 0.072310 + blue * 0.986039;
+  const sum = X + Y + Z;
+  return sum === 0 ? [0, 0] : [X / sum, Y / sum];
+}
+
 const Particles: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -130,30 +149,41 @@ const Particles: React.FC = () => {
       // .catch((err: any) => console.error('Error fetching Hue lights:', err));
   }, []);
 
-  // Flash Hue lights on and off every second while particles are active - added logging for debugging
+  // Modified flash lights effect: toggles on/off each second and cycles song color
   useEffect(() => {
-    if (!isActive || hueLights.length === 0) {
-      console.log("🚫 Not toggling lights: isActive =", isActive, ", hueLights =", hueLights);
-      return;
-    }
-    console.log("🔄 Starting hue lights flashing effect");
-    let flashOn = false;
+    if (!isActive || hueLights.length === 0 || !songDetails) return;
+
+    let flashIndex = 0;
     const flashInterval = setInterval(() => {
-      flashOn = !flashOn;
-      console.log(`💡 Toggling lights: turning ${flashOn ? "ON" : "OFF"}`);
-      hueLights.forEach((lightId) => {
-        console.log(`👉 Processing light with id: ${lightId}`);
-        const action = flashOn ? 'hue:turnOn' : 'hue:turnOff';
-        window.electron.ipcRenderer.invoke(action, lightId)
-          .then((res: any) => console.log(`✅ Light ${lightId} ${flashOn ? 'is ON' : 'is OFF'}`, res))
-          .catch((err: any) => console.error(`❌ Error toggling light ${lightId}:`, err));
+      const toggle = flashIndex % 2 === 0;
+      const currentColorHex = songDetails.colours && songDetails.colours.length > 0
+        ? songDetails.colours[flashIndex % songDetails.colours.length]
+        : "#FFFFFF";
+      const rgb = hexToRgb(currentColorHex);
+      const xy = rgb ? rgbToXy(rgb.r, rgb.g, rgb.b) : [0.5, 0.5];
+
+      console.log(`Flashing lights: toggle=${toggle}, color=${currentColorHex}, xy=[${xy}]`);
+      hueLights.forEach(lightId => {
+        if (toggle) {
+          // Turn light on with normalized brightness (1 = full brightness) & color
+          window.electron.ipcRenderer.invoke('hue:setLightState', {
+            lightId,
+            on: true,
+            brightness: 1,
+            xy
+          }).catch((err: any) => console.error(`Error updating light ON ${lightId}:`, err));
+        } else {
+          // Turn light off by sending only "on: false"
+          window.electron.ipcRenderer.invoke('hue:setLightState', {
+            lightId,
+            on: false
+          }).catch((err: any) => console.error(`Error updating light OFF ${lightId}:`, err));
+        }
       });
+      flashIndex++;
     }, 1000);
-    return () => {
-      console.log("🛑 Clearing hue lights flashing interval");
-      clearInterval(flashInterval);
-    };
-  }, [hueLights, isActive]);
+    return () => clearInterval(flashInterval);
+  }, [isActive, hueLights, songDetails]);
 
   // New effect: Refresh Hue lights periodically if none are present
   useEffect(() => {

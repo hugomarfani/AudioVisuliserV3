@@ -245,12 +245,18 @@ ipcMain.on('run-gemma-test', (event) => {
 // Updated Handler to turn on a specified light by ID
 ipcMain.handle('hue:turnOn', async (_event, lightId: string) => {
   const url = `https://${currentHueBridgeIP}/clip/v2/resource/light/${lightId}`;
+  const payload = { on: { on: true } };
+  // Log details for manual testing in Postman
+  console.log("POSTMAN TEST - Turn On Light:");
+  console.log("Method: PUT");
+  console.log("URL:", url);
+  console.log("Headers:", { 'hue-application-key': currentHueUsername });
+  console.log("Payload:", payload);
+
   try {
-    const response = await axios.put(url, {
-      on: { on: true }
-    }, {
+    const response = await axios.put(url, payload, {
       headers: { 'hue-application-key': currentHueUsername },
-      httpsAgent, // use custom agent
+      httpsAgent,
     });
     console.log(`Turned on light ${lightId}:`, response.data);
     return response.data;
@@ -263,12 +269,18 @@ ipcMain.handle('hue:turnOn', async (_event, lightId: string) => {
 // Updated Handler to turn off a specified light by ID
 ipcMain.handle('hue:turnOff', async (_event, lightId: string) => {
   const url = `https://${currentHueBridgeIP}/clip/v2/resource/light/${lightId}`;
+  const payload = { on: { on: false } };
+  // Log details for manual testing in Postman
+  console.log("POSTMAN TEST - Turn Off Light:");
+  console.log("Method: PUT");
+  console.log("URL:", url);
+  console.log("Headers:", { 'hue-application-key': currentHueUsername });
+  console.log("Payload:", payload);
+
   try {
-    const response = await axios.put(url, {
-      on: { on: false }
-    }, {
+    const response = await axios.put(url, payload, {
       headers: { 'hue-application-key': currentHueUsername },
-      httpsAgent, // use custom agent
+      httpsAgent,
     });
     console.log(`Turned off light ${lightId}:`, response.data);
     return response.data;
@@ -521,29 +533,37 @@ ipcMain.handle('hue:getLightDetails', async () => {
 
 // New IPC handler to set light state using CLIP v2 API directly
 ipcMain.handle('hue:setLightState', async (_event, { lightId, on, brightness, xy }: { lightId: string, on?: boolean, brightness?: number, xy?: number[] }) => {
+  const url = `https://${currentHueBridgeIP}/clip/v2/resource/light/${lightId}`;
+  const state: any = {};
+  if (on !== undefined) state.on = { on };
+  if (brightness !== undefined) state.dimming = { brightness };
+  if (xy && xy.length === 2) {
+    state.color = {
+      xy: { x: xy[0], y: xy[1] },
+      mode: 'xy'
+    };
+    console.log(`🖌️ Setting light ${lightId} color to: x=${xy[0]}, y=${xy[1]} with mode "xy"`);
+  }
+  // Log details for manual testing in Postman:
+  console.log("POSTMAN TEST - Set Light State:");
+  console.log("Method: PUT");
+  console.log("URL:", url);
+  console.log("Headers:", { 'hue-application-key': currentHueUsername });
+  console.log("Payload:", state);
+  console.log("POSTMAN REQUEST BODY:", JSON.stringify(state, null, 2));
+
   try {
-    const url = `https://${currentHueBridgeIP}/clip/v2/resource/light/${lightId}`;
-    const state: any = {};
-
-    if (on !== undefined) {
-      state.on = { on };
-    }
-    if (brightness !== undefined) {
-      state.dimming = { brightness };
-    }
-    if (xy && xy.length === 2) {
-      state.color = { xy: { x: xy[0], y: xy[1] } }; // Wrap xy as an object
-    }
-
     const response = await axios.put(url, state, {
       headers: { 'hue-application-key': currentHueUsername },
       httpsAgent
     });
-
-    console.log(`Updated light ${lightId} with state:`, response.data);
+    console.log(`✅ Light ${lightId} updated successfully. Response:`, response.data);
     return response.data;
-  } catch (error) {
-    console.error(`Error setting state for light ${lightId}:`, error);
+  } catch (error: any) {
+    console.error(`❌ Error setting state for light ${lightId}:`, error);
+    if (error.response && error.response.data) {
+      console.error(`💥 Bridge response:`, error.response.data);
+    }
     throw error;
   }
 });

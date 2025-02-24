@@ -1,6 +1,41 @@
 import p5 from "p5";
 import { particlePhysics, getRandomParticleImage } from "./particlePhysics";
 
+// Updated hexToRgb with additional logging
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  console.log(`hexToRgb called with hex: ${hex}`);
+  const result = /^#?([A-Fa-f0-9]{2})([A-Fa-f0-9]{2})([A-Fa-f0-9]{2})$/.exec(hex);
+  if (result) {
+    const rgb = {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16),
+    };
+    console.log(`hexToRgb: ${hex} converts to RGB:`, rgb);
+    return rgb;
+  } else {
+    console.error(`hexToRgb failed to parse hex: ${hex}`);
+    return null;
+  }
+}
+
+// Updated rgbToXy with additional logging
+function rgbToXy(r: number, g: number, b: number): number[] {
+  console.log(`rgbToXy called with r: ${r}, g: ${g}, b: ${b}`);
+  const red = r / 255, green = g / 255, blue = b / 255;
+  const X = red * 0.664511 + green * 0.154324 + blue * 0.162028;
+  const Y = red * 0.283881 + green * 0.668433 + blue * 0.047685;
+  const Z = red * 0.000088 + green * 0.072310 + blue * 0.986039;
+  const sum = X + Y + Z;
+  if (sum === 0) {
+    console.error('rgbToXy computed sum is zero, returning [0,0]');
+    return [0, 0];
+  }
+  const xy = [parseFloat((X / sum).toFixed(3)), parseFloat((Y / sum).toFixed(3))];
+  console.log(`rgbToXy: for RGB(${r},${g},${b}) computed xy:`, xy);
+  return xy;
+}
+
 class Particle {
   pos: p5.Vector;
   vel: p5.Vector;
@@ -18,10 +53,10 @@ class Particle {
     this.vel = p.createVector(p.random(-2, 2), p.random(-2, 2));
     this.acc = p.createVector(0, 0);
     this.type = type;
-    
+
     // Initialize with default image
     this.img = null;
-    
+
     // Load image immediately
     this.loadImage();
 
@@ -34,7 +69,7 @@ class Particle {
     try {
       const imagePath = await getRandomParticleImage(this.type);
       console.log('Loading particle image from:', imagePath);
-      
+
       // Use p5's loadImage with a Promise wrapper
       this.img = await new Promise((resolve, reject) => {
         const img = this.p.loadImage(
@@ -46,7 +81,7 @@ class Particle {
           }
         );
       });
-      
+
       console.log('Image loaded successfully for', this.type);
     } catch (error) {
       console.error('Error loading particle image:', error);
@@ -59,11 +94,11 @@ class Particle {
 
   update() {
     const physics = particlePhysics[this.type] || particlePhysics["musicNote"];
-    
+
     // Apply gravity (positive y is downward in p5)
     const gravity = this.p.createVector(0, physics.gravity * physics.weight);
     this.applyForce(gravity);
-    
+
     // Apply air resistance
     const airResistance = this.vel.copy();
     airResistance.mult(-physics.airResistance);
@@ -99,7 +134,7 @@ class Particle {
 
   isDead() {
     // Remove particles when they go off screen vertically or expire
-    return this.lifespan <= 0 || 
+    return this.lifespan <= 0 ||
            this.pos.y > this.p.height + 30; // +30 to account for particle size
   }
 
@@ -113,24 +148,24 @@ class Particle {
       // Create repulsion force
       const repulsionStrength = 1 - (distance / mouseRadius); // Stronger when closer
       const baseForce = 15; // Increased base force
-      
+
       // Calculate force direction
       let forceX = (dx / distance) * baseForce * repulsionStrength;
       let forceY = (dy / distance) * baseForce * repulsionStrength;
-      
+
       // Add mouse velocity influence
       const mouseInfluence = 0.3;
       forceX += mouseVelX * mouseInfluence;
       forceY += mouseVelY * mouseInfluence;
-      
+
       // Apply the force
       this.vel.x += forceX;
       this.vel.y += forceY;
-      
+
       // Add some chaos
       this.vel.x += this.p.random(-0.5, 0.5);
       this.vel.y += this.p.random(-0.5, 0.5);
-      
+
       // Optional: Cap maximum velocity
       const maxVel = 20;
       this.vel.x = this.p.constrain(this.vel.x, -maxVel, maxVel);
@@ -159,7 +194,7 @@ class Particle {
       // Apply impulse with stronger effect
       const impulseX = nx * impulse;
       const impulseY = ny * impulse;
-      
+
       this.vel.x += impulseX;
       this.vel.y += impulseY;
       other.vel.x -= impulseX;
@@ -210,7 +245,7 @@ class ParticleSystem {
     // More thorough collision detection
     for (let i = 0; i < this.particles.length; i++) {
       const particle = this.particles[i];
-      
+
       // Check collisions with all other particles
       for (let j = 0; j < this.particles.length; j++) {
         if (i !== j) {
@@ -227,6 +262,57 @@ class ParticleSystem {
     // Remove dead particles
     this.particles = this.particles.filter(particle => !particle.isDead());
   }
+}
+
+// Updated flashLight: removes "on" property and sends payload as required for a 400-free response
+function flashLight(lightId: string, colorHex: string) {
+  console.log(`🚀 flashLight ENTRY for lightId: ${lightId} with song color: ${colorHex}`);
+  const rgb = hexToRgb(colorHex);
+  if (!rgb) {
+    console.error("❌ flashLight: Invalid color", colorHex);
+    return;
+  }
+  const xy = rgbToXy(rgb.r, rgb.g, rgb.b);
+  console.log(`🖌️ flashLight: Song color converted to xy: [${xy[0]}, ${xy[1]}]`);
+
+  // Helper: convert percentage brightness (0-100) to Hue brightness (0-254)
+  const percentToHueBrightness = (percent: number): number => Math.round((percent / 100) * 254);
+
+  let brightnessPercent = 0;
+  let increasing = true;
+  setInterval(() => {
+    // Cycle brightness from 0 to 100%
+    if (increasing) {
+      brightnessPercent += 10;
+      if (brightnessPercent >= 100) {
+        brightnessPercent = 100;
+        increasing = false;
+      }
+    } else {
+      brightnessPercent -= 10;
+      if (brightnessPercent <= 0) {
+        brightnessPercent = 0;
+        increasing = true;
+      }
+    }
+    const hueBrightness = percentToHueBrightness(brightnessPercent);
+    console.log(`🔄 flashLight: Updating light ${lightId} with brightness ${brightnessPercent}% (${hueBrightness}) and xy: [${xy}]`);
+    window.electron.ipcRenderer.invoke('hue:setLightState', {
+      lightId,
+      // Do not include the "on" property.
+      brightness: hueBrightness,
+      xy
+    }).catch(error => {
+      console.error(`💥 Error updating light ${lightId}:`, error);
+    });
+  }, 1000);
+}
+
+// TEMPORARY: Test call to flashLight to verify hex conversion logging
+// Only run if 'process' is defined and TEST_HUE is 'true'
+if (typeof process !== 'undefined' && process.env.TEST_HUE === 'true') {
+  console.log('🎯 Test call: triggering flashLight with sample hex #FFD700');
+  flashLight('test-light-id', '#FFD700', 100);
 }
 
 export { ParticleSystem };
