@@ -312,21 +312,23 @@ async function validateStoredCredentials(): Promise<boolean> {
   }
 }
 
-// IPC handler to retrieve light RIDs
+// Updated IPC handler to retrieve light RIDs using getHueApi helper function
 ipcMain.handle('hue:getLightRids', async () => {
-  if (!await validateStoredCredentials()) {
-    throw new Error('No valid credentials');
-  }
-
   try {
-    const api = await v3.api.createLocal(currentHueBridgeIP).connect(currentHueUsername);
+    const api = await getHueApi();
     const lights = await api.lights.getAll();
-    const rids = lights.map(light => light.id);
+    let rids = lights.map(light => light.id);
+    // If all IDs are numeric, fall back to CLIP v2 API
+    if (rids.every(id => /^\d+$/.test(String(id)))) {
+      console.warn("V3 API returned numeric IDs, falling back to CLIP v2 API");
+      rids = await getLightRids();
+    }
     console.log('Light RIDs:', rids);
     return rids;
   } catch (error) {
     console.error('Error retrieving light RIDs:', error);
-    throw error;
+    // Return an empty array so the renderer does not crash
+    return [];
   }
 });
 

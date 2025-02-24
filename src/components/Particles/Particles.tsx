@@ -24,8 +24,8 @@ const Particles: React.FC = () => {
   useEffect(() => {
     const loadAssets = async () => {
       if (songDetails) {
-        console.log('Loading assets for song:', songDetails.title);
-        console.log('Available images:', songDetails.images);
+        // console.log('Loading assets for song:', songDetails.title);
+        // console.log('Available images:', songDetails.images);
 
         const audioPath = await window.electron.fileSystem.mergeAssetPath(
           songDetails.audioPath
@@ -38,16 +38,16 @@ const Particles: React.FC = () => {
         try {
           const imagePaths = await Promise.all(
             songDetails.images.map(async (imagePath: string) => {
-              console.log('Processing image path:', imagePath);
+              // console.log('Processing image path:', imagePath);
               const fullPath = await window.electron.fileSystem.mergeAssetPath(imagePath);
-              console.log('Resolved full path:', fullPath);
+              // console.log('Resolved full path:', fullPath);
               return fullPath;
             })
           );
-          console.log('Successfully loaded image paths:', imagePaths);
+          // console.log('Successfully loaded image paths:', imagePaths);
           setBackgroundImages(imagePaths);
         } catch (error) {
-          console.error('Error loading image paths:', error);
+          // console.error('Error loading image paths:', error);
         }
 
         setFullAudioPath(audioPath);
@@ -90,36 +90,92 @@ const Particles: React.FC = () => {
   // Add effect to set initial image when images are loaded
   useEffect(() => {
     if (backgroundImages.length > 0) {
-      console.log('Setting initial background image:', backgroundImages[0]);
+      // console.log('Setting initial background image:', backgroundImages[0]);
       setCurrentImageIndex(0);
     }
   }, [backgroundImages]);
 
-  // Fetch connected Hue lights on mount
+  // New effect: Ensure Hue credentials are set by reading localStorage before fetching RIDs
+  useEffect(() => {
+    const stored = localStorage.getItem('hueBridgeInfo');
+    if (stored) {
+      const credentials = JSON.parse(stored);
+      if (credentials?.ip && credentials?.username) {
+        console.log('🔑 Found stored Hue credentials, setting them');
+        window.electron.ipcRenderer.invoke('hue:setCredentials', credentials)
+          .catch(err => console.error('Error setting stored Hue credentials:', err));
+      }
+    } else {
+      console.warn('⚠️ No stored Hue credentials found. HueDebugOverlay must be used first.');
+    }
+  }, []);
+
+  // New effect: Log stored Hue credentials from localStorage for debugging
+  useEffect(() => {
+    const stored = localStorage.getItem('hueBridgeInfo');
+    console.log("📝 Stored Hue credentials in Particles:", stored);
+  }, []);
+
+  // Update Hue lights fetching effect to filter out legacy numeric IDs.
   useEffect(() => {
     window.electron.ipcRenderer.invoke('hue:getLightRids')
       .then((ids: string[]) => {
         console.log('Retrieved Hue lights:', ids);
-        setHueLights(ids);
+        const validIds = ids.filter(id => !/^\d+$/.test(id));
+        if (validIds.length < ids.length) {
+          console.warn('Some legacy numeric light IDs were filtered out; using only UUIDs:', validIds);
+        }
+        setHueLights(validIds);
       })
-      .catch((err: any) => console.error('Error fetching Hue lights:', err));
+      // .catch((err: any) => console.error('Error fetching Hue lights:', err));
   }, []);
 
-  // Flash Hue lights on and off every second while particles are active
+  // Flash Hue lights on and off every second while particles are active - added logging for debugging
   useEffect(() => {
-    if (!isActive || hueLights.length === 0) return;
+    if (!isActive || hueLights.length === 0) {
+      console.log("🚫 Not toggling lights: isActive =", isActive, ", hueLights =", hueLights);
+      return;
+    }
+    console.log("🔄 Starting hue lights flashing effect");
     let flashOn = false;
     const flashInterval = setInterval(() => {
       flashOn = !flashOn;
+      console.log(`💡 Toggling lights: turning ${flashOn ? "ON" : "OFF"}`);
       hueLights.forEach((lightId) => {
+        console.log(`👉 Processing light with id: ${lightId}`);
         const action = flashOn ? 'hue:turnOn' : 'hue:turnOff';
         window.electron.ipcRenderer.invoke(action, lightId)
-          .then((res: any) => console.log(`Light ${lightId} ${flashOn ? 'on' : 'off'}`, res))
-          .catch((err: any) => console.error(`Error toggling light ${lightId}:`, err));
+          .then((res: any) => console.log(`✅ Light ${lightId} ${flashOn ? 'is ON' : 'is OFF'}`, res))
+          .catch((err: any) => console.error(`❌ Error toggling light ${lightId}:`, err));
       });
     }, 1000);
-    return () => clearInterval(flashInterval);
+    return () => {
+      console.log("🛑 Clearing hue lights flashing interval");
+      clearInterval(flashInterval);
+    };
   }, [hueLights, isActive]);
+
+  // New effect: Refresh Hue lights periodically if none are present
+  useEffect(() => {
+    if (isActive && hueLights.length === 0) {
+      console.log("🔄 Hue lights empty; starting periodic refresh");
+      const refreshInterval = setInterval(() => {
+        window.electron.ipcRenderer.invoke('hue:getLightRids')
+          .then((ids: string[]) => {
+            const validIds = ids.filter(id => !/^\d+$/.test(id));
+            if (validIds.length > 0) {
+              console.log("🌟 Refreshed Hue lights:", validIds);
+              setHueLights(validIds);
+              clearInterval(refreshInterval);
+            } else {
+              console.warn("⚠️ Still no valid Hue lights found");
+            }
+          })
+          .catch((err: any) => console.error("❌ Error refreshing Hue lights:", err));
+      }, 5000);
+      return () => clearInterval(refreshInterval);
+    }
+  }, [isActive, hueLights]);
 
   // Handle leaving the page
   const handleBack = () => {
@@ -134,14 +190,14 @@ const Particles: React.FC = () => {
   // Handle image rotation based on current time
   const handleTimeUpdate = (currentTime: number, duration: number) => {
     if (backgroundImages.length === 0) {
-      console.log('No background images available');
+      // console.log('No background images available');
       return;
     }
 
     if (duration !== songDuration) {
       setSongDuration(duration);
-      console.log('Song duration:', duration);
-      console.log('Time per image:', duration / backgroundImages.length);
+      // console.log('Song duration:', duration);
+      // console.log('Time per image:', duration / backgroundImages.length);
     }
 
     const intervalDuration = duration / backgroundImages.length;
@@ -151,8 +207,8 @@ const Particles: React.FC = () => {
     );
 
     if (newIndex !== currentImageIndex) {
-      console.log('Switching to image index:', newIndex);
-      console.log('Current image path:', backgroundImages[newIndex]);
+      // console.log('Switching to image index:', newIndex);
+      // console.log('Current image path:', backgroundImages[newIndex]);
       setCurrentImageIndex(newIndex);
     }
   };
@@ -255,8 +311,8 @@ const Particles: React.FC = () => {
             key={index}
             src={imagePath}
             alt=""
-            onLoad={() => console.log(`Preloaded image ${index} loaded successfully:`, imagePath)}
-            onError={(e) => console.error(`Error loading image ${index}:`, e)}
+            // onLoad={() => console.log(`Preloaded image ${index} loaded successfully:`, imagePath)}
+            // onError={(e) => console.error(`Error loading image ${index}:`, e)}
           />
         ))}
       </div>

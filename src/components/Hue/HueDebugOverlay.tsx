@@ -45,6 +45,14 @@ const HueDebugOverlay: React.FC = () => {
     }
   }, []); // Empty dependency array - only run once on mount
 
+  // Add this useEffect to store bridgeInfo to localStorage when updated
+  React.useEffect(() => {
+    if (bridgeInfo) {
+      localStorage.setItem("hueBridgeInfo", JSON.stringify(bridgeInfo));
+      console.log("💾 Stored updated Hue credentials:", bridgeInfo);
+    }
+  }, [bridgeInfo]);
+
   const scanBridge = useCallback(async () => {
     try {
       // Discover the bridge IP…
