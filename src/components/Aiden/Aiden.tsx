@@ -1,28 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { SongModel } from '../../database/models/Song';
 import Player from '../SongPlayer/Player';
 
 const Aiden: React.FC = () => {
-  const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const songDetails = location.state?.songDetails as SongModel;
-
+  const [fullAudioPath, setFullAudioPath] = useState('');
+  const [fullJacketPath, setFullJacketPath] = useState('');
   const [isVisible, setIsVisible] = useState(false);
-  const [isCurtainOpen, setIsCurtainOpen] = useState(false);
-  const [fullAudioPath, setFullAudioPath] = useState<string>('');
-  const [fullJacketPath, setFullJacketPath] = useState<string>('');
-
-  useEffect(() => {
-    setIsCurtainOpen(true);
-    setTimeout(() => setIsVisible(true), 1000);
-    
-    return () => {
-      setIsCurtainOpen(false);
-      setIsVisible(false);
-    };
-  }, []);
 
   useEffect(() => {
     const loadAssets = async () => {
@@ -35,36 +22,39 @@ const Aiden: React.FC = () => {
         );
         setFullAudioPath(audioPath);
         setFullJacketPath(jacketPath);
-        console.log('Audio path:', audioPath);
-        console.log('Jacket path:', jacketPath);
       }
     };
     loadAssets();
   }, [songDetails]);
 
+  useEffect(() => {
+    // Trigger entrance animation
+    const timer = setTimeout(() => setIsVisible(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Handle leaving the page
   const handleBack = () => {
     setIsVisible(false);
-    setIsCurtainOpen(false);
-    setTimeout(() => navigate('/'), 1500);
+    setTimeout(() => navigate('/'), 300);
   };
 
-  if (!songDetails) {
-    return <div>No song details available</div>;
-  }
+  if (!songDetails) return null;
 
   return (
-    <div style={{ 
-      width: '100vw', 
-      height: '100vh', 
-      background: '#000',
-      color: 'white',
-      padding: '20px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '20px'
+    <div className={`page-transition ${isVisible ? 'visible' : ''}`}
+      style={{ 
+        width: '100vw', 
+        height: '100vh', 
+        background: '#000',
+        color: 'white',
+        padding: '20px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px'
     }}>
       <button
-        onClick={() => navigate('/')}
+        onClick={handleBack}
         style={{
           padding: '8px 16px',
           borderRadius: '20px',
@@ -78,27 +68,31 @@ const Aiden: React.FC = () => {
         Back
       </button>
 
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: '20px'
-      }}>
-        <h1>{songDetails?.title} - Aiden Visualization</h1>
+      <div className={`visualization-title ${isVisible ? 'visible' : ''}`}
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '20px'
+        }}
+      >
+        <h1>{songDetails.title} - Aiden Visualization</h1>
         <h2>Visualization Goes Here</h2>
       </div>
 
       {fullAudioPath && (
-        <Player
-          track={{
-            title: songDetails.title,
-            artist: songDetails.uploader,
-            albumArt: fullJacketPath,
-            audioSrc: fullAudioPath,
-          }}
-        />
+        <div className={`player-wrapper ${isVisible ? 'visible' : ''}`}>
+          <Player
+            track={{
+              title: songDetails.title,
+              artist: songDetails.uploader,
+              albumArt: fullJacketPath,
+              audioSrc: fullAudioPath,
+            }}
+          />
+        </div>
       )}
     </div>
   );

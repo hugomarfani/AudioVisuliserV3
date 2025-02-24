@@ -132,3 +132,38 @@ a:hover {
 .player-container {
   /* Remove all these classes */
 }
+
+.page-transition {
+  opacity: 0;
+  transform: scale(0.98);
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+}
+
+.page-transition.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.visualization-title {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+  transition-delay: 0.2s;
+}
+
+.visualization-title.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.player-wrapper {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+  transition-delay: 0.4s;
+}
+
+.player-wrapper.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
