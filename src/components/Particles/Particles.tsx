@@ -169,7 +169,7 @@ const Particles: React.FC = () => {
           window.electron.ipcRenderer.invoke('hue:setLightState', {
             lightId,
             on: true,
-            brightness: 1,
+            brightness: 100,
             xy
           }).catch((err: any) => console.error(`Error updating light ON ${lightId}:`, err));
         } else {
