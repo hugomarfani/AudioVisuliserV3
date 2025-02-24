@@ -25,7 +25,7 @@
     "\n\n* **Song Title:** \"The Sound of Silence\" by Simon & Garfunkel\n* **Mood:** melancholic, introspective, haunting\n* **Setting:** a foggy, deserted city street at night, streetlights casting long, distorted shadows\n* **Characters:** a lone figure in a long coat, head bowed, walking away from the viewer\n* **Color Palette:** muted tones of blue, gray, and purple, with a hint of orange from the streetlights\n* **Style:** cinematic, film noir, with a touch of surrealism\n\n\nThe Sound of Silence, melancholic, introspective, haunting, a foggy, deserted city street at night, streetlights casting long, distorted shadows, a lone figure in a long coat, head bowed, walking away from the viewer, muted tones of blue, gray, and purple, with a hint of orange from the streetlights, cinematic, film noir, with a touch of surrealism \n"
   ],
   "objects": ["ter", "nd", "land"],
-  "particles": [],
+  "particles": ["musicNotes"],
   "status": "Green",
   "title": "Auli'i Cravalho - How Far I'll Go (from Moana/Official Video)",
   "updatedAt": "2025-02-23T16:48:04.802Z",

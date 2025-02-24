@@ -1,6 +1,7 @@
 // Using a single default image for now
 import defaultParticle from '../../assets/icon.png';
-import note1 from '../../assets/particles/musicNotes/note1.png';
+import musicNote1 from '../../assets/particles/musicNotes/musicNote1.png';
+import musicNote2 from '../../assets/particles/musicNotes/musicNote2.png';
 import bubble1 from '../../assets/particles/bubbles/bubbles1.png';
 import star1 from '../../assets/particles/stars/star1.png';
 import star2 from '../../assets/particles/stars/star2.png';
@@ -23,7 +24,7 @@ export const particlePhysics: Record<string, ParticlePhysics> = {
   musicNote: { 
     name: "musicNote", 
     weight: 1.0, gravity: 0.15, bounce: 0.6, airResistance: 0.01, lifespan: 5000, 
-    images: [note1],
+    images: [musicNote1, musicNote2],
     moods: ['happy', 'energetic']
   },
   bubble: { 
@@ -133,8 +134,43 @@ export const particlePhysics: Record<string, ParticlePhysics> = {
 };
 
 // Function to get a random image for a given particle type
-export function getRandomParticleImage(type: string): string {
-  const physics = particlePhysics[type];
-  if (!physics) return defaultParticle; // Return defaultParticle instead of "default.png"
-  return physics.images[Math.floor(Math.random() * physics.images.length)];
-}
+export const getRandomParticleImage = async (type: string): Promise<string> => {
+    console.log(`Getting image for particle type: ${type}`);
+    
+    // Map particle types to their directory names and number of images
+    const particleConfig: { [key: string]: { dir: string, count: number } } = {
+        musicNote: { dir: 'musicNotes', count: 2 }, // Assuming you have 4 music note images
+        star: { dir: 'stars', count: 2 },
+        bubble: { dir: 'bubbles', count: 1 },
+        snowflake: { dir: 'snowflakes', count: 1 },
+        heart: { dir: 'hearts', count: 1 },
+        leaves: { dir: 'leaves', count: 1 },
+        butterfly: { dir: 'butterflies', count: 1 },
+        confetti: { dir: 'confetti', count: 1 },
+        raindrop: { dir: 'raindrops', count: 1 },
+        firefly: { dir: 'fireflies', count: 1 },
+        balloon: { dir: 'balloons', count: 1 },
+        flower: { dir: 'flowers', count: 1 },
+        firework: { dir: 'fireworks', count: 1 },
+    };
+
+    const config = particleConfig[type] || particleConfig.musicNote;
+    
+    // Get random image number
+    const imageNumber = Math.floor(Math.random() * config.count) + 1;
+    
+    // Construct the relative path
+    const imageName = `${type}${imageNumber}.png`;
+    const relativePath = `particles/${config.dir}/${imageName}`;
+    
+    try {
+        // Use electron to get the correct absolute path
+        const fullPath = await window.electron.fileSystem.mergeAssetPath(relativePath);
+        console.log(`Selected image path: ${fullPath}`);
+        return fullPath;
+    } catch (error) {
+        console.error(`Error loading image: ${relativePath}`, error);
+        // Return a default image path if the requested one fails
+        return await window.electron.fileSystem.mergeAssetPath('particles/musicNotes/musicNote1.png');
+    }
+};

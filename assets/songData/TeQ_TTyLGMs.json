@@ -10,7 +10,7 @@
   "moods": [],
   "object_prompts": [],
   "objects": ["ctures on the walls", "ke", "owman"],
-  "particles": [],
+  "particles": ["snowflakes"],
   "status": "Yellow",
   "updatedAt": "2025-02-23T13:01:20.257Z",
   "uploader": "assets"

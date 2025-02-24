@@ -11,7 +11,7 @@
   "colours_reason": [],
   "objects": [],
   "object_prompts": [],
-  "particles": [],
+  "particles": ["musicNotes"],
   "backgrounds": [],
   "background_prompts": [],
   "createdAt": "2025-02-23T15:04:38.903Z",
