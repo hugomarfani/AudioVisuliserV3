@@ -83,26 +83,50 @@ const App: React.FC = () => {
               {accessToken === '123' ? (
                 <Login />
               ) : (
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                  }}
-                >
-                  <SongSelector
-                    onTrackSelect={setSelectedTrackURI}
-                    accessToken={accessToken}
-                  />
+                <>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <SongSelector
+                      onTrackSelect={setSelectedTrackURI}
+                      accessToken={accessToken}
+                    />
+                    <Modal
+                      open={settingsModalOpen}
+                      onClose={() => setSettingsModalOpen(false)}
+                    >
+                      <Box sx={modalStyle}>
+                        <HueDebugOverlay />
+                      </Box>
+                    </Modal>
+                  </div>
+                  <Button
+                    variant="contained"
+                    sx={hueButtonStyle}
+                    onClick={() => setHueModalOpen(true)}
+                  >
+                    Hue Dev Controls
+                  </Button>
+                  <Button
+                    variant="contained"
+                    sx={settingsButtonStyle}
+                    onClick={() => setSettingsModalOpen(true)}
+                  >
+                    Settings
+                  </Button>
                   <Modal
-                    open={settingsModalOpen}
-                    onClose={() => setSettingsModalOpen(false)}
+                    open={hueModalOpen}
+                    onClose={() => setHueModalOpen(false)}
                   >
                     <Box sx={modalStyle}>
-                      <HueDebugOverlay />
+                      <PhillipsHueControls lightId={'4738d2a5-4b1a-4699-9054-6b1028aa5140'} />
                     </Box>
                   </Modal>
-                </div>
+                </>
               )}
             </MeshGradientBackground>
           }
