@@ -19,30 +19,48 @@ const Player: React.FC<PlayerProps> = ({ track }) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
+    console.log('Player component mounted/updated with track:', track);
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio) {
+      console.log('No audio element reference');
+      return;
+    }
 
     const updateProgress = () => {
-      // Avoid NaN by using "|| 0"
       const currentProgress = (audio.currentTime / audio.duration) * 100 || 0;
       setProgress(currentProgress);
+      console.log('Audio progress:', currentProgress);
     };
 
     const handleError = (e: Event) => {
       const audioElement = e.target as HTMLAudioElement;
-      console.error('Audio error:', {
-        error: audioElement.error,
-        src: audioElement.src,
-        readyState: audioElement.readyState,
-      });
-      setIsPlaying(false);
+      // Only log error if we actually have a source
+      if (track.audioSrc) {
+        console.error('Audio error:', {
+          error: audioElement.error,
+          src: audioElement.src,
+          readyState: audioElement.readyState,
+        });
+        setIsPlaying(false);
+      }
     };
 
     audio.addEventListener('timeupdate', updateProgress);
     audio.addEventListener('error', handleError);
+    audio.addEventListener('loadstart', () => console.log('Audio loading started'));
+    audio.addEventListener('canplay', () => console.log('Audio can play'));
+    audio.addEventListener('playing', () => console.log('Audio started playing'));
+    audio.addEventListener('pause', () => console.log('Audio paused'));
+    audio.addEventListener('ended', () => console.log('Audio ended'));
+
+    // Reset player state when audio source changes
+    setIsPlaying(false);
+    setProgress(0);
     
     // Log the audio source when it changes
-    console.log('Audio source:', track.audioSrc);
+    if (track.audioSrc) {
+      console.log('Audio source:', track.audioSrc);
+    }
 
     return () => {
       audio.removeEventListener('timeupdate', updateProgress);
@@ -65,7 +83,7 @@ const Player: React.FC<PlayerProps> = ({ track }) => {
   }, [isPlaying]);
 
   const togglePlayPause = () => {
-    if (!audioRef.current) return;
+    if (!audioRef.current || !track.audioSrc) return;
     if (isPlaying) {
       audioRef.current.pause();
     } else {
@@ -113,6 +131,13 @@ const Player: React.FC<PlayerProps> = ({ track }) => {
   const handleProgressMouseLeave = () => {
     setHoverProgress(0);
   };
+
+  console.log('Player rendering with states:', {
+    isPlaying,
+    progress,
+    trackTitle: track.title,
+    trackSrc: track.audioSrc
+  });
 
   return (
     <div
@@ -236,7 +261,11 @@ const Player: React.FC<PlayerProps> = ({ track }) => {
         </div>
 
         {/* Hidden audio element */}
-        <audio ref={audioRef} src={track.audioSrc} />
+        <audio 
+          ref={audioRef} 
+          src={track.audioSrc} 
+          onLoadedData={() => console.log('Audio loaded successfully')}
+        />
       </div>
     </div>
   );

@@ -36,10 +36,12 @@ function SongCard({
   const handleParticlesClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    console.log('Particles clicked - Song Details:', songDetails);
     const songWithAudio = {
       ...songDetails,
       audioSrc: songDetails.audioSrc || '',
     };
+    console.log('Navigating to particles with data:', songWithAudio);
     navigate(`/particles/${encodeURIComponent(uri)}`, { 
       state: { songDetails: songWithAudio } 
     });
@@ -48,10 +50,12 @@ function SongCard({
   const handleAidenClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    console.log('Aiden clicked - Song Details:', songDetails);
     const songWithAudio = {
       ...songDetails,
       audioSrc: songDetails.audioSrc || '',
     };
+    console.log('Navigating to aiden with data:', songWithAudio);
     navigate(`/aiden/${encodeURIComponent(uri)}`, { 
       state: { songDetails: songWithAudio } 
     });

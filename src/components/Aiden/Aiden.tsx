@@ -11,6 +11,8 @@ const Aiden: React.FC = () => {
 
   const [isVisible, setIsVisible] = useState(false);
   const [isCurtainOpen, setIsCurtainOpen] = useState(false);
+  const [fullAudioPath, setFullAudioPath] = useState<string>('');
+  const [fullJacketPath, setFullJacketPath] = useState<string>('');
 
   useEffect(() => {
     setIsCurtainOpen(true);
@@ -22,68 +24,83 @@ const Aiden: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const loadAssets = async () => {
+      if (songDetails) {
+        const audioPath = await window.electron.fileSystem.mergeAssetPath(
+          songDetails.audioPath
+        );
+        const jacketPath = await window.electron.fileSystem.mergeAssetPath(
+          songDetails.jacket
+        );
+        setFullAudioPath(audioPath);
+        setFullJacketPath(jacketPath);
+        console.log('Audio path:', audioPath);
+        console.log('Jacket path:', jacketPath);
+      }
+    };
+    loadAssets();
+  }, [songDetails]);
+
   const handleBack = () => {
     setIsVisible(false);
     setIsCurtainOpen(false);
     setTimeout(() => navigate('/'), 1500);
   };
 
-  // Construct the full audio path
-  const fullAudioPath = songDetails.audioPath ? `../../${songDetails.audioPath}` : '';
-
   if (!songDetails) {
     return <div>No song details available</div>;
   }
 
   return (
-    <>
-      <div className={`curtain curtain-left${isCurtainOpen ? ' open' : ''}`} />
-      <div className={`curtain curtain-right${isCurtainOpen ? ' open' : ''}`} />
-      <div className={`visualization-page${isVisible ? ' visible' : ''}`}>
-        <div style={{ position: 'absolute', top: 20, left: 20 }}>
-          <button 
-            onClick={handleBack}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '20px',
-              background: 'white',
-              border: 'none',
-              cursor: 'pointer',
-              opacity: isVisible ? 1 : 0,
-              transition: 'opacity 0.5s ease-in-out',
-            }}
-          >
-            Back
-          </button>
-        </div>
-        
-        <div style={{ 
-          position: 'absolute', 
-          bottom: 0, 
-          width: '100%',
-          opacity: isVisible ? 1 : 0,
-          transition: 'opacity 0.5s ease-in-out',
-        }}>
-          <Player
-            track={{
-              title: songDetails.title,
-              artist: songDetails.uploader,
-              albumArt: songDetails.jacket,
-              audioSrc: fullAudioPath,  // Use the constructed audio path
-            }}
-          />
-        </div>
-        
-        <div style={{ 
-          padding: '60px 20px',
-          opacity: isVisible ? 1 : 0,
-          transition: 'opacity 0.5s ease-in-out',
-        }}>
-          <h1 style={{ color: 'white' }}>{songDetails.title} - Aiden Visualization</h1>
-          {/* Add your Aiden visualization here */}
-        </div>
+    <div style={{ 
+      width: '100vw', 
+      height: '100vh', 
+      background: '#000',
+      color: 'white',
+      padding: '20px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '20px'
+    }}>
+      <button
+        onClick={() => navigate('/')}
+        style={{
+          padding: '8px 16px',
+          borderRadius: '20px',
+          background: 'white',
+          border: 'none',
+          cursor: 'pointer',
+          width: 'fit-content',
+          color: 'black'
+        }}
+      >
+        Back
+      </button>
+
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: '20px'
+      }}>
+        <h1>{songDetails?.title} - Aiden Visualization</h1>
+        <h2>Visualization Goes Here</h2>
       </div>
-    </>
+
+      {fullAudioPath && (
+        <Player
+          track={{
+            title: songDetails.title,
+            artist: songDetails.uploader,
+            albumArt: fullJacketPath,
+            audioSrc: fullAudioPath,
+          }}
+        />
+      )}
+    </div>
   );
 };
 
