@@ -21,6 +21,7 @@ const electronHandler = {
     once(channel: Channels, func: (...args: unknown[]) => void) {
       ipcRenderer.once(channel, (_event, ...args) => func(...args));
     },
+    invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args),
   },
   database: {
     fetchSongs: () => ipcRenderer.invoke('fetch-songs'),
