@@ -7,8 +7,24 @@ import t1 from './Assets/Test.png'
 import { lerp } from 'three/src/math/MathUtils';
 import frozenLetItGo from '../../assets/audio/frozen_let_it_go.mp3'
 import YukiGuni from '../../assets/audio/Yorushika.mp3'
+import LK from '../../assets/audio/25QyCxVkXwQ.wav'
 import { AiOutlineForward, AiOutlineBackward } from 'react-icons/ai';
 import { FaPlay, FaPause } from 'react-icons/fa';
+
+const songList =
+  [
+    { "title": "Let it go",
+      "artist": "Idina Menzel",
+      "albumArt": "https://cdn-images.dzcdn.net/images/cover/f669aa7623ad8af5fbeb5a196346013a/500x500.jpg",
+      "path": "../../assets/audio/frozen_let_it_go.mp3"
+    },
+    {
+      "title": "The Lion King - Can You Feel The Love Tonight",
+      "artist": "Elton John",
+      "albumArt": "https://github.com/hugomarfani/AudioVisuliserV3/blob/Bug-Fix/assets/images/theLionKing.png",
+      "path": "../../assets/audio/25QyCxVkXwQ.wav"
+    }
+  ]
 
 const loadImage = path => {
   return new Promise((resolve, reject) => {
@@ -24,8 +40,8 @@ class ShaderVisuals extends Component {
   constructor(props) {
     super(props);
     this.requestID = null;
-    this.track = props.track
-    this.hoverProgress = 0;
+    this.track = songList[1];
+    console.log(this.track)
     this.mountRef = React.createRef();
     this.audio = null;
     this.clock = new THREE.Clock();
@@ -347,7 +363,7 @@ class ShaderVisuals extends Component {
 
     const sound = new THREE.Audio(listeners);
     const audioLoader = new THREE.AudioLoader();
-    audioLoader.load(frozenLetItGo, buffer => {
+    audioLoader.load(this.track.path, buffer => {
       sound.setBuffer(buffer);
       sound.setLoop(false);
       sound.setVolume(0.5);
