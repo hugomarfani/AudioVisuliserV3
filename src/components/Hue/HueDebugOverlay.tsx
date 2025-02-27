@@ -1,122 +1,133 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Box, Typography, Divider, Button, TextField } from '@mui/material';
 import HueControlPanel from './HueControlPanel';
 
 const HueDebugOverlay: React.FC = () => {
-  const [bridgeInfo, setBridgeInfo] = useState<{ ip: string; username: string } | null>(() => {
+  // Store discovered bridge info using phea credentials
+  const [bridgeInfo, setBridgeInfo] = useState<{ ip: string } | null>(null);
+  const [bridgeError, setBridgeError] = useState<string | null>(null);
+
+  // State for manual IP entry
+  const [manualIp, setManualIp] = useState<string>('');
+  const [manualUsername, setManualUsername] = useState<string>(''); // for App Key
+  const [manualPSK, setManualPSK] = useState<string>(''); // NEW state for PSK
+  const [showManualInput, setShowManualInput] = useState<boolean>(false);
+
+  // NEW: Check for valid stored credentials on mount
+  useEffect(() => {
     const stored = localStorage.getItem("hueBridgeInfo");
     if (stored) {
-      const parsed = JSON.parse(stored);
-      if (parsed?.ip && parsed?.username) {
-        // Send credentials to main process
-        window.electron.ipcRenderer.invoke('hue:setCredentials', parsed);
-        return parsed;
+      const creds = JSON.parse(stored);
+      if (creds?.ip && creds?.username && creds?.psk) {
+        console.log("Found stored Hue credentials, verifying...");
+        window.electron.ipcRenderer.invoke('hue:setCredentials', creds)
+          .then(() => {
+            setBridgeInfo({ ip: creds.ip });
+            setBridgeError(null);
+          })
+          .catch(err => {
+            console.error("Stored Hue credentials invalid:", err);
+            localStorage.removeItem("hueBridgeInfo");
+            setBridgeInfo(null);
+          });
       }
-    }
-    return null;
-  });
-  const [lightRids, setLightRids] = useState<string[]>([]);
-  const [bridgeError, setBridgeError] = useState<string | null>(null);
-  const [manualIp, setManualIp] = useState<string>('');
-
-  // Only fetch light RIDs if we have valid credentials
-  const fetchLightRids = useCallback(async () => {
-    if (!bridgeInfo?.username) return;
-
-    try {
-      const rids = await window.electron.ipcRenderer.invoke('hue:getLightRids');
-      setLightRids(rids);
-      setBridgeError(null);
-    } catch (error: any) {
-      setBridgeError(error.message);
-      // If credentials are invalid, clear them
-      if (error.message === 'No valid credentials') {
-        localStorage.removeItem("hueBridgeInfo");
-        setBridgeInfo(null);
-      }
-      console.error('Error fetching light RIDs:', error);
-    }
-  }, [bridgeInfo?.username]);
-
-  // Only attempt to fetch RIDs once when component mounts if we have credentials
-  React.useEffect(() => {
-    if (bridgeInfo?.username) {
-      fetchLightRids();
-    }
-  }, []); // Empty dependency array - only run once on mount
-
-  // Add this useEffect to store bridgeInfo to localStorage when updated
-  React.useEffect(() => {
-    if (bridgeInfo) {
-      localStorage.setItem("hueBridgeInfo", JSON.stringify(bridgeInfo));
-      console.log("💾 Stored updated Hue credentials:", bridgeInfo);
-    }
-  }, [bridgeInfo]);
-
-  const scanBridge = useCallback(async () => {
-    try {
-      // Discover the bridge IP…
-      const discoveredIp: string = await window.electron.ipcRenderer.invoke('hue:discoverBridge');
-      // Automatically set up credentials using the discovered IP
-      const credentials = await window.electron.ipcRenderer.invoke('hue:setManualBridge', discoveredIp);
-      setBridgeInfo(credentials);
-      localStorage.setItem("hueBridgeInfo", JSON.stringify(credentials));
-      setBridgeError(null);
-    } catch (error: any) {
-      setBridgeError(error.message);
-      console.error('Error in HueDebugOverlay:', error);
     }
   }, []);
+
+  // Discovery function remains available
+  const scanBridge = useCallback(async () => {
+    try {
+      const discoveredIp: string = await window.electron.ipcRenderer.invoke('hue:discoverBridge');
+      console.log('Discovered Hue Bridge IP:', discoveredIp);
+      // Set credentials via the discovery path (using dummy credentials here so that IPC call works)
+      await window.electron.ipcRenderer.invoke('hue:setCredentials', { ip: discoveredIp, username: 'fromPhea', psk: 'fromPhea' });
+      setBridgeInfo({ ip: discoveredIp });
+      setBridgeError(null);
+    } catch (error: any) {
+      setBridgeError(error.message);
+      console.error('Error in auto discovery:', error);
+    }
+  }, []);
+
+  // Allow manual connection when user enters an IP address
+  const connectManually = useCallback(async () => {
+    try {
+      let result;
+      if (manualUsername.trim() && manualPSK.trim()) {
+        result = await window.electron.ipcRenderer.invoke('hue:setCredentials', {
+          ip: manualIp,
+          username: manualUsername,
+          psk: manualPSK
+        });
+      } else {
+        result = await window.electron.ipcRenderer.invoke('hue:connectToBridges', [manualIp]);
+      }
+      setBridgeInfo({ ip: manualIp });
+      localStorage.setItem("hueBridgeInfo", JSON.stringify({ ip: manualIp, ...result }));
+      setBridgeError(null);
+    } catch (error: any) {
+      setBridgeError(error.message);
+      console.error('Error in manual connection:', error);
+    }
+  }, [manualIp, manualUsername, manualPSK]);
+
+  // Automatically run discovery on mount if no manual credentials exist
+  useEffect(() => {
+    if (!bridgeInfo) {
+      scanBridge();
+    }
+  }, [bridgeInfo, scanBridge]);
+
+  // Save updated bridge info persistently.
+  useEffect(() => {
+    if (bridgeInfo) {
+      localStorage.setItem("hueBridgeInfo", JSON.stringify(bridgeInfo));
+      console.log("💾 Stored Hue Bridge info:", bridgeInfo);
+    }
+  }, [bridgeInfo]);
 
   return (
     <Box sx={{ p: 2 }}>
       <Typography variant="h5" gutterBottom>
         Hue Debug Overlay
       </Typography>
-      {/* Show bridge info and scan button if no credentials, otherwise display control panel */}
-      {!bridgeInfo?.username ? (
+      {bridgeError && (
+        <Typography variant="body2" color="error">
+          {bridgeError}
+        </Typography>
+      )}
+      {!bridgeInfo ? (
         <>
-          <Button variant="contained" onClick={scanBridge}>
-            Start Bridge Discovery
+          <Button variant="contained" onClick={scanBridge} sx={{ mr: 2 }}>
+            Start Discovery
           </Button>
-          {bridgeError && (
+          <Button variant="contained" onClick={() => setShowManualInput(true)}>
+            Connect Manually
+          </Button>
+          {showManualInput && (
             <Box sx={{ mt: 2 }}>
-              <Typography variant="body2" color="error">
-                {bridgeError.includes('429')
-                  ? 'Too many requests - please wait a few minutes or enter your bridge IP manually:'
-                  : bridgeError.includes('link')
-                  ? 'Please press the link button on your Hue Bridge and then click "Rescan Bridge".'
-                  : bridgeError}
-              </Typography>
-              {bridgeError.includes('429') && !bridgeInfo && (
-                <Box sx={{ mt: 1 }}>
-                  <TextField
-                    label="Manual Bridge IP"
-                    value={manualIp}
-                    onChange={(e) => setManualIp(e.target.value)}
-                    fullWidth
-                  />
-                  <Button
-                    variant="contained"
-                    sx={{ mt: 1 }}
-                    onClick={async () => {
-                      try {
-                        const result = await window.electron.ipcRenderer.invoke('hue:setManualBridge', manualIp);
-                        setBridgeInfo(result);
-                        localStorage.setItem("hueBridgeInfo", JSON.stringify(result));
-                        setBridgeError('');
-                      } catch (err: any) {
-                        setBridgeError(err.message);
-                        console.error('Error setting manual IP:', err);
-                      }
-                    }}
-                  >
-                    Set Bridge IP
-                  </Button>
-                </Box>
-              )}
-              <Button variant="contained" sx={{ mt: 1 }} onClick={scanBridge}>
-                Rescan Bridge
+              <TextField
+                label="Enter Hue Bridge IP"
+                value={manualIp}
+                onChange={(e) => setManualIp(e.target.value)}
+                fullWidth
+              />
+              <TextField
+                label="Enter Hue Bridge App Key (Username)"
+                value={manualUsername}
+                onChange={(e) => setManualUsername(e.target.value)}
+                fullWidth
+                sx={{ mt: 1 }}
+              />
+              <TextField
+                label="Enter Hue Bridge PSK"
+                value={manualPSK}
+                onChange={(e) => setManualPSK(e.target.value)}
+                fullWidth
+                sx={{ mt: 1 }}
+              />
+              <Button variant="contained" sx={{ mt: 1 }} onClick={connectManually}>
+                Connect
               </Button>
             </Box>
           )}
@@ -125,7 +136,6 @@ const HueDebugOverlay: React.FC = () => {
         <>
           <Typography variant="subtitle1">Bridge Info:</Typography>
           <Typography variant="body2">IP: {bridgeInfo.ip}</Typography>
-          <Typography variant="body2">Username: {bridgeInfo.username || 'Not Authorized'}</Typography>
           <Divider sx={{ my: 2 }} />
           <Typography variant="subtitle1" gutterBottom>
             Lights:

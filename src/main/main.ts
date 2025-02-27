@@ -508,11 +508,8 @@ ipcMain.handle('hue:getLightDetails', async () => {
     const response = await axios.get(`https://${currentHueBridgeIP}/clip/v2/resource/light`, {
       headers: { 'hue-application-key': currentHueUsername },
       httpsAgent,
-      // Add timeout and max retries
-      timeout: 5000,
-      maxRedirects: 0
+      timeout: 5000
     });
-
     const lights = response.data.data || [];
     return lights.map((light: any) => ({
       id: light.id,
@@ -522,11 +519,11 @@ ipcMain.handle('hue:getLightDetails', async () => {
       xy: (light.color && light.color.xy) ? light.color.xy : [0, 0]
     }));
   } catch (error: any) {
-    // Handle rate limiting explicitly
-    if (error.response?.status === 429) {
-      throw new Error('Rate limit reached. Please wait a few seconds before trying again.');
+    if (error.response?.status === 403) {
+      console.error("403 Unauthorized: Check your Hue Bridge App Key.");
+      throw new Error("Unauthorized: Please ensure your Hue Bridge App Key is correct.");
     }
-    console.error('Error getting light details:', error);
+    console.error('Error in hue:getLightDetails handler:', error.message);
     throw error;
   }
 });

@@ -66,7 +66,7 @@ const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUp
     // Reset player state when audio source changes
     setIsPlaying(false);
     setProgress(0);
-    
+
     // Log the audio source when it changes
     if (track.audioSrc) {
       console.log('Audio source:', track.audioSrc);
@@ -101,11 +101,20 @@ const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUp
     return () => cancelAnimationFrame(animationFrame);
   }, [isPlaying]);
 
+  // New effect to log current hue lights from the new configuration.
+  useEffect(() => {
+    if (track.audioSrc) {
+      window.electron.ipcRenderer.invoke('hue:getLightRids')
+        .then((rids: string[]) => console.log("Player retrieved Hue Lights (new config):", rids))
+        .catch((err: any) => console.error("Error retrieving Hue Lights in Player:", err));
+    }
+  }, [track]);
+
   const togglePlayPause = () => {
     if (!audioRef.current || !track.audioSrc) return;
-    
+
     console.log('Toggle play/pause, current state:', isPlaying);
-    
+
     if (isPlaying) {
       audioRef.current.pause();
     } else {
@@ -283,9 +292,9 @@ const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUp
         </div>
 
         {/* Hidden audio element */}
-        <audio 
-          ref={audioRef} 
-          src={track.audioSrc} 
+        <audio
+          ref={audioRef}
+          src={track.audioSrc}
           onLoadedData={() => console.log('Audio loaded successfully')}
         />
       </div>
