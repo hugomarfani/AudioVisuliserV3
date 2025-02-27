@@ -44,6 +44,10 @@ const configuration: webpack.Configuration = {
           filename: 'assets/images/[name][ext]', // Store images in assets/images
         },
       },
+      {
+        test: /\.node$/,
+        loader: 'node-loader',
+      },
     ],
   },
 

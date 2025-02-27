@@ -112,7 +112,6 @@
     "cors": "^2.8.5",
     "electron-debug": "^3.2.0",
     "electron-log": "^4.4.8",
-    "electron-react-boilerplate": "file:",
     "electron-updater": "^6.1.4",
     "flowbite-react": "^0.10.2",
     "fluent-ffmpeg": "^2.1.3",
