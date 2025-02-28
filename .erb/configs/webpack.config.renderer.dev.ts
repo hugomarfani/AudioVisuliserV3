@@ -162,7 +162,32 @@ const configuration: webpack.Configuration = {
       isDevelopment: process.env.NODE_ENV !== 'production',
       nodeModules: webpackPaths.appNodeModulesPath,
     }),
+
+    new webpack.ProvidePlugin({
+      process: 'process/browser',
+      Buffer: ['buffer', 'Buffer'],
+    }),
   ],
+
+  resolve: {
+    fallback: {
+      assert: require.resolve('assert/'),
+      crypto: require.resolve('crypto-browserify'),
+      http: require.resolve('stream-http'),
+      https: require.resolve('https-browserify'),
+      net: false,
+      tls: false,
+      path: require.resolve('path-browserify'),
+      querystring: require.resolve('querystring-es3'),
+      stream: require.resolve('stream-browserify'),
+      url: require.resolve('url/'),
+      zlib: require.resolve('browserify-zlib'),
+      fs: false,
+      dgram: false,
+      "process/browser": require.resolve("process/browser"),
+      "process": require.resolve("process/browser"),
+    },
+  },
 
   node: {
     __dirname: false,

@@ -14,7 +14,7 @@ import Particles from '../components/Particles/Particles';
 import Aiden from '../components/Aiden/Aiden';
 import { Button, Modal, Box } from '@mui/material';
 import PhillipsHueControls from '../components/Hue/PhillipsHueControls';
-import HueDebugOverlay from '../components/Hue/HueDebugOverlay';
+import HueConfigModal from '../components/Hue/HueConfigModal';
 
 // eslint-disable-next-line react/function-component-definition
 const App: React.FC = () => {
@@ -100,7 +100,7 @@ const App: React.FC = () => {
                       onClose={() => setSettingsModalOpen(false)}
                     >
                       <Box sx={modalStyle}>
-                        <HueDebugOverlay />
+                        <HueConfigModal onClose={() => setSettingsModalOpen(false)} />
                       </Box>
                     </Modal>
                   </div>

@@ -1,3 +1,4 @@
+import '../utils/process-shim';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import PlayScene from '../components/SongPlayer/PlayScene';

@@ -1,0 +1,52 @@
+.hue-controls {
+  margin: 10px 0;
+  padding: 10px;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hue-setup-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  color: #333;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  width: 80%;
+  max-width: 500px;
+}
+
+.hue-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.setup-section {
+  margin-bottom: 15px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+.bridge-selection {
+  margin-top: 10px;
+}
+
+.hue-setup select,
+.hue-setup button {
+  margin-top: 8px;
+  padding: 8px 12px;
+}
+
+.hue-setup h3,
+.hue-setup h4 {
+  margin-bottom: 10px;
+}
