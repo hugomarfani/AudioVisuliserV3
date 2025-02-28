@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Button, Stepper, Step, StepLabel,
   CircularProgress, Select, MenuItem, FormControl,
-  InputLabel, TextField, Alert, Paper, AlertTitle
+  InputLabel, TextField, Alert, Paper, AlertTitle,
+  Link
 } from '@mui/material';
 
 interface HueConfigModalProps {
@@ -139,26 +140,19 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
     setIsLoading(true);
     setError(null);
     try {
-      // Use IPC to get light details
-      const lights = await window.electron.ipcRenderer.invoke('hue:getLightDetails');
+      // Use IPC to get entertainment areas
+      const entertainmentAreas = await window.electron.ipcRenderer.invoke('hue:getEntertainmentAreas');
 
-      // For this simplified version, we'll treat individual lights as groups
-      const groups = lights.map((light: any) => ({
-        id: light.id,
-        name: light.name || 'Light ' + light.id.substring(0, 8)
-      }));
-
-      setEntertainmentGroups(groups);
-
-      if (groups.length > 0) {
-        setSelectedGroup(groups[0].id);
-        setSuccess(`Found ${groups.length} light(s)`);
+      if (entertainmentAreas && entertainmentAreas.length > 0) {
+        setEntertainmentGroups(entertainmentAreas);
+        setSelectedGroup(entertainmentAreas[0].id);
+        setSuccess(`Found ${entertainmentAreas.length} entertainment area(s)`);
       } else {
-        setError("No lights found. Make sure your Hue Bridge is properly configured.");
+        setError("No entertainment areas found. You need to create an entertainment area in the Philips Hue app first.");
       }
     } catch (error: any) {
-      setError(`Error fetching lights: ${error.message || "Unknown error"}`);
-      console.error('Error fetching lights:', error);
+      setError(`Error fetching entertainment areas: ${error.message || "Unknown error"}`);
+      console.error('Error fetching entertainment areas:', error);
     } finally {
       setIsLoading(false);
     }
@@ -292,6 +286,47 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
     );
   };
 
+  // Render entertainment area creation instructions
+  const renderEntertainmentAreaInstructions = () => {
+    return (
+      <Paper elevation={2} sx={{ p: 2, mb: 3, bgcolor: '#f8f8f8', border: '1px solid #e0e0e0' }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
+          How to Create an Entertainment Area:
+        </Typography>
+        <Box component="ol" sx={{ pl: 2, mb: 2 }}>
+          <Typography component="li" variant="body2" sx={{ mb: 1 }}>
+            Open the official Philips Hue app on your mobile device
+          </Typography>
+          <Typography component="li" variant="body2" sx={{ mb: 1 }}>
+            Go to Settings &gt; Entertainment areas
+          </Typography>
+          <Typography component="li" variant="body2" sx={{ mb: 1 }}>
+            Tap "+" to add a new entertainment area
+          </Typography>
+          <Typography component="li" variant="body2" sx={{ mb: 1 }}>
+            Select the lights you want to include and follow the setup process
+          </Typography>
+          <Typography component="li" variant="body2">
+            Once created, return here and click "Refresh" to see your entertainment area
+          </Typography>
+        </Box>
+        <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
+          Note: Only Hue color-capable lights can be added to entertainment areas.
+        </Typography>
+        <Box sx={{ mt: 2 }}>
+          <Link
+            href="https://www.philips-hue.com/en-us/explore-hue/propositions/entertainment/sync-with-music"
+            target="_blank"
+            rel="noopener"
+            sx={{ fontSize: '0.875rem' }}
+          >
+            Learn more about Philips Hue Entertainment Areas
+          </Link>
+        </Box>
+      </Paper>
+    );
+  };
+
   // Render step content
   const getStepContent = (step: number) => {
     switch (step) {
@@ -386,20 +421,32 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
         return (
           <Box sx={{ mt: 2 }}>
             <Typography variant="body1" sx={{ mb: 2 }}>
-              Select a light to use with the music visualizer.
+              Select an entertainment area to use with the music visualizer.
             </Typography>
 
+            {error && error.includes('entertainment area') && renderEntertainmentAreaInstructions()}
+
             {entertainmentGroups.length === 0 ? (
-              <Alert severity="warning" sx={{ mb: 2 }}>
-                No lights found. Make sure your Hue Bridge is properly configured.
-              </Alert>
+              <Box>
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  No entertainment areas found. You need to create one in the Philips Hue app first.
+                </Alert>
+                {renderEntertainmentAreaInstructions()}
+                <Button
+                  variant="contained"
+                  onClick={fetchEntertainmentGroups}
+                  sx={{ mt: 2 }}
+                >
+                  Refresh
+                </Button>
+              </Box>
             ) : (
               <FormControl fullWidth sx={{ mb: 3 }}>
-                <InputLabel id="group-select-label">Select Light</InputLabel>
+                <InputLabel id="group-select-label">Select Entertainment Area</InputLabel>
                 <Select
                   labelId="group-select-label"
                   value={selectedGroup}
-                  label="Select Light"
+                  label="Select Entertainment Area"
                   onChange={(e) => setSelectedGroup(e.target.value)}
                 >
                   {entertainmentGroups.map((group) => (
@@ -412,6 +459,7 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
             )}
           </Box>
         );
+
       case 3: // Setup complete
         return (
           <Box sx={{ mt: 2 }}>
@@ -420,7 +468,7 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
             </Typography>
 
             <Typography variant="body1" sx={{ mb: 3 }}>
-              Your Phillips Hue lights are now configured and ready to sync with your music.
+              Your Phillips Hue entertainment area is now configured and ready to sync with your music.
               The lights will respond to the audio frequencies when you play songs.
             </Typography>
 

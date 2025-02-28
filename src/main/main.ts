@@ -565,6 +565,49 @@ ipcMain.handle('hue:setLightState', async (_event, { lightId, on, brightness, xy
   }
 });
 
+// New IPC handler to get entertainment areas using CLIP v2 API
+ipcMain.handle('hue:getEntertainmentAreas', async () => {
+  try {
+    // First try CLIP v2 API for entertainment groups
+    const response = await axios.get(`https://${currentHueBridgeIP}/clip/v2/resource/entertainment`, {
+      headers: { 'hue-application-key': currentHueUsername },
+      httpsAgent,
+      timeout: 5000
+    });
+
+    const areas = response.data.data || [];
+    if (areas.length > 0) {
+      return areas.map((area: any) => ({
+        id: area.id,
+        name: area.metadata?.name || 'Entertainment Area',
+        lights: area.lights || []
+      }));
+    }
+
+    // Fallback to v3 API if no areas found through CLIP v2
+    try {
+      const api = await getHueApi();
+      const groups = await api.groups.getAll();
+      const entertainmentGroups = groups.filter((group: any) =>
+        group.type === 'Entertainment' ||
+        (group.stream && group.stream.active !== undefined)
+      );
+
+      return entertainmentGroups.map((group: any) => ({
+        id: group.id,
+        name: group.name || 'Entertainment Group',
+        lights: group.lights || []
+      }));
+    } catch (innerError) {
+      console.error('Error fetching entertainment groups using v3 API:', innerError);
+      return [];
+    }
+  } catch (error: any) {
+    console.error('Error in hue:getEntertainmentAreas handler:', error.message);
+    throw error;
+  }
+});
+
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
   sourceMapSupport.install();
@@ -652,43 +695,45 @@ const createWindow = async () => {
  * Add event listeners...
  */
 
-app.on('window-all-closed', () => {
-  // Respect the OSX convention of having the application in memory even
-  // after all windows have been closed
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
 
-app
-  .whenReady()
-  .then(async () => {
-    try {
-      await initDatabase();
-      console.log('✨ Database system ready!');
-      if (mainWindow) {
-        mainWindow.setTitle('App (Database: Connected)');
-      }
-    } catch (error) {
-      console.error('💥 Failed to initialize database:', error);
-      if (mainWindow) {
-        mainWindow.setTitle('App (Database: Error)');
-      }
-    }
 
-    createWindow();
-    app.on('activate', () => {
-      if (mainWindow === null) createWindow();
-    });
-  })
-  .catch(console.log);
 
-app.on('before-quit', () => {
-  db.close((err) => {
-    if (err) {
-      console.error('Error closing database:', err);
-    } else {
-      console.log('Database connection closed');
-    }
-  });
-});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+});  });    }      console.log('Database connection closed');    } else {      console.error('Error closing database:', err);    if (err) {  db.close((err) => {app.on('before-quit', () => {  .catch(console.log);  })    });      if (mainWindow === null) createWindow();    app.on('activate', () => {    createWindow();    }      }        mainWindow.setTitle('App (Database: Error)');      if (mainWindow) {      console.error('💥 Failed to initialize database:', error);    } catch (error) {      }        mainWindow.setTitle('App (Database: Connected)');      if (mainWindow) {      console.log('✨ Database system ready!');      await initDatabase();    try {  .then(async () => {  .whenReady()app});  }    app.quit();  if (process.platform !== 'darwin') {  // after all windows have been closed  // Respect the OSX convention of having the application in memory evenapp.on('window-all-closed', () => {
