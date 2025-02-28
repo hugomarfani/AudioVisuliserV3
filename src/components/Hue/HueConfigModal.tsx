@@ -498,20 +498,22 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
 
   return (
     <Paper
-      elevation={5}
+      elevation={3}
       sx={{
         position: 'relative',
-        maxWidth: 600,
+        width: '80%', // Set to 80% of screen width
+        maxHeight: '90vh',
+        overflowY: 'auto',
         mx: 'auto',
-        p: 3,
+        p: 4,
         bgcolor: '#ffffff',
-        borderRadius: 2
+        borderRadius: 1.5
       }}
     >
       <Button
         aria-label="close"
         onClick={onClose}
-        sx={{ position: 'absolute', top: 8, right: 8 }}
+        sx={{ position: 'absolute', top: 12, right: 12 }}
       >
         Close
       </Button>
@@ -520,7 +522,7 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
         Phillips Hue Setup
       </Typography>
 
-      <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
+      <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
         {steps.map((label) => (
           <Step key={label}>
             <StepLabel>{label}</StepLabel>
@@ -531,7 +533,8 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
       {error && (
         <Alert
           severity="error"
-          sx={{ mb: 2 }}
+          variant="outlined"
+          sx={{ mb: 3 }}
         >
           <AlertTitle>{formatErrorMessage(error).title}</AlertTitle>
           <Typography variant="body2">{formatErrorMessage(error).message}</Typography>
@@ -541,7 +544,8 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
       {success && (
         <Alert
           severity="success"
-          sx={{ mb: 2 }}
+          variant="outlined"
+          sx={{ mb: 3 }}
         >
           <Typography variant="body2">{success}</Typography>
         </Alert>
@@ -549,7 +553,7 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
 
       {getStepContent(activeStep)}
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
         <Button
           variant="outlined"
           onClick={handleBack}

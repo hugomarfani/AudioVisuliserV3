@@ -15,6 +15,7 @@ import Aiden from '../components/Aiden/Aiden';
 import { Button, Modal, Box } from '@mui/material';
 import PhillipsHueControls from '../components/Hue/PhillipsHueControls';
 import HueConfigModal from '../components/Hue/HueConfigModal';
+import '../styles/hue.css';
 
 // eslint-disable-next-line react/function-component-definition
 const App: React.FC = () => {
@@ -52,10 +53,12 @@ const App: React.FC = () => {
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    width: 400,
+    width: '80%', // Changed from fixed width of 400 to 95% of screen width
+    maxWidth: '1400px', // Add a maximum width to prevent excessive stretching
     bgcolor: 'background.paper',
     boxShadow: 24,
-    p: 4,
+    p: 0, // Remove padding as the HueConfigModal has its own padding
+    py: 5,
     borderRadius: 2,
   };
 

@@ -568,42 +568,41 @@ ipcMain.handle('hue:setLightState', async (_event, { lightId, on, brightness, xy
 // New IPC handler to get entertainment areas using CLIP v2 API
 ipcMain.handle('hue:getEntertainmentAreas', async () => {
   try {
-    // First try CLIP v2 API for entertainment groups
+    console.log(`Requesting entertainment areas from bridge at ${currentHueBridgeIP}`);
+
+    // Log details for manual testing in Postman
+    console.log("POSTMAN TEST - Get Entertainment Areas:");
+    console.log("Method: GET");
+    console.log("URL:", `https://${currentHueBridgeIP}/clip/v2/resource/entertainment`);
+    console.log("Headers:", { 'hue-application-key': currentHueUsername });
+
     const response = await axios.get(`https://${currentHueBridgeIP}/clip/v2/resource/entertainment`, {
       headers: { 'hue-application-key': currentHueUsername },
       httpsAgent,
       timeout: 5000
     });
 
-    const areas = response.data.data || [];
-    if (areas.length > 0) {
-      return areas.map((area: any) => ({
-        id: area.id,
-        name: area.metadata?.name || 'Entertainment Area',
-        lights: area.lights || []
-      }));
-    }
-
-    // Fallback to v3 API if no areas found through CLIP v2
-    try {
-      const api = await getHueApi();
-      const groups = await api.groups.getAll();
-      const entertainmentGroups = groups.filter((group: any) =>
-        group.type === 'Entertainment' ||
-        (group.stream && group.stream.active !== undefined)
-      );
-
-      return entertainmentGroups.map((group: any) => ({
-        id: group.id,
-        name: group.name || 'Entertainment Group',
-        lights: group.lights || []
-      }));
-    } catch (innerError) {
-      console.error('Error fetching entertainment groups using v3 API:', innerError);
+    if (!response.data || !response.data.data) {
+      console.warn('No entertainment data returned from bridge');
       return [];
     }
+
+    console.log('Entertainment areas from bridge:', response.data);
+
+    // Filter and format the entertainment areas
+    const areas = response.data.data || [];
+    return areas
+      .filter((area: any) => area.type === 'entertainment')
+      .map((area: any) => ({
+        id: area.id,
+        name: area.id_v1 ? `Entertainment ${area.id_v1.replace('/lights/', '')}` : `Entertainment ${area.id.substring(0, 8)}`,
+        lights: area.renderer_reference ? [area.renderer_reference.rid] : []
+      }));
   } catch (error: any) {
-    console.error('Error in hue:getEntertainmentAreas handler:', error.message);
+    console.error('Error in hue:getEntertainmentAreas handler:', error);
+    if (error.response) {
+      console.error('Bridge response:', error.response.status, error.response.data);
+    }
     throw error;
   }
 });
