@@ -6,8 +6,25 @@ import texture from './Assets/bg.jpg';
 import t1 from './Assets/Test.png'
 import { lerp } from 'three/src/math/MathUtils';
 import frozenLetItGo from '../../assets/audio/frozen_let_it_go.mp3'
+import YukiGuni from '../../assets/audio/Yorushika.mp3'
+import LK from '../../assets/audio/25QyCxVkXwQ.wav'
 import { AiOutlineForward, AiOutlineBackward } from 'react-icons/ai';
 import { FaPlay, FaPause } from 'react-icons/fa';
+
+const songList =
+  [
+    { "title": "Let it go",
+      "artist": "Idina Menzel",
+      "albumArt": "https://cdn-images.dzcdn.net/images/cover/f669aa7623ad8af5fbeb5a196346013a/500x500.jpg",
+      "path": "../../assets/audio/frozen_let_it_go.mp3"
+    },
+    {
+      "title": "The Lion King - Can You Feel The Love Tonight",
+      "artist": "Elton John",
+      "albumArt": "https://github.com/hugomarfani/AudioVisuliserV3/blob/Bug-Fix/assets/images/theLionKing.png",
+      "path": "../../assets/audio/25QyCxVkXwQ.wav"
+    }
+  ]
 
 const loadImage = path => {
   return new Promise((resolve, reject) => {
@@ -22,27 +39,81 @@ const loadImage = path => {
 class ShaderVisuals extends Component {
   constructor(props) {
     super(props);
-    this.track = props.track
-    this.progress = 0
-    this.hoverProgress = 10;
-    this.rotation = 0
+    this.requestID = null;
+    this.track = songList[1];
+    console.log(this.track)
     this.mountRef = React.createRef();
     this.audio = null;
+    this.clock = new THREE.Clock();
 
     this.state = {
       isPlaying: false,
-      rotation: 0
+      rotation: 0,
+      progress: 0,
+      hoverProgress: 0,
     };
 
     this.togglePlayPause = this.togglePlayPause.bind(this);
+    this.updateRotation = this.updateRotation.bind(this);
+    this.updateProgress = this.updateProgress.bind(this);
+    this.handleProgressMouseMove = this.handleProgressMouseMove.bind(this);
+    this.handleProgressClick = this.handleProgressClick.bind(this);
+    this.handleProgressMouseLeave = this.handleProgressMouseLeave.bind(this);
+  }
+
+  handleProgressMouseLeave() {
+    this.setState (() => ({hoverProgress: 0}));
+  }
+
+  handleProgressMouseMove(e) {
+    if(!e) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const hoverX = e.clientX - rect.left;
+    const hoverProgress = (hoverX / rect.width) * 100;
+    this.setState(() => ({hoverProgress}));
+  }
+
+  handleProgressClick(e) {
+    if(!e) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickProgress = (clickX / rect.width) * 100;
+
+    this.setState(() => ({ progress: clickProgress }));
+    if(this.state.isPlaying){
+      this.togglePlayPause();
+    }
+    this.audio.offset = clickProgress * this.audio.buffer.duration / 100;
+  }
+
+  updateProgress() {
+    const currentProgress = (this.dtime / this.audio.buffer.duration) * 100;
+    if(this.state.progress + currentProgress >= 100){
+      this.setState(() => ({ progress: 0 }));
+      this.setState(() => ({ isPlaying: false }));
+    } else {
+      this.setState((prev) => ({ progress: prev.progress + currentProgress }));
+      // console.log("is updating", this.state.progress)
+    }
+  }
+
+  updateRotation() {
+    if(this.state.isPlaying){
+      this.setState((prevState) => ({ rotation: prevState.rotation + 0.1 }));
+    };
   }
 
   togglePlayPause() {
-    this.setState((prevState) => ({ isPlaying: !prevState.isPlaying }));
     if (this.state.isPlaying) {
+      this.setState((prevState) => ({ isPlaying: !prevState.isPlaying }));
+      console.log("STOP", this.state.progress)
       this.audio.pause();
     } else {
-      this.audio.play();
+      this.setState((prevState) => ({ isPlaying: !prevState.isPlaying }));
+      console.log("Start", this.state.progress)
+      this.audio.play(0, this.offset || 0);
     }
   }
 
@@ -63,7 +134,6 @@ class ShaderVisuals extends Component {
       alpha: true,
       antialias: true
     });
-    this.renderer.setClearColor(0xffffff, 1);
     this.renderer.setSize(this.width, this.height);
     this.mountRef.current.appendChild(this.renderer.domElement);
 
@@ -86,6 +156,7 @@ class ShaderVisuals extends Component {
     this.controls.enableRotate = false;
 
     this.time = 0;
+    this.dtime = 0;
 
     // Load textures and then add objects to the scene
     Promise.all([this.getPixelDataFromImage(t1)]).then(textures => {
@@ -99,7 +170,7 @@ class ShaderVisuals extends Component {
       this.setupResize();
       this.animate(); // Start the animation loop
     });
-
+    // console.log("test")
   }
 
   async getPixelDataFromImage(url) {
@@ -165,8 +236,8 @@ class ShaderVisuals extends Component {
 
       const intersects = this.raycaster.intersectObjects([this.planeMesh]);
       if(intersects.length > 0){
-          console.log(intersects[0].point);
-          console.log(this.analyser.getAverageFrequency());
+          // console.log(intersects[0].point);
+          // console.log(this.analyser.getAverageFrequency());
           this.simMaterial.uniforms.uMouse.value = intersects[0].point;
       }
     });
@@ -292,9 +363,9 @@ class ShaderVisuals extends Component {
 
     const sound = new THREE.Audio(listeners);
     const audioLoader = new THREE.AudioLoader();
-    audioLoader.load(frozenLetItGo, buffer => {
+    audioLoader.load(this.track.path, buffer => {
       sound.setBuffer(buffer);
-      sound.setLoop(true);
+      sound.setLoop(false);
       sound.setVolume(0.5);
       this.audio = sound;
     });
@@ -388,12 +459,14 @@ class ShaderVisuals extends Component {
 
   // Rename the animation loop method to 'animate'
   animate = () => {
-    this.time += 0.01;
+    this.dtime = this.clock.getDelta();
+    this.time += this.dtime;
 
     this.material.uniforms.time.value = this.time;
     this.simMaterial.uniforms.time.value = this.time;
     this.material.uniforms.uFrequency.value = this.analyser.getAverageFrequency();
 
+    this.requestID = requestAnimationFrame(this.animate);
     this.renderer.setRenderTarget(this.renderTarget);
     this.renderer.render(this.sceneFBO, this.cameraFBO);
     this.renderer.setRenderTarget(null);
@@ -406,18 +479,25 @@ class ShaderVisuals extends Component {
 
     this.material.uniforms.uTexture.value = this.renderTarget.texture;
     this.simMaterial.uniforms.uCurrentPosition.value = this.renderTarget1.texture;
-    window.requestAnimationFrame(this.animate);
+
+    this.updateRotation();
+    if(this.audio && this.audio.isPlaying){
+      this.updateProgress();
+      // console.log(this.state.progress)
+      // console.log(this.clickProgress, this.audio.buffer.duration, this.audio.offset);
+    };
   };
 
   componentWillUnmount() {
     // Cancel the animation frame if it's running
     cancelAnimationFrame(this.requestID);
-    // Remove any event listeners if added (e.g., resize)
-    // window.removeEventListener('resize', this.handleResize);
-    // Clean up the DOM by removing the renderer's canvas
-    if (this.mountRef.current && this.renderer.domElement.parentNode === this.mountRef.current) {
+    // Remove Three.js canvas
+    if (this.mountRef.current) {
       this.mountRef.current.removeChild(this.renderer.domElement);
     }
+    // if (this.mountRef.current && this.renderer.domElement.parentNode === this.mountRef.current) {
+    //   this.mountRef.current.removeChild(this.renderer.domElement);
+    // }
   }
 
 
@@ -436,6 +516,7 @@ class ShaderVisuals extends Component {
             padding: 0
           }}
         />
+
         <div
         style={{
           position: 'fixed',
@@ -491,7 +572,7 @@ class ShaderVisuals extends Component {
                   position: 'absolute', // position absolute to fill the corner
                   top: '10px', // adjust top position
                   left: '10px', // adjust left position
-                  transform: `rotate(${this.rotation}deg)`,
+                  transform: `rotate(${this.state.rotation}deg)`,
                   transition: this.isPlaying ? 'none' : 'transform 0.1s linear',
                 }}
               >
@@ -523,24 +604,24 @@ class ShaderVisuals extends Component {
                     position: 'relative',
                     cursor: 'pointer', // add cursor pointer to indicate interactivity
                   }}
-                  // onClick={} // add onClick event
-                  // onMouseMove={} // add onMouseMove event
-                  // onMouseLeave={} // add onMouseLeave event
+                  onClick={this.handleProgressClick} // add onClick event
+                  onMouseMove={this.handleProgressMouseMove} // add onMouseMove event
+                  onMouseLeave={this.handleProgressMouseLeave} // add onMouseLeave event
                 >
                   <div
                     style={{
                       height: '100%',
-                      width: `${this.progress}%`,
+                      width: `${this.state.progress}%`,
                       background: '#000', // pick any colour you like
                       borderRadius: '4px',
                       transition: 'width 0.1s linear',
                     }}
                   />
-                  {this.hoverProgress !== null && (
+                  {this.state.hoverProgress !== null && (
                     <div
                       style={{
                         height: '100%',
-                        width: `${this.hoverProgress}%`,
+                        width: `${this.state.hoverProgress}%`,
                         background: 'rgba(85, 85, 85, 0.3)', // ghost bar color
                         borderRadius: '4px',
                         position: 'absolute',

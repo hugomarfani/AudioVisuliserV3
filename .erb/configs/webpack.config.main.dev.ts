@@ -37,11 +37,11 @@ const configuration: webpack.Configuration = {
   },
 
   externals: {
-    'sqlite3': 'commonjs sqlite3',
+    sqlite3: 'commonjs sqlite3',
   },
 
   resolve: {
-    extensions: ['.js', '.ts', '.tsx', '.mjs'] // added '.mjs'
+    extensions: ['.js', '.ts', '.tsx', '.mjs'], // added '.mjs'
   },
 
   module: {
@@ -49,16 +49,16 @@ const configuration: webpack.Configuration = {
       {
         test: /\.mjs$/,
         include: /node_modules/,
-        type: 'javascript/auto'
+        type: 'javascript/auto',
       },
       {
         test: /\.js$/,
         include: /node_modules[\\\/]node-hue-api[\\\/]dist[\\\/]esm/,
         resolve: {
-          fullySpecified: false
-        }
-      }
-    ]
+          fullySpecified: false,
+        },
+      },
+    ],
   },
 
   plugins: [

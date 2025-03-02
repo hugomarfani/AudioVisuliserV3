@@ -1,5 +1,4 @@
 import ShaderVisuals from '../../shader/ShaderVisuals';
-import frozenLetItGo from '../../../assets/audio/frozen_let_it_go.mp3'
 
 const PlayScene = () => {
   return (

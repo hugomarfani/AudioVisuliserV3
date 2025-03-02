@@ -1,0 +1,13 @@
+[
+  { "title": "Let it go",
+    "artist": "Idina Menzel",
+    "albumArt": "https://cdn-images.dzcdn.net/images/cover/f669aa7623ad8af5fbeb5a196346013a/500x500.jpg",
+    "path": "../../assets/audio/frozen_let_it_go.mp3"
+  },
+  {
+    "title": "The Lion King - Can You Feel The Love Tonight",
+    "artist": "Elton John",
+    "albumArt": "../../assets/albumArt/theLionKing.jpg",
+    "path": "../../assets/audio/25QyCxVkXwQ.wav"
+  }
+]
