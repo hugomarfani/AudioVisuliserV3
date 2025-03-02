@@ -13,6 +13,8 @@ class HueService {
   private connection: any = null; // DTLS connection
   private isConnected: boolean = false;
   private config: HueBridgeConfig | null = null;
+  private updateRate: number = 50; // Default updates per second
+  private lastRGB: [number, number, number] = [0, 0, 0]; // Track last RGB to avoid unnecessary updates
 
   constructor() {
     // Try to load saved config
@@ -123,7 +125,7 @@ class HueService {
   }
 
   // Initialize connection to the bridge
-  async initialize(): Promise<boolean> {
+  async initialize(options?: { updateRate?: number }): Promise<boolean> {
     if (!this.config) {
       console.error('No Hue configuration found');
       return false;
@@ -135,7 +137,7 @@ class HueService {
         address: this.config.address,
         username: this.config.username,
         psk: this.config.psk,
-        dtlsUpdatesPerSecond: 50, // Default rate
+        dtlsUpdatesPerSecond: options?.updateRate || this.updateRate, // Use provided rate or default
         colorUpdatesPerSecond: 25 // Default rate
       });
       return true;
@@ -189,8 +191,14 @@ class HueService {
     }
 
     try {
+      // Avoid sending the same color repeatedly
+      if (this.lastRGB[0] === rgb[0] && this.lastRGB[1] === rgb[1] && this.lastRGB[2] === rgb[2]) {
+        return;
+      }
+
       // Use group 0 to target all lights in the entertainment group
       await this.bridge.transition([0], rgb, transitionTime);
+      this.lastRGB = rgb;
     } catch (error) {
       console.error('Error sending color transition', error);
     }

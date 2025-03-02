@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect, CSSProperties, forwardRef, useImperativeHandle } from 'react';
 import { AiOutlineForward, AiOutlineBackward } from 'react-icons/ai';
 import { FaPlay, FaPause } from 'react-icons/fa';
+import { IoSettingsOutline } from 'react-icons/io5';
+import HueMusicSync from '../Hue/HueMusicSync';
+import { Popover } from '@mui/material';
 
 interface PlayerProps {
   track: {
@@ -19,6 +22,7 @@ const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUp
   const [hoverProgress, setHoverProgress] = useState<number | null>(null);
   const [rotation, setRotation] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [settingsAnchorEl, setSettingsAnchorEl] = useState<null | HTMLElement>(null);
 
   useImperativeHandle(ref, () => ({
     play: () => audioRef.current?.play(),
@@ -163,6 +167,16 @@ const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUp
     setHoverProgress(0);
   };
 
+  // Handle settings click
+  const handleSettingsClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setSettingsAnchorEl(event.currentTarget);
+  };
+
+  // Handle settings close
+  const handleSettingsClose = () => {
+    setSettingsAnchorEl(null);
+  };
+
   console.log('Player rendering with states:', {
     isPlaying,
     progress,
@@ -288,16 +302,36 @@ const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUp
           <button onClick={skipForward} style={iconButtonStyle}>
             <AiOutlineForward />
           </button>
-          <button style={iconButtonStyle}>Options</button>
+          <button onClick={handleSettingsClick} style={iconButtonStyle}>
+            <IoSettingsOutline />
+          </button>
         </div>
 
         {/* Hidden audio element */}
         <audio
           ref={audioRef}
           src={track.audioSrc}
+          crossOrigin="anonymous" // Add this to allow audio processing from different domains
           onLoadedData={() => console.log('Audio loaded successfully')}
         />
       </div>
+
+      {/* Settings popover */}
+      <Popover
+        open={Boolean(settingsAnchorEl)}
+        anchorEl={settingsAnchorEl}
+        onClose={handleSettingsClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'center',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'center',
+        }}
+      >
+        <HueMusicSync audioRef={audioRef} isPlaying={isPlaying} />
+      </Popover>
     </div>
   );
 });

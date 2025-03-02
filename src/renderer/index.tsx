@@ -2,10 +2,15 @@ import '../utils/process-shim';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import PlayScene from '../components/SongPlayer/PlayScene';
+import { HueProvider } from '../context/HueContext';
 
 const container = document.getElementById('root') as HTMLElement;
 const root = createRoot(container);
-root.render(<App />);
+root.render(
+  <HueProvider>
+    <App />
+  </HueProvider>
+);
 // root.render(<PlayScene />);
 
 // calling IPC exposed from preload script
