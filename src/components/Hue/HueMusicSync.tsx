@@ -45,6 +45,11 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
   // Add new state to track which API mode is being used
   const [isEntertainmentAPI, setIsEntertainmentAPI] = useState<boolean>(true);
   const [selectedGroup, setSelectedGroup] = useState<string>(HueService.getConfig()?.entertainmentGroupId || '');
+  const [audioElementConnected, setAudioElementConnected] = useState(false);
+  // Add missing availableGroups state here
+  const [availableGroups, setAvailableGroups] = useState<any[]>([]);
+  // Add debug state to show more info
+  const [lastLightCommand, setLastLightCommand] = useState<string>("");
 
   // Use a state for config so that dependency changes trigger refetch
   const [config, setConfig] = useState(HueService.getConfig());
@@ -53,28 +58,46 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     setConfig(HueService.getConfig());
   }, []);
 
-  // Updated effect to fetch available entertainment groups once config is ready
+  // Updated effect to handle error cases better
   useEffect(() => {
     if (!config) return;
     async function fetchGroups() {
       try {
-        const groups = await HueService.getEntertainmentGroups();
-        if (groups && groups.length > 0) {
-          setAvailableGroups(groups);
-          // If current selected group not found, default to first group
-          if (!groups.find(g => g.id === selectedGroup)) {
-            setSelectedGroup(groups[0].id);
-            HueService.setEntertainmentGroupId(groups[0].id);
+        if (HueService.hasValidConfig()) {
+          const groups = await HueService.getEntertainmentGroups();
+          if (groups && groups.length > 0) {
+            // Convert to expected format if necessary
+            const formattedGroups = groups.map(group => {
+              return {
+                id: group.id || 'default',
+                name: group.name || `Group ${group.id || 'Default'}`
+              };
+            });
+
+            setAvailableGroups(formattedGroups);
+
+            // If current selected group not found, default to first group
+            if (!formattedGroups.find(g => g.id === selectedGroup)) {
+              setSelectedGroup(formattedGroups[0].id);
+              HueService.setEntertainmentGroupId(formattedGroups[0].id);
+            }
+          } else {
+            // Fallback: use current stored entertainment group as option
+            const defaultId = config.entertainmentGroupId || 'default';
+            setAvailableGroups([
+              { id: defaultId, name: `Default (${defaultId})` }
+            ]);
+            setSelectedGroup(defaultId);
           }
-        } else {
-          // Fallback: use current stored entertainment group as option
-          setAvailableGroups([
-            { id: config.entertainmentGroupId, name: `Default (${config.entertainmentGroupId})` }
-          ]);
-          setSelectedGroup(config.entertainmentGroupId);
         }
       } catch (error) {
         console.error("Error fetching entertainment groups", error);
+        // Create a fallback option even when there's an error
+        const defaultId = config.entertainmentGroupId || 'default';
+        setAvailableGroups([
+          { id: defaultId, name: `Default Group (${defaultId})` }
+        ]);
+        setSelectedGroup(defaultId);
       }
     }
     fetchGroups();
@@ -249,14 +272,23 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
       animationFrameRef.current = null;
     }
 
-    // Disconnect audio nodes
+    // Properly disconnect audio nodes
     if (sourceNodeRef.current) {
-      sourceNodeRef.current.disconnect();
+      try {
+        sourceNodeRef.current.disconnect();
+      } catch (e) {
+        console.log('Error disconnecting source node:', e);
+      }
       sourceNodeRef.current = null;
+      setAudioElementConnected(false); // Reset the connected flag
     }
 
     if (analyserRef.current) {
-      analyserRef.current.disconnect();
+      try {
+        analyserRef.current.disconnect();
+      } catch (e) {
+        console.log('Error disconnecting analyzer:', e);
+      }
       analyserRef.current = null;
     }
 
@@ -276,6 +308,18 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
   // Setup audio analyzer
   const setupAudioAnalyzer = () => {
     try {
+      // If audio element is already connected, skip
+      if (audioElementConnected && sourceNodeRef.current) {
+        console.log('Audio element already connected, reusing existing analyzer');
+        return;
+      }
+
+      // Clean up existing connections first
+      if (sourceNodeRef.current || analyserRef.current || audioContextRef.current) {
+        console.log('Cleaning up existing audio connections before creating new ones');
+        cleanup();
+      }
+
       // Create audio context
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       const audioContext = new AudioContext();
@@ -303,6 +347,7 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
         source.connect(analyser);
         analyser.connect(audioContext.destination);
         sourceNodeRef.current = source;
+        setAudioElementConnected(true); // Mark as connected
 
         console.log('Audio analyzer setup complete:', {
           bufferLength,
@@ -332,44 +377,41 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     try {
       console.log('Connecting to Hue bridge...');
 
-      // Try first attempt with entertainment mode
+      // Reset connection attempts counter in HueService
+      HueService.resetConnectionAttempts();
+
+      // Force entertainment mode
+      HueService.forceEntertainmentMode();
+
+      // Try initialization with entertainment mode
       let initialized = await HueService.initialize({
         updateRate: colorMode === 'pulse' ? 30 : 20
       });
 
       if (!initialized) {
-        // If initialization failed, try again with limited retries
         console.log('First attempt failed, retrying...');
         initialized = await HueService.initialize();
       }
 
       if (!initialized) {
-        throw new Error('Failed to initialize Hue bridge connection. Check console for details.');
+        throw new Error('Failed to initialize Hue bridge connection.');
       }
 
       // Start entertainment mode
       console.log('Starting entertainment mode...');
       const started = await HueService.startEntertainmentMode();
+
       if (!started) {
-        throw new Error('Failed to start entertainment mode. Check console for details.');
+        throw new Error('Failed to start entertainment mode.');
       }
 
       console.log('Connected to Hue bridge successfully');
       setConnected(true);
-
-      // Check if we're using Entertainment API or Regular API
-      // We can get this information from the HueService
       setIsEntertainmentAPI(HueService.isUsingEntertainmentMode());
 
     } catch (error: any) {
       console.error('Error connecting to Hue:', error);
-
-      // More descriptive error message
       let errorMessage = error.message || 'Unknown error';
-      if (errorMessage.includes('initialize')) {
-        errorMessage += '. Verify your Hue bridge is connected and try reconfiguring in Settings.';
-      }
-
       setError(`Failed to connect to Hue: ${errorMessage}`);
       setEnabled(false);
     } finally {
@@ -553,17 +595,32 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     // Ensure RGB values are in 0-1 range
     rgb = rgb.map(v => Math.max(0, Math.min(1, v))) as [number, number, number];
 
-    // Send color to lights
-    console.log('updateLights sending rgb:', rgb, 'with transitionTime:', transitionTime);
+    // Send color to lights with better logging
+    console.log('Sending color to lights:', {
+      rgb,
+      transitionTime,
+      connected,
+      isEntertainmentAPI: HueService.isUsingEntertainmentMode(),
+      selectedGroup: HueService.getConfig()?.entertainmentGroupId
+    });
+
+    setLastLightCommand(`RGB: ${rgb[0].toFixed(2)}, ${rgb[1].toFixed(2)}, ${rgb[2].toFixed(2)}`);
+
+    // Send via HueService
     HueService.sendColorTransition(rgb, transitionTime).catch(err => {
       console.error('Error sending color to Hue:', err);
-      // If we get frequent errors, disconnect
+      setLastLightCommand(`Error: ${err.message}`);
       if (connected) {
         disconnectFromHue();
         setError('Connection to Hue Bridge lost. Please check your network.');
         setEnabled(false);
       }
     });
+
+    // Also try direct command for better compatibility
+    if (selectedLights.length > 0) {
+      sendDirectLightCommand(rgb, Math.round(Math.max(...rgb) * 100));
+    }
   };
 
   // Add a new function for direct light control on beats
@@ -581,6 +638,14 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
       const x = sum > 0 ? X / sum : 0.33;
       const y = sum > 0 ? Y / sum : 0.33;
 
+      // Enhanced logging
+      console.log('Direct light command:', {
+        rgb,
+        xy: [x, y],
+        brightness,
+        lights: selectedLights
+      });
+
       // Send to all selected lights with minimal transition time for flash effect
       selectedLights.forEach(async (lightId) => {
         await window.electron.ipcRenderer.invoke('hue:setLightState', {
@@ -589,10 +654,11 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
           brightness: brightness,
           xy: [x, y],
           transitiontime: 0 // Immediate change for flash effect
-        });
+        }).catch(err => console.error(`Error sending to light ${lightId}:`, err));
       });
     } catch (error) {
       console.error('Error sending direct light command:', error);
+      setLastLightCommand(`Direct Error: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -637,6 +703,24 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
   const handleDebugFlashToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
     const isEnabled = event.target.checked;
     onAutoFlashToggle?.(isEnabled);
+  };
+
+  // Add additional debug info to UI
+  const renderDebugInfo = () => {
+    if (!enabled) return null;
+
+    return (
+      <Box sx={{ mt: 2, p: 2, borderRadius: 1, bgcolor: '#f5f5f7', fontSize: '0.75rem' }}>
+        <Typography variant="subtitle2">Debug Info:</Typography>
+        <Box component="ul" sx={{ m: 0, pl: 2 }}>
+          <li>Connection: {connected ? 'Connected' : 'Disconnected'}</li>
+          <li>API Mode: {isEntertainmentAPI ? 'Entertainment' : 'Regular'}</li>
+          <li>Selected Group: {HueService.getConfig()?.entertainmentGroupId || 'None'}</li>
+          <li>Lights: {selectedLights.join(', ') || 'None'}</li>
+          <li>Last Command: {lastLightCommand || 'None'}</li>
+        </Box>
+      </Box>
+    );
   };
 
   return (
@@ -826,8 +910,8 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
             width: '100%',
             borderRadius: 2,
             overflow: 'hidden',
-            className: 'visualizer-container' + (connected ? ' active' : '')
           }}
+          className={`visualizer-container${connected ? ' active' : ''}`}
         >
           <HueMusicVisualizer
             audioData={getCurrentAudioData()}
@@ -846,6 +930,9 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
           </Alert>
         </Box>
       )}
+
+      {/* Add debug info component before the divider */}
+      {renderDebugInfo()}
 
       <Divider sx={{ my: 2 }} />
 
