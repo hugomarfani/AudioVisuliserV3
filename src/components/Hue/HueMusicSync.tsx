@@ -24,13 +24,15 @@ interface HueMusicSyncProps {
   isPlaying?: boolean;
   autoFlashEnabled?: boolean; // New prop to control auto flashing
   onAutoFlashToggle?: (isEnabled: boolean) => void; // Add callback for toggle
+  isVisible?: boolean; // Add prop for visibility
 }
 
 const HueMusicSync: React.FC<HueMusicSyncProps> = ({
   audioRef,
   isPlaying = false,
   autoFlashEnabled = false,
-  onAutoFlashToggle
+  onAutoFlashToggle,
+  isVisible = true // Default to true
 }) => {
   // State variables
   const [enabled, setEnabled] = useState<boolean>(false);
@@ -128,6 +130,9 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
   const dataArrayRef = useRef<Uint8Array | null>(null);
   const hueContext = useHue();
 
+  // Track previous visibility
+  const prevVisibleRef = useRef<boolean>(isVisible);
+
   // Load the saved settings
   useEffect(() => {
     const savedSettings = localStorage.getItem('hueMusicSyncSettings');
@@ -167,7 +172,8 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
       }
     }
 
-    return () => cleanup();
+    // Removed cleanup call to avoid closing the shared audio context
+    return () => {};
   }, [enabled, audioRef]);
 
   // Watch for changes in isPlaying to start/stop analysis
@@ -194,7 +200,7 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
 
   // Check if we have any Hue lights configured
   useEffect(() => {
-    // First check if we have a valid configuration according to HueService
+    // First check if we have a valid configuration according to HueServicess
     if (HueService.hasValidConfig()) {
       setHueConnected(true);
     }
@@ -280,6 +286,34 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     fetchGroups();
   }, []);
 
+  // New useEffect to re-trigger visualization when HueMusicSync is re-enabled
+  useEffect(() => {
+    if (enabled && isPlaying && audioRef?.current && !animationFrameRef.current) {
+      updateVisualization();
+    }
+  }, [enabled, isPlaying]);
+
+  // Add effect to handle visibility changes
+  useEffect(() => {
+    if (isVisible && !prevVisibleRef.current) {
+      console.log('HueMusicSync became visible');
+      // Force analyzer setup if playing
+      if (isPlaying && audioRef?.current) {
+        if (!audioContextRef.current) {
+          setupAudioAnalyzer();
+        }
+
+        // Ensure visualization is running
+        if (enabled && !animationFrameRef.current && audioContextRef.current) {
+          updateVisualization();
+        }
+      }
+    }
+
+    // Update the ref
+    prevVisibleRef.current = isVisible;
+  }, [isVisible, isPlaying]);
+
   // Cleanup function
   const cleanup = useCallback(() => {
     // Cancel animation frame
@@ -323,59 +357,54 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
 
   // Setup audio analyzer
   const setupAudioAnalyzer = () => {
+    if (!audioRef?.current) {
+      console.warn('No audio element available. Ensure the audio element is mounted and playback is triggered by user interaction.');
+      return;
+    }
     try {
-      // If audio element is already connected, skip
-      if (audioElementConnected && sourceNodeRef.current) {
-        console.log('Audio element already connected, reusing existing analyzer');
-        return;
-      }
-
-      // Clean up existing connections first
+      // Clean up any existing connections first
       if (sourceNodeRef.current || analyserRef.current || audioContextRef.current) {
-        console.log('Cleaning up existing audio connections before creating new ones');
         cleanup();
       }
-
-      // Create audio context
+      // Create an audio context
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       const audioContext = new AudioContext();
       audioContextRef.current = audioContext;
 
-      // Create analyzer
+      // Create an analyzer node
       const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256; // Power of 2, determines frequency bin count
-      analyser.smoothingTimeConstant = 0.8; // How smooth the frequency data is (0-1)
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.8;
       analyserRef.current = analyser;
 
-      // Buffer to store frequency data
+      // Create a buffer array for frequency data
       const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-      dataArrayRef.current = dataArray;
+      dataArrayRef.current = new Uint8Array(bufferLength);
 
-      // Connect audio element to analyzer if we have one
-      if (audioRef?.current) {
-        // Resume audio context if it's suspended (browser policy may require user interaction)
-        if (audioContext.state === 'suspended') {
-          audioContext.resume().catch(console.error);
-        }
-
-        const source = audioContext.createMediaElementSource(audioRef.current);
-        source.connect(analyser);
-        analyser.connect(audioContext.destination);
-        sourceNodeRef.current = source;
-        setAudioElementConnected(true); // Mark as connected
-
-        console.log('Audio analyzer setup complete:', {
-          bufferLength,
-          fftSize: analyser.fftSize,
-          state: audioContext.state
+      // Resume context if needed (triggered by user gesture)
+      if (audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+          console.log("Audio context resumed");
+        }).catch(err => {
+          console.error("Failed to resume AudioContext:", err);
         });
-      } else {
-        console.error('No audio element reference available');
       }
+
+      // Connect the audio element to the analyzer and to the destination
+      const source = audioContext.createMediaElementSource(audioRef.current);
+      source.connect(analyser);
+      analyser.connect(audioContext.destination);
+      sourceNodeRef.current = source;
+      setAudioElementConnected(true);
+
+      console.log('Audio analyzer setup complete:', {
+        bufferLength,
+        fftSize: analyser.fftSize,
+        state: audioContext.state
+      });
     } catch (error) {
       console.error('Error setting up audio analyzer:', error);
-      setError('Failed to set up audio analysis. Please check browser permissions.');
+      setError('Failed to set up audio analysis. Please click play to allow audio context initialization.');
     }
   };
 
@@ -449,136 +478,170 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
   // Update visualization and control lights
   const updateVisualization = () => {
     if (!analyserRef.current || !dataArrayRef.current) {
-      // If we don't have the analyzer ready yet, try again in the next frame
       animationFrameRef.current = requestAnimationFrame(updateVisualization);
       return;
     }
 
-    // Get frequency data
     const analyser = analyserRef.current;
     const dataArray = dataArrayRef.current;
     analyser.getByteFrequencyData(dataArray);
 
-    // Check for beats with modified threshold based on sensitivity
-    // Higher sensitivity = lower threshold = more beats detected
     const beatThreshold = 1.35 - (sensitivity - 5) * 0.05;
     const isBeat = detectBeat(dataArray, beatThreshold);
+
+    // Check if beat state changed
     if (isBeat !== beatDetected) {
       setBeatDetected(isBeat);
-      // Log beat detection with energy data for debugging
+
+      // If new beat detected, send to lights immediately!
       if (isBeat) {
-        console.log('Beat detected! Energy:', calculateBassEnergy(dataArray));
+        const energy = calculateBassEnergy(dataArray);
+        console.log('🥁 BEAT DETECTED! Energy:', energy);
+
+        // On beat detection, immediately flash the lights
+        if (true) {
+          // Generate vibrant color for beat flash
+          const beatColor = generateBeatColor(dataArray);
+          // Send direct command for immediate response
+          console.log('🔴 BEAT DETECTED - Sending immediate flash command');
+          HueService.sendColorTransition(beatColor, 0, true);
+          setLastLightCommand(`Beat Flash: ${beatColor.map(v => v.toFixed(2)).join(', ')}`);
+        }
       }
     }
 
-    // Update lights if connected
-    // For beats, update immediately without rate limiting
-    if (connected && isBeat) {
-      updateLights(dataArray, true);
-    }
-    // For non-beats, use rate limiting
-    else if (connected && performance.now() - lastUpdateTimeRef.current > 40) {
-      updateLights(dataArray, false);
-      lastUpdateTimeRef.current = performance.now();
+    if (true) {
+      // Continue regular light updates
+      updateLights(dataArray, isBeat);
     }
 
-    // Continue loop
     animationFrameRef.current = requestAnimationFrame(updateVisualization);
   };
 
-  // Update Hue lights based on audio data
+  // Add this new helper function to generate vibrant colors for beats
+  const generateBeatColor = (dataArray: Uint8Array): [number, number, number] => {
+    const { bass, mid, treble } = calculateFrequencyBands(dataArray);
+
+    // Determine dominant frequency range
+    if (bass > mid && bass > treble) {
+      // Bass-heavy beat - use red/orange
+      return [1, 0.3 + Math.random() * 0.3, 0];
+    } else if (mid > treble) {
+      // Mid-heavy beat - use green/cyan
+      return [0, 0.8 + Math.random() * 0.2, 0.5 + Math.random() * 0.5];
+    } else {
+      // Treble-heavy beat - use blue/purple
+      return [0.5 + Math.random() * 0.5, 0, 1];
+    }
+  };
+
+  // Update the updateLights function to make beat handling more aggressive
   const updateLights = (dataArray: Uint8Array, isBeat: boolean) => {
     const bufferLength = dataArray.length;
 
     // Calculate audio characteristics based on sensitivity and color mode
     let rgb: [number, number, number] = [0, 0, 0];
     let transitionTime = 100; // ms
-    let brightness = 1.0;
-
-    // Log the beat event for debugging
-    if (isBeat) {
-      console.log('Strong beat detected → flash mode');
-    }
 
     // If a beat is detected, create a more dramatic effect
     if (isBeat) {
-      // Use a brighter, more vivid color for beat flashes
+      // Log prominently
+      console.log('🎵 STRONG BEAT → FLASH MODE');
+
+      // For beats, use much more vivid colors
       switch (colorMode) {
         case 'spectrum': {
           // On beat, use more vibrant version of spectrum colors
           const { bass, mid, treble } = calculateFrequencyBands(dataArray);
-          const sensitivityFactor = (sensitivity / 5) * 1.5; // Boost sensitivity on beats
+          const sensitivityFactor = (sensitivity / 5) * 2.0; // Higher boost for beats
 
-          const r = Math.min(1, mapRange(bass * sensitivityFactor, 0, 255, 0.1, 1) * 1.3);
-          const g = Math.min(1, mapRange(mid * sensitivityFactor, 0, 255, 0.1, 1) * 1.3);
-          const b = Math.min(1, mapRange(treble * sensitivityFactor, 0, 255, 0.1, 1) * 1.3);
+          // Use more saturated colors for beats
+          const r = Math.min(1, mapRange(bass * sensitivityFactor, 0, 255, 0.2, 1) * 1.5);
+          const g = Math.min(1, mapRange(mid * sensitivityFactor, 0, 255, 0.2, 1) * 1.5);
+          const b = Math.min(1, mapRange(treble * sensitivityFactor, 0, 255, 0.2, 1) * 1.5);
 
           rgb = [r, g, b];
           break;
         }
 
-        case 'intensity': {
-          // On beat, use a brighter color based on volume
-          const volumeLevel = averageFrequency(dataArray, 0, bufferLength);
-          const scaledVolume = volumeLevel * (sensitivity / 5) * 1.3; // Boost sensitivity
-
-          // Map volume to a vibrant color (higher saturation and brightness)
-          const hue = mapRange(scaledVolume, 0, 255, 0, 360);
-          rgb = hsvToRgb(hue / 360, 1, 1); // Full saturation and brightness on beats
-          break;
-        }
-
+        case 'intensity':
         case 'pulse': {
-          // For pulse mode, use a very bright flash on beat
-          // Use dominant frequency for color
-          let dominantIndex = 0;
-          let maxEnergy = 0;
-          for (let i = 0; i < bufferLength; i++) {
-            if (dataArray[i] > maxEnergy) {
-              maxEnergy = dataArray[i];
-              dominantIndex = i;
-            }
-          }
-
-          const hue = mapRange(dominantIndex, 0, bufferLength, 0, 360);
+          // For both these modes on a beat, use a very bright flash
+          const volumeLevel = averageFrequency(dataArray, 0, bufferLength);
+          const hue = mapRange(volumeLevel, 0, 255, 0, 360);
           rgb = hsvToRgb(hue / 360, 1, 1); // Full saturation and brightness
           break;
         }
       }
 
-      // NEW: Add subtle variation to prevent filtering identical commands
-      // This ensures each beat creates a slightly different color
+      // NEW: Add subtle variation to prevent command filtering
       rgb = [
-        rgb[0] + (Math.random() * 0.02 - 0.01), // Add ±1% variation
-        rgb[1] + (Math.random() * 0.02 - 0.01),
-        rgb[2] + (Math.random() * 0.02 - 0.01)
+        Math.min(1, rgb[0] + (Math.random() * 0.05)),
+        Math.min(1, rgb[1] + (Math.random() * 0.05)),
+        Math.min(1, rgb[2] + (Math.random() * 0.05))
       ] as [number, number, number];
 
-      // Use very fast transitions for beats to create flash effect
-      transitionTime = 50;
-
-      // Direct light control for stronger effect on beats
-      console.log('Direct flash command – rgb:', rgb);
-      sendDirectLightCommand(rgb, 100); // 100% brightness on beats
+      // Use VERY fast transitions for beats
+      transitionTime = 20; // Much faster than before
     } else {
-      // Between beats, use more subtle colors
-      // ...existing code for non-beat state...
+      // Between beats logic stays the same...
+      switch (colorMode) {
+        case 'spectrum': {
+          const { bass, mid, treble } = calculateFrequencyBands(dataArray);
+          const sensitivityFactor = sensitivity / 5;
+          const r = mapRange(bass * sensitivityFactor, 0, 255, 0.05, 0.8);
+          const g = mapRange(mid * sensitivityFactor, 0, 255, 0.05, 0.8);
+          const b = mapRange(treble * sensitivityFactor, 0, 255, 0.05, 0.8);
+          const overallLevel = (bass + mid + treble) / 3;
+          const brightness = overallLevel < 20 ? 0.1 : 0.7;
+          rgb = [Math.min(1, r * brightness), Math.min(1, g * brightness), Math.min(1, b * brightness)];
+          transitionTime = 300;
+          break;
+        }
+        // Other cases remain unchanged...
+        case 'intensity': {
+          const volumeLevel = averageFrequency(dataArray, 0, bufferLength);
+          const scaledVolume = volumeLevel * (sensitivity / 5);
+          const intensity = mapRange(scaledVolume, 0, 255, 0, 0.7);
+          const hue = mapRange(intensity, 0, 1, 30, 260);
+          const sat = mapRange(intensity, 0, 1, 0.3, 0.8);
+          const val = mapRange(intensity, 0, 1, 0.05, 0.7);
+          rgb = hsvToRgb(hue / 360, sat, val);
+          transitionTime = 400;
+          break;
+        }
+        case 'pulse': {
+          const { bass, mid, treble } = calculateFrequencyBands(dataArray);
+          const sensitivityFactor = sensitivity / 10;
+          const baseLevel = Math.max(bass, mid, treble) * sensitivityFactor;
+          const dimBrightness = mapRange(baseLevel, 0, 255, 0.05, 0.2);
+          if (baseLevel < 30) {
+            rgb = [dimBrightness, dimBrightness, dimBrightness];
+          } else {
+            const hue = mid > bass ? 240 : 40;
+            rgb = hsvToRgb(hue / 360, 0.5, dimBrightness);
+          }
+          transitionTime = 300;
+          break;
+        }
+      }
     }
 
     // Ensure RGB values are in 0-1 range
     rgb = rgb.map(v => Math.max(0, Math.min(1, v))) as [number, number, number];
 
     // Send color to lights with better logging
-    console.log(`Sending color to lights (beat=${isBeat}):`, {
-      rgb,
-      transitionTime,
-      connected,
-      isEntertainmentAPI: HueService.isUsingEntertainmentMode(),
-    });
+    if (isBeat) {
+      console.log(`🔴 Sending BEAT color to lights:`, {
+        rgb: rgb.map(v => v.toFixed(2)),
+        transitionTime,
+        isBeat
+      });
+    }
 
     setLastLightCommand(`RGB: ${rgb[0].toFixed(2)}, ${rgb[1].toFixed(2)}, ${rgb[2].toFixed(2)}, Beat: ${isBeat}`);
 
-    // Send via HueService - pass isBeat as forceSend parameter
+    // Send via HueService - pass isBeat as forceSend parameter to ensure beats get priority
     HueService.sendColorTransition(rgb, transitionTime, isBeat).catch(err => {
       console.error('Error sending color to Hue:', err);
       setLastLightCommand(`Error: ${err.message}`);
@@ -589,13 +652,14 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
       }
     });
 
-    // Also try direct command for better compatibility
-    if (selectedLights.length > 0) {
-      sendDirectLightCommand(rgb, Math.round(Math.max(...rgb) * 100));
+    // Also try direct command for beats
+    if (isBeat && selectedLights.length > 0) {
+      console.log('Sending additional direct beat command to ensure delivery');
+      sendDirectLightCommand(rgb, 100); // 100% brightness on beats
     }
   };
 
-  // Add a new function for direct light control on beats
+  // Add the missing sendDirectLightCommand function
   const sendDirectLightCommand = (rgb: [number, number, number], brightness: number) => {
     if (!hueConnected || selectedLights.length === 0) return;
 
@@ -633,7 +697,7 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
       });
     } catch (error) {
       console.error('Error sending direct light command:', error);
-      setLastLightCommand(`Direct Error: ${error.message || 'Unknown error'}`);
+      setLastLightCommand(`Direct Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -893,7 +957,7 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
           className={`visualizer-container${connected ? ' active' : ''}`}
         >
           <HueMusicVisualizer
-            audioData={getCurrentAudioData()}
+            getAudioData={getCurrentAudioData}
             colorMode={colorMode}
             sensitivity={sensitivity}
           />
@@ -915,42 +979,37 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
 
       <Divider sx={{ my: 2 }} />
 
-      <Box sx={{ mt: 2 }}>
-        <Typography variant="h6" gutterBottom sx={{ color: '#333333', fontWeight: 500 }}>
-          Philips Hue Control
-        </Typography>
+      <Box sx={{ mt: 2 }}></Box>
 
-        {/* Debug flash toggle - Always show this */}
-        <FormControlLabel
-          control={
-            <Switch
-              checked={autoFlashEnabled}
-              onChange={handleDebugFlashToggle}
-              color="primary"
-            />
-          }
-          label="Enable Debug Light Flashing"
-          sx={{ mb: 1, display: 'block' }}
-        />
+      {(hueConnected || selectedLights.length > 0 || HueService.hasValidConfig()) ? (
+        <Box>
+          <Typography sx={{ color: '#555555' }}>Connected to Hue Bridge</Typography>
+          <Typography sx={{ color: '#555555' }}>Selected Lights: {selectedLights.length || "(Detecting...)"}</Typography>
+          <Button
+            sx={{ mt: 2 }}
+            onClick={flashLights}
+            color="primary"
+            variant="contained"
+          >
+            Flash Lights Manually
+          </Button>
+        </Box>
+      ) : (
+        <Typography sx={{ color: '#555555' }}>No Hue lights configured. Go to settings to set up Philips Hue.</Typography>
+      )}
 
-        {/* Update this conditional to also check HueService.hasValidConfig() as a fallback */}
-        {(hueConnected || selectedLights.length > 0 || HueService.hasValidConfig()) ? (
-          <Box>
-            <Typography sx={{ color: '#555555' }}>Connected to Hue Bridge</Typography>
-            <Typography sx={{ color: '#555555' }}>Selected Lights: {selectedLights.length || "(Detecting...)"}</Typography>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={flashLights}
-              sx={{ mt: 2 }}
-            >
-              Flash Lights Manually
-            </Button>
-          </Box>
-        ) : (
-          <Typography sx={{ color: '#555555' }}>No Hue lights configured. Go to settings to set up Philips Hue.</Typography>
-        )}
-      </Box>
+      {/* Debug flash toggle - Always show this */}
+      <FormControlLabel
+        control={
+          <Switch
+            checked={autoFlashEnabled}
+            onChange={handleDebugFlashToggle}
+            color="primary"
+          />
+        }
+        label="Enable Debug Light Flashing"
+        sx={{ mb: 1, display: 'block' }}
+      />
     </Paper>
   );
 };

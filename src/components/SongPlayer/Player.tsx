@@ -23,6 +23,7 @@ const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUp
   const [hoverProgress, setHoverProgress] = useState<number | null>(null);
   const [rotation, setRotation] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const prevAudioSrc = useRef<string>(''); // New ref to track previous audio source
   const [settingsAnchorEl, setSettingsAnchorEl] = useState<null | HTMLElement>(null);
   const [isAutoFlashEnabled, setIsAutoFlashEnabled] = useState(false); // New state for controlling auto flashing
 
@@ -39,6 +40,13 @@ const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUp
     if (!audio) {
       // console.log('No audio element reference');
       return;
+    }
+
+    // Only reset state if audio source has changed
+    if (track.audioSrc !== prevAudioSrc.current) {
+      setIsPlaying(false);
+      setProgress(0);
+      prevAudioSrc.current = track.audioSrc;
     }
 
     const updateProgress = () => {
@@ -348,6 +356,7 @@ const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUp
             isPlaying={isPlaying}
             autoFlashEnabled={isAutoFlashEnabled}
             onAutoFlashToggle={handleAutoFlashToggle}
+            isVisible={Boolean(settingsAnchorEl)} // Pass visibility state
           />
         </div>
       </Popover>

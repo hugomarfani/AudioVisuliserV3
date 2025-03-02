@@ -24,6 +24,8 @@ class HueService {
   private lastLightUpdateTime: number = 0; // For rate limiting in non-entertainment mode
   private debugLogsEnabled: boolean = hueConfig.debug; // Control verbose logging
   private connectionAttempts: number = 0; // Track connection attempts
+  private beatCommandCounter: number = 0; // Track beat commands for debugging
+  private lastBeatTime: number = 0;
 
   constructor() {
     // Try to load saved config
@@ -556,55 +558,60 @@ class HueService {
     }
   }
 
-  // Updated to work with either mode, but prioritize entertainment mode
+  // COMPLETELY REWRITTEN to guarantee beat commands are processed
   async sendColorTransition(rgb: [number, number, number], transitionTime: number = 200, forceSend: boolean = false): Promise<void> {
+    // CRITICAL CHANGE: If it's a beat (forceSend=true), we MUST process this command
+    if (forceSend) {
+      this.beatCommandCounter++;
+      const now = Date.now();
+      this.lastBeatTime = now;
+
+      // Add extremely visible logging for beat commands
+      console.log(`🔴 BEAT COMMAND #${this.beatCommandCounter} - RGB: ${rgb.map(v => v.toFixed(2)).join(', ')}`);
+
+      // For beats, ALWAYS try to use both methods to maximize chance of success
+      let entertainmentMethodSucceeded = false;
+
+      // First try entertainment method if connected and available
+      if (this.isConnected && this.useEntertainmentMode && this.bridge) {
+        try {
+          // Use very short transition time for beats to enhance flash effect
+          const fastTransitionTime = 10; // 10ms for beats
+          console.log(`🔴 Sending urgent beat flash via Entertainment API - RGB=${rgb.map(v => v.toFixed(2)).join(',')}`);
+
+          await this.bridge.transition([0], rgb, fastTransitionTime);
+          console.log('✅ Beat entertainment transition sent successfully');
+          entertainmentMethodSucceeded = true;
+        } catch (err) {
+          console.error('❌ Error sending beat via entertainment API:', err);
+          // Don't return, continue to regular API
+        }
+      }
+
+      // ALWAYS try regular API for beats, even if entertainment method succeeded
+      // This double-send approach ensures at least one method works
+      await this.sendRegularAPICommandForBeats(rgb);
+
+      return; // Done with beat handling
+    }
+
+    // Non-beat regular transitions
     if (!this.isConnected) {
-      return;
+      return; // Skip if not connected
     }
 
     try {
-      // Only check for duplicate commands if we're not forcing the send
-      // This ensures beat events always trigger light changes
-      if (!forceSend && this.lastRGB[0] === rgb[0] && this.lastRGB[1] === rgb[1] && this.lastRGB[2] === rgb[2]) {
-        return;
-      }
-
+      // For normal transitions, use the proper API based on connection type
       if (this.useEntertainmentMode && this.bridge) {
-        // Entertainment mode - use Phea
         await this.bridge.transition([0], rgb, transitionTime);
       } else if (!hueConfig.forceEntertainmentAPI) {
-        // Regular API mode - use direct API calls
-        // Rate limit to avoid overwhelming the bridge (max 15 updates/sec for responsive beats)
+        // Rate limit regular API calls for non-beat transitions
         const now = Date.now();
-        if (!forceSend && now - this.lastLightUpdateTime < 66) { // ~15 updates per second
+        if (now - this.lastLightUpdateTime < 66) { // ~15 updates/sec limit
           return;
         }
 
-        // Get all lights from configuration
-        const lights = await this.getLightsForRegularAPI();
-        if (!lights || lights.length === 0) {
-          return;
-        }
-
-        // Convert RGB to XY
-        const X = rgb[0] * 0.664511 + rgb[1] * 0.154324 + rgb[2] * 0.162028;
-        const Y = rgb[0] * 0.283881 + rgb[1] * 0.668433 + rgb[2] * 0.047685;
-        const Z = rgb[0] * 0.000088 + rgb[1] * 0.072310 + rgb[2] * 0.986039;
-        const sum = X + Y + Z;
-        const xy = sum === 0 ? [0.33, 0.33] : [X / sum, Y / sum];
-
-        // Update each light
-        lights.forEach(lightId => {
-          window.electron.ipcRenderer.invoke('hue:setLightState', {
-            lightId,
-            on: true,
-            brightness: Math.round(Math.max(...rgb) * 100), // Maximum RGB value for brightness
-            xy,
-            // For forced sends (beats), use minimal transition time
-            transitiontime: forceSend ? 0 : Math.floor(transitionTime / 100)
-          }).catch(console.error);
-        });
-
+        await this.sendRegularAPICommand(rgb, transitionTime, false);
         this.lastLightUpdateTime = now;
       }
 
@@ -612,6 +619,83 @@ class HueService {
     } catch (error) {
       console.error('Error sending color transition:', error);
     }
+  }
+
+  // New dedicated method just for beat flashes via regular API
+  private async sendRegularAPICommandForBeats(rgb: [number, number, number]): Promise<void> {
+    try {
+      // Get ALL lights
+      const lights = await window.electron.ipcRenderer.invoke('hue:getLightRids');
+
+      if (!lights || lights.length === 0) {
+        console.warn('❌ No lights available for regular API beat command');
+        return;
+      }
+
+      // Convert RGB to XY color space for Hue
+      const X = rgb[0] * 0.664511 + rgb[1] * 0.154324 + rgb[2] * 0.162028;
+      const Y = rgb[0] * 0.283881 + rgb[1] * 0.668433 + rgb[2] * 0.047685;
+      const Z = rgb[0] * 0.000088 + rgb[1] * 0.072310 + rgb[2] * 0.986039;
+      const sum = X + Y + Z;
+      const xy = sum === 0 ? [0.33, 0.33] : [X / sum, Y / sum];
+
+      console.log(`🔴 URGENT BEAT API command: RGB=${rgb.map(v => v.toFixed(2)).join(',')} → xy=${xy.map(v => v.toFixed(3)).join(',')}`);
+
+      // Add timestamp to log for tracking command timing
+      console.log(`🕒 Beat command sent at ${new Date().toISOString()} to ${lights.length} lights`);
+
+      // For beats, ALWAYS use:
+      // - Brightness 100% for maximum impact
+      // - Transition time 0 for instant flash effect
+
+      // Send command to each light as quickly as possible
+      const promises = lights.map(lightId =>
+        window.electron.ipcRenderer.invoke('hue:setLightState', {
+          lightId,
+          on: true,
+          brightness: 100, // Always full brightness for beats
+          xy,
+          transitiontime: 0 // No transition for beats - instant change
+        })
+      );
+
+      // Wait for all commands to complete
+      await Promise.all(promises);
+      console.log(`✅ Beat commands sent to all ${lights.length} lights`);
+
+    } catch (error) {
+      console.error('❌ ERROR sending beat commands via regular API:', error);
+    }
+  }
+
+  // Keep the existing sendRegularAPICommand for non-beat updates
+  private async sendRegularAPICommand(rgb: [number, number, number], transitionTime: number, forceSend: boolean): Promise<void> {
+    const lights = await this.getLightsForRegularAPI();
+    if (!lights || lights.length === 0) {
+      return;
+    }
+
+    const X = rgb[0] * 0.664511 + rgb[1] * 0.154324 + rgb[2] * 0.162028;
+    const Y = rgb[0] * 0.283881 + rgb[1] * 0.668433 + rgb[2] * 0.047685;
+    const Z = rgb[0] * 0.000088 + rgb[1] * 0.072310 + rgb[2] * 0.986039;
+    const sum = X + Y + Z;
+    const xy = sum === 0 ? [0.33, 0.33] : [X / sum, Y / sum];
+
+    const brightness = Math.round(Math.max(...rgb) * 100);
+    const transitionTimeDs = forceSend ? 0 : Math.max(1, Math.floor(transitionTime / 100));
+
+    // For beat flashes, always use brightness 100
+    const effectiveBrightness = forceSend ? 100 : brightness;
+
+    lights.forEach(lightId => {
+      window.electron.ipcRenderer.invoke('hue:setLightState', {
+        lightId,
+        on: true,
+        brightness: effectiveBrightness,
+        xy,
+        transitiontime: transitionTimeDs
+      }).catch(err => console.error(`Error setting light ${lightId}:`, err));
+    });
   }
 
   // Helper to get lights for regular API mode
@@ -694,9 +778,9 @@ class HueService {
 
   // Clear the configuration (for logging out or resetting)
   clearConfig(): void {
-    localStorage.removeItem('hueConfig');
-    localStorage.removeItem('hueBridgeInfo');
     this.config = null;
+    localStorage.removeItem('hueBridgeInfo');
+    localStorage.removeItem('hueConfig');
     console.log('Hue configuration cleared');
   }
 
@@ -706,7 +790,7 @@ class HueService {
     console.log('Entertainment mode forced - will not fall back to regular API');
   }
 
-  // New method to disable verbose logging after initial setup
+  // New method to disable verbose logging after initial setups
   disableDebugLogs(): void {
     this.debugLogsEnabled = false;
     console.log('Disabled verbose Hue debug logs');
@@ -723,5 +807,4 @@ class HueService {
   }
 }
 
-// Export as a singleton
 export default new HueService();
