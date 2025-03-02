@@ -18,7 +18,7 @@ import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import CodeIcon from '@mui/icons-material/Code';
-import { testPheaLibrary } from '../../utils/testPhea';
+import { testPheaLibrary, runDetailedPheaTest } from '../../utils/testPhea';
 
 // Apple-inspired styled components
 const AppleCard = styled(Paper)(({ theme }) => ({
@@ -915,8 +915,8 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
   };
 
   const handleTestPhea = () => {
-    console.log('Running Phea test...');
-    const result = testPheaLibrary();
+    console.log('Running detailed Phea diagnostics...');
+    const result = runDetailedPheaTest();
     console.log('Test result:', result);
   };
 
@@ -985,7 +985,7 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
         onClick={handleTestPhea}
         sx={{ mt: 2, backgroundColor: '#4caf50' }}
       >
-        Test Phea Library
+        Run Detailed Phea Diagnostics
       </Button>
 
       {/* Apple-style Toast Notification */}

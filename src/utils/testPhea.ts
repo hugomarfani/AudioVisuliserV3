@@ -56,23 +56,69 @@ export function runDetailedPheaTest() {
     try {
       const pheaPath = require.resolve('phea');
       console.log('✅ Phea module found at:', pheaPath);
-    } catch (e) {
-      console.error('❌ Cannot resolve phea module path:', e);
-    }
 
-    // Test module content
-    try {
+      // Load the actual module content
       const pheaModule = require('phea');
       console.log('Module type:', typeof pheaModule);
       console.log('Module keys:', Object.keys(pheaModule));
-      console.log('Module structure:', pheaModule);
+
+      // Inspect important functions
+      console.log('Function details:');
+      if (typeof pheaModule.discover === 'function') {
+        console.log('- discover: Function exists directly');
+      }
+
+      if (typeof pheaModule.HueBridge === 'function') {
+        console.log('- HueBridge: Constructor function exists');
+        // Examine HueBridge prototype methods
+        const methods = Object.getOwnPropertyNames(pheaModule.HueBridge.prototype);
+        console.log('  HueBridge prototype methods:', methods);
+      }
+
+      if (typeof pheaModule.PheaEngine === 'function') {
+        console.log('- PheaEngine: Constructor function exists');
+        // Examine PheaEngine prototype methods
+        const methods = Object.getOwnPropertyNames(pheaModule.PheaEngine.prototype);
+        console.log('  PheaEngine prototype methods:', methods);
+      }
+
+      if (typeof pheaModule.bridge === 'function') {
+        console.log('- bridge: Function exists directly');
+      }
+
+      if (typeof pheaModule.register === 'function') {
+        console.log('- register: Function exists directly');
+      }
     } catch (e) {
-      console.error('❌ Error importing phea module:', e);
+      console.error('❌ Phea module error:', e);
     }
 
-    // Run basic test
-    console.log('\nRunning standard test:');
-    testPheaLibrary();
+    // Create test Phea instance using our adapter
+    console.log('\nTesting adapted Phea instance:');
+    const Phea = getPheaInstance();
+
+    // Test each method separately
+    console.log('Testing discover()...');
+    try {
+      Phea.discover().then(bridges => {
+        console.log(`Found ${bridges.length} bridges:`, bridges);
+      }).catch(err => console.error('Discover error:', err));
+    } catch (e) {
+      console.error('Discover execution error:', e);
+    }
+
+    console.log('Testing bridge() construction...');
+    try {
+      const testBridge = Phea.bridge({
+        address: '192.168.1.100', // Test IP
+        username: 'testuser',
+        psk: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+      });
+      console.log('Bridge instance created:', !!testBridge);
+      console.log('Bridge methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(testBridge)));
+    } catch (e) {
+      console.error('Bridge construction error:', e);
+    }
 
     return 'Detailed diagnostics completed';
   } catch (error) {
@@ -80,3 +126,5 @@ export function runDetailedPheaTest() {
     return 'Detailed diagnostics failed';
   }
 }
+
+export { runDetailedPheaTest };

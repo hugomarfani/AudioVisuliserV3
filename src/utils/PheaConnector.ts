@@ -34,30 +34,59 @@ export function getPheaInstance(): PheaInterface {
       type: typeof pheaModule,
       hasDiscover: typeof pheaModule.discover === 'function',
       hasBridge: typeof pheaModule.bridge === 'function',
+      hasHueBridge: typeof pheaModule.HueBridge === 'function',
       hasRegister: typeof pheaModule.register === 'function',
       moduleKeys: Object.keys(pheaModule)
     });
 
-    // First check if the module is a direct export with the required functions
-    if (typeof pheaModule.discover === 'function' &&
-        typeof pheaModule.bridge === 'function' &&
-        typeof pheaModule.register === 'function') {
-      console.log('Using direct phea exports - this is the preferred mode');
-      return pheaModule as PheaInterface;
-    }
+    // Create an adapter that maps the actual module structure to our expected interface
+    const pheaAdapter: PheaInterface = {
+      discover: pheaModule.discover, // This function exists directly
 
-    // Then check if it's exported as default
-    if (pheaModule.default &&
-        typeof pheaModule.default.discover === 'function' &&
-        typeof pheaModule.default.bridge === 'function' &&
-        typeof pheaModule.default.register === 'function') {
-      console.log('Using phea.default exports');
-      return pheaModule.default as PheaInterface;
-    }
+      // The library uses HueBridge instead of bridge
+      bridge: (options: PheaOptions) => {
+        console.log('Creating Hue bridge with options:', options);
+        if (typeof pheaModule.HueBridge === 'function') {
+          return new pheaModule.HueBridge(options);
+        } else if (typeof pheaModule.bridge === 'function') {
+          return pheaModule.bridge(options);
+        } else {
+          console.error('No compatible bridge constructor found in phea module');
+          return PheaMock.bridge(options);
+        }
+      },
 
-    // If we reach here, the module doesn't have the expected structure
-    console.error('Phea module loaded but does not have the expected API structure:', pheaModule);
-    throw new Error('Phea module has invalid structure');
+      // Create a register function if missing (or use the existing one)
+      register: async (ipAddress: string) => {
+        if (typeof pheaModule.register === 'function') {
+          return pheaModule.register(ipAddress);
+        }
+
+        // If no register function exists, try to create one using PheaEngine or HueBridge
+        console.log('No direct register function found, trying to implement one...');
+
+        try {
+          if (typeof pheaModule.PheaEngine === 'function') {
+            console.log('Using PheaEngine for registration');
+            const engine = new pheaModule.PheaEngine();
+            return engine.register(ipAddress);
+          } else if (typeof pheaModule.HueBridge === 'function') {
+            console.log('Attempting registration using HueBridge class');
+            // Some implementations might support registration through the bridge class
+            const tempBridge = new pheaModule.HueBridge({ address: ipAddress });
+            return tempBridge.register();
+          } else {
+            throw new Error('No registration mechanism found in Phea module');
+          }
+        } catch (error) {
+          console.error('Failed to implement registration:', error);
+          return PheaMock.register(ipAddress);
+        }
+      }
+    };
+
+    console.log('Phea adapter created successfully');
+    return pheaAdapter;
   } catch (error) {
     console.error('Failed to load real Phea module:', error);
 
