@@ -293,8 +293,26 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
       // Wait 2 seconds to give user time to read the message
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Use IPC to register with the bridge - now getting actual credentials back
-      const credentials = await window.electron.ipcRenderer.invoke('hue:setManualBridge', bridgeIp);
+      // Use IPC to register with the bridge - ensure generateClientKey is properly set
+      const options = {
+        generateClientKey: true, // Force this to be true
+        devicetype: 'AudioVisualizer#HueMusic', // Add app identifier
+      };
+
+      console.log('Registering with bridge using options:', options);
+
+      // Pass options as a second parameter to the ipcRenderer.invoke call
+      const credentials = await window.electron.ipcRenderer.invoke(
+        'hue:setManualBridge',
+        bridgeIp,
+        options
+      );
+
+      console.log('Received credentials from bridge:', {
+        username: credentials?.username,
+        hasClientKey: !!credentials?.clientKey,
+        clientKeyLength: credentials?.clientKey?.length
+      });
 
       if (!credentials || !credentials.username || !credentials.clientKey) {
         throw new Error("Registration failed - did not receive proper credentials from the bridge");
@@ -981,3 +999,4 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
 };
 
 export default HueConfigModal;
+

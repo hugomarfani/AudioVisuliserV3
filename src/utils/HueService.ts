@@ -1,4 +1,9 @@
-import * as Phea from 'phea';
+// Import our Phea connector utility
+import { getPheaInstance, validatePSK } from './PheaConnector';
+import { hueConfig } from '../config/hueConfig';
+
+// Get the Phea instance
+const Phea = getPheaInstance();
 
 // Configuration type for Hue Bridge
 interface HueBridgeConfig {
@@ -13,10 +18,12 @@ class HueService {
   private connection: any = null; // DTLS connection
   private isConnected: boolean = false;
   private config: HueBridgeConfig | null = null;
-  private updateRate: number = 50; // Default updates per second
+  private updateRate: number = hueConfig.defaultDtlsUpdateRate; // Default updates per second
   private lastRGB: [number, number, number] = [0, 0, 0]; // Track last RGB to avoid unnecessary updates
-  private useEntertainmentMode: boolean = true; // New flag to track mode
+  private useEntertainmentMode: boolean = true; // Always use entertainment mode
   private lastLightUpdateTime: number = 0; // For rate limiting in non-entertainment mode
+  private debugLogsEnabled: boolean = hueConfig.debug; // Control verbose logging
+  private connectionAttempts: number = 0; // Track connection attempts
 
   constructor() {
     // Try to load saved config
@@ -39,7 +46,7 @@ class HueService {
             this.config = {
               address: bridgeInfo.ip,
               username: bridgeInfo.username,
-              psk: clientKey, // Use the found client key
+              psk: validatePSK(clientKey), // Validate and normalize PSK
               entertainmentGroupId: '1' // Default value
             };
             console.log('Loaded Hue configuration from hueBridgeInfo with valid PSK');
@@ -64,7 +71,7 @@ class HueService {
           this.config = {
             address: config.address,
             username: config.username,
-            psk: clientKey || '', // Don't use dummy value - empty string is safer
+            psk: clientKey ? validatePSK(clientKey) : '', // Validate if exists
             entertainmentGroupId: config.entertainmentGroupId || '1'
           };
 
@@ -123,8 +130,9 @@ class HueService {
     }
 
     if (this.config) {
-      console.log(`Updating PSK (${psk.length} chars): ${psk.substring(0, 4)}...${psk.substring(psk.length - 4)}`);
-      this.config.psk = psk;
+      const validPSK = validatePSK(psk);
+      console.log(`Updating PSK (${validPSK.length} chars): ${validPSK.substring(0, 4)}...${validPSK.substring(validPSK.length - 4)}`);
+      this.config.psk = validPSK;
       this.saveConfig(this.config);
     } else {
       console.warn('Cannot update PSK - no configuration loaded');
@@ -135,11 +143,12 @@ class HueService {
   async discoverBridges(): Promise<any[]> {
     try {
       console.log('Starting Hue bridge discovery...');
+      // Use Phea.discover
       const bridges = await Phea.discover();
       console.log("Discovered bridges:", bridges);
       return bridges || [];
     } catch (error) {
-      console.error('Failed to discover Hue bridges', error);
+      console.error('Failed to discover Hue bridges:', error);
       throw new Error(`Bridge discovery failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -148,6 +157,7 @@ class HueService {
   async registerBridge(ipAddress: string): Promise<any> {
     try {
       console.log(`Attempting to register with bridge at ${ipAddress}`);
+      // Use Phea.register
       const credentials = await Phea.register(ipAddress);
 
       if (!credentials || !credentials.username || !credentials.psk) {
@@ -160,13 +170,13 @@ class HueService {
       const partialConfig = {
         address: ipAddress,
         username: credentials.username,
-        psk: credentials.psk,
+        psk: validatePSK(credentials.psk),
         entertainmentGroupId: '1' // Default to first group, can be changed later
       };
       this.saveConfig(partialConfig);
       return credentials;
     } catch (error) {
-      console.error('Failed to register with Hue bridge', error);
+      console.error('Failed to register with Hue bridge:', error);
       throw new Error(`Registration failed: ${error instanceof Error ? error.message : 'Please press the link button and try again'}`);
     }
   }
@@ -179,12 +189,15 @@ class HueService {
 
     try {
       console.log(`Getting entertainment groups from bridge ${this.config.address}`);
+
+      // Create bridge using Phea.bridge
       const bridge = Phea.bridge({
         address: this.config.address,
         username: this.config.username,
         psk: this.config.psk,
-        dtlsUpdatesPerSecond: 50,
-        colorUpdatesPerSecond: 25
+        dtlsUpdatesPerSecond: this.updateRate,
+        colorUpdatesPerSecond: hueConfig.defaultColorUpdateRate,
+        dtlsPort: hueConfig.defaultDtlsPort
       });
 
       const allGroups = await bridge.getGroup(0);
@@ -201,7 +214,7 @@ class HueService {
       console.log("Entertainment groups:", entertainmentGroups);
       return entertainmentGroups;
     } catch (error) {
-      console.error('Failed to get entertainment groups', error);
+      console.error('Failed to get entertainment groups:', error);
       throw new Error(`Failed to get entertainment groups: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -220,22 +233,20 @@ class HueService {
       }
     }
 
-    // Reset entertainment mode flag to true by default - we'll only disable if needed
-    this.useEntertainmentMode = true;
-
-    // Log config details for debugging
-    console.log('Initializing bridge with config:', {
-      address: this.config.address,
-      username: this.config.username,
-      hasPsk: !!this.config.psk,
-      pskLength: this.config.psk?.length || 0,
-      // Add PSK preview for debugging (first 4 chars and last 4 chars)
-      pskPreview: this.config.psk && this.config.psk !== 'dummy-psk' ?
-        `${this.config.psk.substring(0, 4)}...${this.config.psk.substring(this.config.psk.length - 4)}` :
-        'INVALID OR MISSING',
-      entertainmentGroupId: this.config.entertainmentGroupId,
-      useEntertainmentMode: this.useEntertainmentMode
-    });
+    if (this.debugLogsEnabled) {
+      // Log config details for debugging
+      console.log('Initializing bridge with config:', {
+        address: this.config.address,
+        username: this.config.username,
+        hasPsk: !!this.config.psk,
+        pskLength: this.config.psk?.length || 0,
+        pskPreview: this.config.psk && this.config.psk !== 'dummy-psk' ?
+          `${this.config.psk.substring(0, 4)}...${this.config.psk.substring(this.config.psk.length - 4)}` :
+          'INVALID OR MISSING',
+        entertainmentGroupId: this.config.entertainmentGroupId,
+        useEntertainmentMode: this.useEntertainmentMode
+      });
+    }
 
     // Check for missing critical values
     if (!this.config.address) {
@@ -268,7 +279,7 @@ class HueService {
             const data = JSON.parse(stored);
             for (const altKey of source.altKeys) {
               if (data[altKey] && data[altKey] !== 'dummy-psk' && data[altKey].length > 10) {
-                this.config.psk = data[altKey];
+                this.config.psk = validatePSK(data[altKey]);
                 console.log(`Found valid PSK in ${source.key}.${altKey}, length: ${data[altKey].length}`);
                 foundValidKey = true;
                 break;
@@ -281,44 +292,69 @@ class HueService {
         }
       }
 
-      // If we still don't have a valid PSK, fall back to regular API
-      if (!foundValidKey) {
-        console.warn('Could not find a valid PSK in any storage - falling back to regular API');
-        this.useEntertainmentMode = false;
-      } else {
-        // Save the valid PSK we found
-        this.saveConfig(this.config);
+      // If we still don't have a valid PSK and we're forcing entertainment mode
+      if (!foundValidKey && hueConfig.forceEntertainmentAPI) {
+        console.error('No valid PSK found. Entertainment API requires a valid PSK.');
+        return false;
       }
     }
 
     try {
-      if (this.useEntertainmentMode) {
+      // Only try entertainment mode if we have a valid PSK
+      if (this.config.psk && this.config.psk.length >= 10) {
         console.log(`Initializing bridge at ${this.config.address} with entertainment mode`);
         const dtlsUpdates = options?.updateRate || this.updateRate;
         console.log(`Using DTLS update rate: ${dtlsUpdates}/sec`);
 
         try {
-          console.log('Creating entertainment bridge with config:', {
-            address: this.config.address,
-            username: this.config.username,
-            hasPsk: !!this.config.psk,
-            pskLength: this.config.psk?.length || 0,
-            dtlsUpdatesPerSecond: dtlsUpdates
-          });
+          this.connectionAttempts++;
+          console.log(`Connection attempt ${this.connectionAttempts}`);
 
           this.bridge = Phea.bridge({
             address: this.config.address,
             username: this.config.username,
             psk: this.config.psk,
             dtlsUpdatesPerSecond: dtlsUpdates,
-            colorUpdatesPerSecond: 25
+            colorUpdatesPerSecond: hueConfig.defaultColorUpdateRate,
+            dtlsPort: hueConfig.defaultDtlsPort
           });
+
+          if (this.bridge) {
+            console.log('Bridge created successfully');
+            // Disable verbose logs after successful setup
+            this.debugLogsEnabled = false;
+          } else {
+            throw new Error('bridge() returned null or undefined');
+          }
         } catch (e) {
           console.error('Error creating entertainment bridge:', e);
-          // Fall back to regular API
-          console.warn('Failed to initialize entertainment mode - falling back to regular API');
+          console.error('Error details:', e instanceof Error ? e.message : String(e));
+
+          if (this.connectionAttempts < 3) {
+            console.log(`Retrying (attempt ${this.connectionAttempts + 1})...`);
+            return this.initialize(options);
+          }
+
+          if (hueConfig.forceEntertainmentAPI) {
+            console.error('Entertainment API is forced but initialization failed.');
+            return false;
+          }
+
+          console.warn('Falling back to regular API mode');
           this.useEntertainmentMode = false;
         }
+      } else if (hueConfig.forceEntertainmentAPI) {
+        console.error('Entertainment API is forced but no valid PSK is available.');
+        return false;
+      } else {
+        console.warn('No valid PSK available for Entertainment API');
+        this.useEntertainmentMode = false;
+      }
+
+      // If we're not using entertainment mode and it's forced, return failure
+      if (!this.useEntertainmentMode && hueConfig.forceEntertainmentAPI) {
+        console.error('Entertainment API is forced but could not be initialized.');
+        return false;
       }
 
       // If not using entertainment mode, we're already initialized
@@ -333,14 +369,19 @@ class HueService {
       console.error('Failed to initialize Hue bridge:', error);
       if (error instanceof Error) {
         console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
       }
       return false;
     }
   }
 
-  // Updated start method that works with either mode
+  // Updated start method that works with entertainment mode
   async startEntertainmentMode(): Promise<boolean> {
+    // If we're not using entertainment mode and it's forced, return failure
+    if (!this.useEntertainmentMode && hueConfig.forceEntertainmentAPI) {
+      console.error('Entertainment API is forced but not available.');
+      return false;
+    }
+
     // If we're not using entertainment mode, just return true
     if (!this.useEntertainmentMode) {
       console.log('Not using entertainment mode - considering as connected');
@@ -361,28 +402,10 @@ class HueService {
     try {
       // Display PSK info before attempting to start entertainment mode
       console.log(`Starting entertainment mode for group ${this.config.entertainmentGroupId}`);
-      console.log('PSK information:', {
-        exists: !!this.config.psk,
-        length: this.config.psk?.length || 0,
-        // Show first 4 and last 4 chars for debugging while masking the middle
-        preview: this.config.psk ?
-          `${this.config.psk.substring(0, 4)}...${this.config.psk.substring(Math.max(0, this.config.psk.length - 4))}` :
-          'none',
-        // Include value type for debugging
-        type: this.config.psk ? typeof this.config.psk : 'undefined',
-        // Check for any special characters
-        hasSpecialChars: this.config.psk ? /[^a-zA-Z0-9]/.test(this.config.psk) : false
-      });
-
-      // Log if the PSK looks like a valid hex string (typical for Hue)
-      if (this.config.psk) {
-        const isHexString = /^[0-9A-Fa-f]+$/.test(this.config.psk);
-        console.log(`PSK is ${isHexString ? 'a valid' : 'NOT a valid'} hex string`);
-      }
 
       // Add a timeout to fail faster if the connection hangs
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Connection timeout')), 10000);
+        setTimeout(() => reject(new Error('Connection timeout')), hueConfig.dtlsConnectionTimeout);
       });
 
       // Race the connection against the timeout
@@ -406,6 +429,12 @@ class HueService {
         console.error('Error details:', error.message);
       }
 
+      // If entertainment mode is forced, return failure
+      if (hueConfig.forceEntertainmentAPI) {
+        console.error('Entertainment API is forced but could not be started.');
+        return false;
+      }
+
       // If we failed to start entertainment mode, fall back to regular API
       console.warn('Falling back to regular API mode');
       this.useEntertainmentMode = false;
@@ -427,7 +456,7 @@ class HueService {
     }
   }
 
-  // Updated to work with either mode
+  // Updated to work with either mode, but prioritize entertainment mode
   async sendColorTransition(rgb: [number, number, number], transitionTime: number = 200): Promise<void> {
     if (!this.isConnected) {
       return;
@@ -442,7 +471,7 @@ class HueService {
       if (this.useEntertainmentMode && this.bridge) {
         // Entertainment mode - use Phea
         await this.bridge.transition([0], rgb, transitionTime);
-      } else {
+      } else if (!hueConfig.forceEntertainmentAPI) {
         // Regular API mode - use direct API calls
         // Rate limit to avoid overwhelming the bridge (max 10 updates/sec)
         const now = Date.now();
@@ -478,7 +507,7 @@ class HueService {
 
       this.lastRGB = rgb;
     } catch (error) {
-      console.error('Error sending color transition', error);
+      console.error('Error sending color transition:', error);
     }
   }
 
@@ -548,10 +577,26 @@ class HueService {
     console.log('Hue configuration cleared');
   }
 
-  // New method to force regular API mode
-  useRegularAPIMode(): void {
-    this.useEntertainmentMode = false;
-    console.log('Switched to regular API mode');
+  // Method to force entertainment mode (never fall back to regular API)
+  forceEntertainmentMode(): void {
+    this.useEntertainmentMode = true;
+    console.log('Entertainment mode forced - will not fall back to regular API');
+  }
+
+  // New method to disable verbose logging after initial setup
+  disableDebugLogs(): void {
+    this.debugLogsEnabled = false;
+    console.log('Disabled verbose Hue debug logs');
+  }
+
+  // Reset connection attempts
+  resetConnectionAttempts(): void {
+    this.connectionAttempts = 0;
+  }
+
+  // New method to check if we're using Entertainment API
+  isUsingEntertainmentMode(): boolean {
+    return this.useEntertainmentMode;
   }
 }
 

@@ -42,6 +42,8 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
   const [beatDetected, setBeatDetected] = useState<boolean>(false);
   const [hueConnected, setHueConnected] = useState(false);
   const [selectedLights, setSelectedLights] = useState<string[]>([]);
+  // Add new state to track which API mode is being used
+  const [isEntertainmentAPI, setIsEntertainmentAPI] = useState<boolean>(true);
 
   // Refs
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -275,21 +277,15 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     try {
       console.log('Connecting to Hue bridge...');
 
-      // Try forcing regular API mode if entertainment mode doesn't work
-      let initialized = false;
-      let useFallbackMode = false;
-
-      // First try with entertainment mode
-      initialized = await HueService.initialize({
+      // Try first attempt with entertainment mode
+      let initialized = await HueService.initialize({
         updateRate: colorMode === 'pulse' ? 30 : 20
       });
 
       if (!initialized) {
-        // If initialization failed, try with regular API mode
-        console.log('First attempt failed, trying with regular API mode');
-        HueService.useRegularAPIMode();
+        // If initialization failed, try again with limited retries
+        console.log('First attempt failed, retrying...');
         initialized = await HueService.initialize();
-        useFallbackMode = true;
       }
 
       if (!initialized) {
@@ -303,33 +299,19 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
         throw new Error('Failed to start entertainment mode. Check console for details.');
       }
 
-      console.log('Connected to Hue bridge successfully' + (useFallbackMode ? ' using regular API mode' : ''));
+      console.log('Connected to Hue bridge successfully');
       setConnected(true);
 
-      // Show a different message if we're using regular API mode
-      if (useFallbackMode) {
-        setError('Using simplified light mode - some features may be limited. See console for details.');
+      // Check if we're using Entertainment API or Regular API
+      // We can get this information from the HueService
+      setIsEntertainmentAPI(HueService.isUsingEntertainmentMode());
+
+      // Disable verbose logging after successful connection
+      if (typeof HueService.disableDebugLogs === 'function') {
+        HueService.disableDebugLogs();
       }
     } catch (error: any) {
       console.error('Error connecting to Hue:', error);
-
-      // Try one more time with regular API mode
-      try {
-        console.log('Error encountered, trying with regular API mode...');
-        HueService.useRegularAPIMode();
-        const initialized = await HueService.initialize();
-        if (initialized) {
-          const started = await HueService.startEntertainmentMode();
-          if (started) {
-            console.log('Connected to Hue bridge successfully using regular API mode');
-            setConnected(true);
-            setError('Using simplified light mode - some features may be limited. See console for details.');
-            return;
-          }
-        }
-      } catch (fallbackError) {
-        console.error('Fallback also failed:', fallbackError);
-      }
 
       // More descriptive error message
       let errorMessage = error.message || 'Unknown error';
@@ -621,12 +603,25 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
             </Typography>
           }
         />
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          {isConnecting && <CircularProgress size={20} color="primary" sx={{ ml: 2 }} />}
+        <Box sx={{ display: 'flex', alignItems: 'center', marginLeft: 1 }}>
+          {isConnecting && <CircularProgress size={20} color="primary" sx={{ mr: 1 }} />}
           <Box
-            className={`status-indicator ${connected ? 'connected' : ''}`}
-            sx={{ ml: 1 }}
+            className={`status-indicator ${connected ? (isEntertainmentAPI ? 'entertainment-api' : 'regular-api') : ''}`}
+            sx={{
+              width: 12,
+              height: 12,
+              borderRadius: '50%',
+              backgroundColor: connected
+                ? (isEntertainmentAPI ? '#4CAF50' : '#FF9800')  // Green for entertainment, orange for regular
+                : '#ccc',
+              transition: 'background-color 0.3s',
+              animation: connected ? 'pulse 2s infinite' : 'none',
+              boxShadow: connected ? '0 0 8px 0px rgba(0, 0, 0, 0.2)' : 'none'
+            }}
           />
+          <Box sx={{ ml: 1, fontSize: '0.75rem', color: '#666' }}>
+            {connected ? (isEntertainmentAPI ? 'Entertainment API' : 'Regular API') : 'Disconnected'}
+          </Box>
         </Box>
       </Box>
 
