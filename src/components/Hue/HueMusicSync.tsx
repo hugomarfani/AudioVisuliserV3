@@ -3,7 +3,7 @@ import {
   Box, Typography, Switch, FormControlLabel, Slider,
   FormControl, InputLabel, MenuItem, Select,
   Button, CircularProgress, Alert, Paper, Grid,
-  ToggleButtonGroup, ToggleButton
+  ToggleButtonGroup, ToggleButton, Divider
 } from '@mui/material';
 import HueService from '../../utils/HueService';
 import {
@@ -22,9 +22,15 @@ interface HueMusicSyncProps {
   audioRef?: React.RefObject<HTMLAudioElement>;
   isPlaying?: boolean;
   autoFlashEnabled?: boolean; // New prop to control auto flashing
+  onAutoFlashToggle?: (isEnabled: boolean) => void; // Add callback for toggle
 }
 
-const HueMusicSync: React.FC<HueMusicSyncProps> = ({ audioRef, isPlaying = false, autoFlashEnabled = false }) => {
+const HueMusicSync: React.FC<HueMusicSyncProps> = ({
+  audioRef,
+  isPlaying = false,
+  autoFlashEnabled = false,
+  onAutoFlashToggle
+}) => {
   // State variables
   const [enabled, setEnabled] = useState<boolean>(false);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
@@ -458,6 +464,11 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({ audioRef, isPlaying = false
     }).catch(console.error);
   };
 
+  const handleDebugFlashToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const isEnabled = event.target.checked;
+    onAutoFlashToggle?.(isEnabled);
+  };
+
   return (
     <Paper
       sx={{
@@ -465,11 +476,11 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({ audioRef, isPlaying = false
         width: '400px',
         maxWidth: '100%',
         borderRadius: 3,
-        backgroundColor: '#1a1a1a',
-        color: '#fff'
+        backgroundColor: '#ffffff', // Changed to white for light mode
+        color: '#333333' // Changed to dark text
       }}
     >
-      <Typography variant="h6" gutterBottom sx={{ color: '#fff', fontWeight: 500 }}>
+      <Typography variant="h6" gutterBottom sx={{ color: '#333333', fontWeight: 500 }}>
         Phillips Hue Music Sync
       </Typography>
 
@@ -478,11 +489,6 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({ audioRef, isPlaying = false
           severity="error"
           sx={{
             mb: 2,
-            backgroundColor: 'rgba(255, 67, 54, 0.1)',
-            color: '#ff4336',
-            '& .MuiAlert-icon': {
-              color: '#ff4336'
-            }
           }}
         >
           {error}
@@ -495,7 +501,7 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({ audioRef, isPlaying = false
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          bgcolor: 'rgba(255, 255, 255, 0.05)',
+          bgcolor: 'rgba(0, 0, 0, 0.05)', // Light gray background
           p: 1,
           borderRadius: 2
         }}
@@ -506,24 +512,17 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({ audioRef, isPlaying = false
               checked={enabled}
               onChange={handleToggleEnabled}
               disabled={isConnecting || !HueService.hasValidConfig()}
-              sx={{
-                '& .MuiSwitch-switchBase.Mui-checked': {
-                  color: '#007aff'
-                },
-                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                  backgroundColor: '#007aff'
-                }
-              }}
+              color="primary"
             />
           }
           label={
-            <Typography sx={{ color: '#fff' }}>
+            <Typography sx={{ color: '#333333' }}>
               {isConnecting ? 'Connecting...' : connected ? 'Music Sync On' : 'Enable Light Sync'}
             </Typography>
           }
         />
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          {isConnecting && <CircularProgress size={20} sx={{ color: '#007aff', ml: 2 }} />}
+          {isConnecting && <CircularProgress size={20} color="primary" sx={{ ml: 2 }} />}
           <Box
             className={`status-indicator ${connected ? 'connected' : ''}`}
             sx={{ ml: 1 }}
@@ -533,7 +532,7 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({ audioRef, isPlaying = false
 
       <Grid container spacing={2}>
         <Grid item xs={12}>
-          <Typography id="sensitivity-slider" gutterBottom sx={{ color: '#ccc' }}>
+          <Typography id="sensitivity-slider" gutterBottom sx={{ color: '#555555' }}>
             Sensitivity: {sensitivity}
           </Typography>
           <Slider
@@ -545,23 +544,12 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({ audioRef, isPlaying = false
             aria-labelledby="sensitivity-slider"
             disabled={!enabled}
             className="control-slider"
-            sx={{
-              color: '#007aff',
-              '& .MuiSlider-thumb': {
-                backgroundColor: '#fff'
-              },
-              '& .MuiSlider-track': {
-                backgroundColor: '#007aff'
-              },
-              '& .MuiSlider-rail': {
-                backgroundColor: '#555'
-              }
-            }}
+            color="primary"
           />
         </Grid>
 
         <Grid item xs={12}>
-          <Typography gutterBottom sx={{ color: '#ccc', mb: 1 }}>
+          <Typography gutterBottom sx={{ color: '#555555', mb: 1 }}>
             Color Mode
           </Typography>
           <ToggleButtonGroup
@@ -573,17 +561,16 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({ audioRef, isPlaying = false
             fullWidth
             sx={{
               '& .MuiToggleButton-root': {
-                color: '#ccc',
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                borderColor: 'rgba(255, 255, 255, 0.1)',
+                color: '#555555',
+                borderColor: 'rgba(0, 0, 0, 0.1)',
                 textTransform: 'none',
                 '&.Mui-selected': {
-                  backgroundColor: 'rgba(0, 122, 255, 0.1)',
-                  color: '#007aff',
-                  borderColor: '#007aff'
+                  backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                  color: '#1976d2',
+                  borderColor: '#1976d2'
                 },
                 '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                  backgroundColor: 'rgba(0, 0, 0, 0.05)'
                 }
               }
             }}
@@ -610,7 +597,7 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({ audioRef, isPlaying = false
           >
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <div className={`beat-indicator ${beatDetected ? 'active' : ''}`} />
-              <Typography variant="body2" sx={{ color: '#ccc' }}>
+              <Typography variant="body2" sx={{ color: '#555555' }}>
                 Beat Detection
               </Typography>
             </Box>
@@ -621,18 +608,11 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({ audioRef, isPlaying = false
                   onChange={(e) => setVisualizer(e.target.checked)}
                   disabled={!enabled}
                   size="small"
-                  sx={{
-                    '& .MuiSwitch-switchBase.Mui-checked': {
-                      color: '#007aff'
-                    },
-                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                      backgroundColor: '#007aff'
-                    }
-                  }}
+                  color="primary"
                 />
               }
               label={
-                <Typography variant="body2" sx={{ color: '#ccc' }}>
+                <Typography variant="body2" sx={{ color: '#555555' }}>
                   Visualizer
                 </Typography>
               }
@@ -665,27 +645,36 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({ audioRef, isPlaying = false
         <Box sx={{ mt: 2 }}>
           <Alert
             severity="info"
-            sx={{
-              backgroundColor: 'rgba(0, 122, 255, 0.1)',
-              color: '#007aff',
-              '& .MuiAlert-icon': {
-                color: '#007aff'
-              }
-            }}
           >
             Phillips Hue is not configured. Please go to Settings to set up your Hue Bridge.
           </Alert>
         </Box>
       )}
 
+      <Divider sx={{ my: 2 }} />
+
       <Box sx={{ mt: 2 }}>
-        <Typography variant="h6" gutterBottom sx={{ color: '#fff', fontWeight: 500 }}>
+        <Typography variant="h6" gutterBottom sx={{ color: '#333333', fontWeight: 500 }}>
           Philips Hue Control
         </Typography>
+
+        {/* Debug flash toggle */}
+        <FormControlLabel
+          control={
+            <Switch
+              checked={autoFlashEnabled}
+              onChange={handleDebugFlashToggle}
+              color="primary"
+            />
+          }
+          label="Enable Debug Light Flashing"
+          sx={{ mb: 1, display: 'block' }}
+        />
+
         {hueConnected ? (
           <Box>
-            <Typography sx={{ color: '#ccc' }}>Connected to Hue Bridge</Typography>
-            <Typography sx={{ color: '#ccc' }}>Selected Lights: {selectedLights.length}</Typography>
+            <Typography sx={{ color: '#555555' }}>Connected to Hue Bridge</Typography>
+            <Typography sx={{ color: '#555555' }}>Selected Lights: {selectedLights.length}</Typography>
             <Button
               variant="contained"
               color="primary"
@@ -696,7 +685,7 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({ audioRef, isPlaying = false
             </Button>
           </Box>
         ) : (
-          <Typography sx={{ color: '#ccc' }}>No Hue lights configured. Go to settings to set up Philips Hue.</Typography>
+          <Typography sx={{ color: '#555555' }}>No Hue lights configured. Go to settings to set up Philips Hue.</Typography>
         )}
       </Box>
     </Paper>

@@ -3,7 +3,7 @@ import { AiOutlineForward, AiOutlineBackward } from 'react-icons/ai';
 import { FaPlay, FaPause } from 'react-icons/fa';
 import { IoSettingsOutline } from 'react-icons/io5';
 import HueMusicSync from '../Hue/HueMusicSync';
-import { Popover, Switch, FormControlLabel, Divider } from '@mui/material';
+import { Popover } from '@mui/material';
 
 interface PlayerProps {
   track: {
@@ -184,8 +184,9 @@ const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUp
     setSettingsAnchorEl(null);
   };
 
-  const handleAutoFlashToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setIsAutoFlashEnabled(event.target.checked);
+  const handleAutoFlashToggle = (isEnabled: boolean) => {
+    setIsAutoFlashEnabled(isEnabled);
+    onAutoFlashToggle?.(isEnabled);
   };
 
   console.log('Player rendering with states:', {
@@ -342,22 +343,11 @@ const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUp
         }}
       >
         <div style={{ padding: '1rem', minWidth: '250px' }}>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={isAutoFlashEnabled}
-                onChange={handleAutoFlashToggle}
-                color="primary"
-              />
-            }
-            label="Enable Auto Light Flashing"
-            style={{ marginBottom: '0.5rem' }}
-          />
-          <Divider style={{ margin: '0.5rem 0' }} />
           <HueMusicSync
             audioRef={audioRef}
             isPlaying={isPlaying}
             autoFlashEnabled={isAutoFlashEnabled}
+            onAutoFlashToggle={handleAutoFlashToggle}
           />
         </div>
       </Popover>
