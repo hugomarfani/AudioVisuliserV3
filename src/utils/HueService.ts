@@ -26,6 +26,10 @@ class HueService {
   private connectionAttempts: number = 0; // Track connection attempts
   private beatCommandCounter: number = 0; // Track beat commands for debugging
   private lastBeatTime: number = 0;
+  private cachedLightIds: string[] = []; // Cache of light IDs for fallback
+  private lightDiscoveryAttempts: number = 0;
+  private entertainmentAPIWorking: boolean = false; // Track if entertainment API is working
+  private lastSuccessfulLightFetchTime: number = 0;
 
   constructor() {
     // Try to load saved config
@@ -569,7 +573,6 @@ class HueService {
       // Add extremely visible logging for beat commands
       console.log(`🔴 BEAT COMMAND #${this.beatCommandCounter} - RGB: ${rgb.map(v => v.toFixed(2)).join(', ')}`);
 
-      // For beats, ALWAYS try to use both methods to maximize chance of success
       let entertainmentMethodSucceeded = false;
 
       // First try entertainment method if connected and available
@@ -582,17 +585,20 @@ class HueService {
           await this.bridge.transition([0], rgb, fastTransitionTime);
           console.log('✅ Beat entertainment transition sent successfully');
           entertainmentMethodSucceeded = true;
+          this.entertainmentAPIWorking = true; // Remember that entertainment API is working
         } catch (err) {
           console.error('❌ Error sending beat via entertainment API:', err);
-          // Don't return, continue to regular API
+          this.entertainmentAPIWorking = false;
         }
       }
 
-      // ALWAYS try regular API for beats, even if entertainment method succeeded
-      // This double-send approach ensures at least one method works
-      await this.sendRegularAPICommandForBeats(rgb);
+      // Only try regular API if entertainment didn't work OR we want to ensure delivery
+      // with both methods (useful for important beats)
+      if (!entertainmentMethodSucceeded || !this.entertainmentAPIWorking) {
+        await this.sendRegularAPICommandForBeats(rgb);
+      }
 
-      return; // Done with beat handling
+      return;
     }
 
     // Non-beat regular transitions
@@ -624,11 +630,57 @@ class HueService {
   // New dedicated method just for beat flashes via regular API
   private async sendRegularAPICommandForBeats(rgb: [number, number, number]): Promise<void> {
     try {
-      // Get ALL lights
-      const lights = await window.electron.ipcRenderer.invoke('hue:getLightRids');
+      // If entertainment API is working, we don't need to worry about the regular API
+      // This prevents unnecessary logging of warnings
+      if (this.entertainmentAPIWorking) {
+        // Entertainment API seems to be working fine
+        this.lightDiscoveryAttempts++; // Just increment this for statistics
+        return;
+      }
+
+      // Only fetch lights every 5 seconds or if we have none cached
+      const now = Date.now();
+      const shouldFetchLights =
+        this.cachedLightIds.length === 0 ||
+        now - this.lastSuccessfulLightFetchTime > 5000;
+
+      let lights: string[] = [];
+
+      if (shouldFetchLights) {
+        try {
+          console.log(`🔍 Attempting to discover lights (attempt #${this.lightDiscoveryAttempts+1})`);
+          this.lightDiscoveryAttempts++;
+
+          // Try to get lights from electron IPC
+          lights = await window.electron.ipcRenderer.invoke('hue:getLightRids');
+
+          if (lights && lights.length > 0) {
+            console.log(`✅ Found ${lights.length} lights via regular API`, lights);
+            this.cachedLightIds = [...lights]; // Cache for future use
+            this.lastSuccessfulLightFetchTime = now;
+          } else {
+            console.warn('⚠️ No lights returned from regular API');
+          }
+        } catch (err) {
+          console.error('🚫 Error fetching lights from regular API:', err);
+        }
+      }
+
+      // If we still don't have lights, use cached ones
+      if (lights.length === 0 && this.cachedLightIds.length > 0) {
+        console.log('🔄 Using cached light IDs:', this.cachedLightIds);
+        lights = this.cachedLightIds;
+      }
+
+      // Still no lights? Try to create dummy entertainment light IDs as a last resort
+      if (lights.length === 0 && this.config?.entertainmentGroupId) {
+        const fallbackId = this.generateFallbackLightId();
+        console.log(`🚨 No lights found - using fallback ID: ${fallbackId}`);
+        lights = [fallbackId];
+      }
 
       if (!lights || lights.length === 0) {
-        console.warn('❌ No lights available for regular API beat command');
+        console.warn('❌ No lights available for regular API beat command - entertainment API only');
         return;
       }
 
@@ -640,13 +692,7 @@ class HueService {
       const xy = sum === 0 ? [0.33, 0.33] : [X / sum, Y / sum];
 
       console.log(`🔴 URGENT BEAT API command: RGB=${rgb.map(v => v.toFixed(2)).join(',')} → xy=${xy.map(v => v.toFixed(3)).join(',')}`);
-
-      // Add timestamp to log for tracking command timing
       console.log(`🕒 Beat command sent at ${new Date().toISOString()} to ${lights.length} lights`);
-
-      // For beats, ALWAYS use:
-      // - Brightness 100% for maximum impact
-      // - Transition time 0 for instant flash effect
 
       // Send command to each light as quickly as possible
       const promises = lights.map(lightId =>
@@ -656,7 +702,7 @@ class HueService {
           brightness: 100, // Always full brightness for beats
           xy,
           transitiontime: 0 // No transition for beats - instant change
-        })
+        }).catch(err => console.error(`Error setting light ${lightId}:`, err))
       );
 
       // Wait for all commands to complete
@@ -706,6 +752,19 @@ class HueService {
       console.error('Failed to get lights for regular API:', error);
       return [];
     }
+  }
+
+  // Add a method to generate a fallback light ID based on the entertainment group
+  private generateFallbackLightId(): string {
+    // If we have a valid entertainment group, use a derived ID
+    if (this.config?.entertainmentGroupId && this.isUuidFormat(this.config.entertainmentGroupId)) {
+      // Use the first part of the entertainment group ID to create a light ID
+      return this.config.entertainmentGroupId.split('-')[0] + '-' +
+             Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    }
+
+    // Otherwise use a default format like the Hue light IDs
+    return '00:17:88:01:03:' + Math.floor(Math.random() * 100000).toString().padStart(5, '0');
   }
 
   // Set the entertainment group ID with UUID validation

@@ -53,6 +53,8 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
   const [availableGroups, setAvailableGroups] = useState<any[]>([]);
   // Add debug state to show more info
   const [lastLightCommand, setLastLightCommand] = useState<string>("");
+  // Add lastLightCheckTime state
+  const [lastLightCheckTime, setLastLightCheckTime] = useState<number>(Date.now());
 
   // Use a state for config so that dependency changes trigger refetch
   const [config, setConfig] = useState(HueService.getConfig());
@@ -205,21 +207,43 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
       setHueConnected(true);
     }
 
-    // Then retrieve light RIDs to confirm actual lights are available
-    window.electron.ipcRenderer.invoke('hue:getLightRids')
-      .then((rids: string[]) => {
+    // Function to fetch lights that can be called multiple times
+    const fetchLights = async () => {
+      try {
+        console.log('Attempting to fetch Hue lights...');
+        const rids = await window.electron.ipcRenderer.invoke('hue:getLightRids');
         if (rids && rids.length > 0) {
           setSelectedLights(rids);
           setHueConnected(true);
-          console.log(`HueMusicSync: Found ${rids.length} Hue lights`);
+          console.log(`HueMusicSync: Found ${rids.length} Hue lights:`, rids);
         } else {
-          console.log('HueMusicSync: No Hue lights found');
+          console.log('HueMusicSync: No Hue lights found via regular API');
+          // Still consider Hue connected if we have a valid config
+          if (HueService.hasValidConfig()) {
+            console.log('HueMusicSync: Using entertainment mode only (no regular API lights found)');
+            setHueConnected(true);
+          }
         }
-      })
-      .catch(err => {
+      } catch (err) {
         console.error('HueMusicSync: Error getting lights:', err);
         // Don't set hueConnected to false here in case we already determined it's true via config
-      });
+      }
+    };
+
+    // Try to fetch lights right away
+    fetchLights();
+
+    // Set up a periodic refresh to try to find lights
+    const lightRefreshInterval = setInterval(() => {
+      if (selectedLights.length === 0 && HueService.hasValidConfig()) {
+        console.log('Retrying light discovery...');
+        fetchLights();
+      }
+    }, 5000); // Try every 5 seconds
+
+    return () => {
+      clearInterval(lightRefreshInterval);
+    };
   }, []);
 
   // This effect controls the automatic flashing
@@ -659,7 +683,79 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     }
   };
 
-  // Add the missing sendDirectLightCommand function
+  // Define fetchLights as a useCallback function so it can be used anywhere
+  const fetchLights = useCallback(async (force: boolean = false) => {
+    // Skip if we've checked recently (within 10 seconds) unless forced
+    const now = Date.now();
+    if (!force && now - lastLightCheckTime < 10000) {
+      return;
+    }
+
+    try {
+      console.log('Fetching Hue lights...', { forceCheck: force });
+      const rids = await window.electron.ipcRenderer.invoke('hue:getLightRids');
+
+      // Debug log all received lights
+      console.log('Received light IDs from Hue bridge:', rids);
+
+      // Validate light IDs - ensure they're strings and not "0"
+      const validLights = Array.isArray(rids) ?
+        rids.filter(id => id && id !== '0' && id !== 0) :
+        [];
+
+      if (validLights.length > 0) {
+        console.log(`Found ${validLights.length} valid Hue lights:`, validLights);
+        setSelectedLights(validLights);
+        setHueConnected(true);
+
+        // Update HueService with these lights if appropriate
+        if (HueService.isInitialized?.()) {
+          HueService.updateLightIds?.(validLights);
+        }
+      } else {
+        console.warn('No valid Hue lights found. Received:', rids);
+        // Don't clear existing lights if we get an empty response
+        if (!selectedLights.length) {
+          console.log('No existing lights, trying default entertainment mode');
+        }
+      }
+
+      // Update last check time
+      setLastLightCheckTime(now);
+    } catch (err) {
+      console.error('Error fetching lights:', err);
+    }
+  }, [lastLightCheckTime, selectedLights.length]);
+
+  // Enhanced effect for light discovery with periodic rechecks
+  useEffect(() => {
+    // First check if we have a valid configuration
+    if (HueService.hasValidConfig()) {
+      setHueConnected(true);
+
+      // Initial light fetch
+      fetchLights(true);
+
+      // Set up aggressive periodic rechecking
+      const quickCheckInterval = setInterval(() => {
+        console.log('Performing routine light check...');
+        fetchLights();
+      }, 30000); // Check every 30 seconds
+
+      // Additional deep check less frequently
+      const deepCheckInterval = setInterval(() => {
+        console.log('Performing deep light check...');
+        fetchLights(true);
+      }, 120000); // Force check every 2 minutes
+
+      return () => {
+        clearInterval(quickCheckInterval);
+        clearInterval(deepCheckInterval);
+      };
+    }
+  }, [fetchLights]);
+
+  // Fix the sendDirectLightCommand function with proper error handling
   const sendDirectLightCommand = (rgb: [number, number, number], brightness: number) => {
     if (!hueConnected || selectedLights.length === 0) return;
 
@@ -674,31 +770,55 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
       const x = sum > 0 ? X / sum : 0.33;
       const y = sum > 0 ? Y / sum : 0.33;
 
+      // Filter out any invalid or "0" light IDs
+      const validLights = selectedLights.filter(id =>
+        id && id !== '0' && id !== 0 && typeof id === 'string'
+      );
+
+      if (validLights.length === 0) {
+        console.warn('No valid light IDs available for direct command');
+        // If it's been more than 10 seconds since last check, force a recheck
+        if (Date.now() - lastLightCheckTime > 10000) {
+          console.log('Triggering light recheck due to missing valid lights');
+          fetchLights(true);
+        }
+        return;
+      }
+
       // Enhanced logging
       console.log('Direct light command:', {
         rgb,
         xy: [x, y],
         brightness,
-        lights: selectedLights
+        lights: validLights
       });
 
-      // Add timestamp to log for tracking command timing
-      console.log(`Light command sent at ${new Date().toISOString()}`);
-
-      // Send to all selected lights with minimal transition time for flash effect
-      selectedLights.forEach(async (lightId) => {
+      // Send to all valid lights with minimal transition time for flash effect
+      validLights.forEach(async (lightId) => {
         await window.electron.ipcRenderer.invoke('hue:setLightState', {
           lightId,
           on: true,
           brightness: brightness,
           xy: [x, y],
           transitiontime: 0 // Immediate change for flash effect
-        }).catch(err => console.error(`Error sending to light ${lightId}:`, err));
+        }).catch(err => {
+          console.error(`Error sending to light ${lightId}:`, err);
+          // If we get an error, force a light recheck
+          fetchLights(true);
+        });
       });
     } catch (error) {
       console.error('Error sending direct light command:', error);
       setLastLightCommand(`Direct Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Also trigger a light refresh on errors
+      fetchLights(true);
     }
+  };
+
+  // Add function to manually refresh lights
+  const forceRefreshLights = () => {
+    console.log('Manually forcing light refresh...');
+    fetchLights(true);
   };
 
   // Toggle the enabled state
@@ -744,12 +864,13 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     onAutoFlashToggle?.(isEnabled);
   };
 
-  // Add UUID info to the debug display
+  // Update renderDebugInfo to include light check info and refresh button
   const renderDebugInfo = () => {
     if (!enabled) return null;
 
     const currentGroupId = HueService.getConfig()?.entertainmentGroupId || 'None';
     const isUuid = isValidUuid(currentGroupId);
+    const lastCheckAgo = Math.round((Date.now() - lastLightCheckTime) / 1000);
 
     return (
       <Box sx={{ mt: 2, p: 2, borderRadius: 1, bgcolor: '#f5f5f7', fontSize: '0.75rem' }}>
@@ -760,8 +881,17 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
           <li>Selected Group: {currentGroupId}</li>
           <li>Is UUID Format: {isUuid ? 'Yes' : 'No'}</li>
           <li>Lights: {selectedLights.join(', ') || 'None'}</li>
+          <li>Last Check: {lastCheckAgo} seconds ago</li>
           <li>Last Command: {lastLightCommand || 'None'}</li>
         </Box>
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={forceRefreshLights}
+          sx={{ mt: 1, fontSize: '0.7rem' }}
+        >
+          Force Light Refresh
+        </Button>
       </Box>
     );
   };
@@ -966,9 +1096,7 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
 
       {!HueService.hasValidConfig() && (
         <Box sx={{ mt: 2 }}>
-          <Alert
-            severity="info"
-          >
+          <Alert severity="info">
             Phillips Hue is not configured. Please go to Settings to set up your Hue Bridge.
           </Alert>
         </Box>
@@ -979,26 +1107,37 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
 
       <Divider sx={{ my: 2 }} />
 
-      <Box sx={{ mt: 2 }}></Box>
+      <Box sx={{ mt: 2 }}>
+        {(hueConnected || selectedLights.length > 0 || HueService.hasValidConfig()) ? (
+          <Box>
+            <Typography sx={{ color: '#555555' }}>Connected to Hue Bridge</Typography>
+            <Typography sx={{ color: '#555555' }}>
+              Selected Lights: {selectedLights.length || "(Detecting...)"}
+            </Typography>
+            <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+              <Button
+                onClick={flashLights}
+                color="primary"
+                variant="contained"
+              >
+                Flash Lights Manually
+              </Button>
+              <Button
+                onClick={forceRefreshLights}
+                color="secondary"
+                variant="outlined"
+              >
+                Refresh Lights
+              </Button>
+            </Box>
+          </Box>
+        ) : (
+          <Typography sx={{ color: '#555555' }}>
+            No Hue lights configured. Go to settings to set up Philips Hue.
+          </Typography>
+        )}
+      </Box>
 
-      {(hueConnected || selectedLights.length > 0 || HueService.hasValidConfig()) ? (
-        <Box>
-          <Typography sx={{ color: '#555555' }}>Connected to Hue Bridge</Typography>
-          <Typography sx={{ color: '#555555' }}>Selected Lights: {selectedLights.length || "(Detecting...)"}</Typography>
-          <Button
-            sx={{ mt: 2 }}
-            onClick={flashLights}
-            color="primary"
-            variant="contained"
-          >
-            Flash Lights Manually
-          </Button>
-        </Box>
-      ) : (
-        <Typography sx={{ color: '#555555' }}>No Hue lights configured. Go to settings to set up Philips Hue.</Typography>
-      )}
-
-      {/* Debug flash toggle - Always show this */}
       <FormControlLabel
         control={
           <Switch
@@ -1015,3 +1154,4 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
 };
 
 export default HueMusicSync;
+
