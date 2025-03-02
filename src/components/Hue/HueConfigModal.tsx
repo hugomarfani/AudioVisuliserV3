@@ -2,9 +2,149 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Button, Stepper, Step, StepLabel,
   CircularProgress, Select, MenuItem, FormControl,
-  InputLabel, TextField, Alert, Paper, AlertTitle,
-  Link, Snackbar
+  InputLabel, TextField, Paper, Link, Snackbar,
+  styled
 } from '@mui/material';
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
+import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import ErrorRoundedIcon from '@mui/icons-material/ErrorRounded';
+import InfoRoundedIcon from '@mui/icons-material/InfoRounded';
+import WarningRoundedIcon from '@mui/icons-material/WarningRounded';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
+import LightModeRoundedIcon from '@mui/icons-material/LightModeRounded';
+import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
+
+// Apple-inspired styled components
+const AppleCard = styled(Paper)(({ theme }) => ({
+  backgroundColor: '#ffffff',
+  borderRadius: 20,
+  padding: theme.spacing(4),
+  boxShadow: 'none',
+  border: '1px solid #e0e0e0',
+  position: 'relative',
+  maxWidth: '650px',
+  width: '90%',
+  maxHeight: '90vh',
+  overflowY: 'auto',
+  margin: '0 auto',
+}));
+
+const AppleButton = styled(Button)(({ theme, variant }) => ({
+  borderRadius: 50,
+  padding: variant === 'contained' ? '12px 24px' : '11px 23px',
+  textTransform: 'none',
+  fontWeight: 500,
+  boxShadow: 'none',
+  '&.MuiButton-contained': {
+    backgroundColor: '#007AFF',
+    color: 'white',
+    '&:hover': {
+      backgroundColor: '#0071e3',
+      boxShadow: 'none',
+    },
+  },
+  '&.MuiButton-outlined': {
+    borderColor: '#007AFF',
+    color: '#007AFF',
+    '&:hover': {
+      borderColor: '#0071e3',
+      backgroundColor: 'rgba(0, 122, 255, 0.04)',
+    },
+  },
+  '&.Mui-disabled': {
+    backgroundColor: variant === 'contained' ? 'rgba(0, 122, 255, 0.5)' : 'transparent',
+    color: variant === 'contained' ? 'white' : 'rgba(0, 122, 255, 0.5)',
+    borderColor: variant === 'outlined' ? 'rgba(0, 122, 255, 0.5)' : 'transparent',
+  },
+}));
+
+const AppleTextField = styled(TextField)({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 10,
+    '& fieldset': {
+      borderColor: '#e0e0e0',
+    },
+    '&:hover fieldset': {
+      borderColor: '#b0b0b0',
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: '#007AFF',
+    },
+  },
+});
+
+const AppleSelect = styled(Select)({
+  borderRadius: 10,
+  '& .MuiOutlinedInput-notchedOutline': {
+    borderColor: '#e0e0e0',
+  },
+  '&:hover .MuiOutlinedInput-notchedOutline': {
+    borderColor: '#b0b0b0',
+  },
+  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+    borderColor: '#007AFF',
+  },
+});
+
+const AppleStepper = styled(Stepper)(({ theme }) => ({
+  '& .MuiStepIcon-root': {
+    color: '#e0e0e0',
+    '&.Mui-active, &.Mui-completed': {
+      color: '#007AFF',
+    },
+  },
+  '& .MuiStepLabel-label': {
+    fontSize: '0.875rem',
+    '&.Mui-active': {
+      color: '#007AFF',
+      fontWeight: 500,
+    },
+  },
+  '& .MuiStepConnector-line': {
+    borderColor: '#e0e0e0',
+  },
+}));
+
+const AppleInfoCard = styled(Box)(({ theme }) => ({
+  backgroundColor: 'rgba(0, 122, 255, 0.05)',
+  borderRadius: 16,
+  padding: theme.spacing(3),
+  marginBottom: theme.spacing(3),
+  border: '1px solid rgba(0, 122, 255, 0.1)',
+}));
+
+// Toast Pill
+const ToastPill = styled(Box)(({ type }) => {
+  const bgColors = {
+    success: 'rgba(52, 199, 89, 0.95)',
+    error: 'rgba(255, 59, 48, 0.95)',
+    info: 'rgba(0, 122, 255, 0.95)',
+    warning: 'rgba(255, 149, 0, 0.95)',
+  };
+
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    backgroundColor: bgColors[type] || bgColors.info,
+    color: 'white',
+    borderRadius: 100,
+    padding: '10px 20px',
+    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)',
+    maxWidth: '80%',
+    minWidth: '200px',
+  };
+});
+
+const getToastIcon = (type) => {
+  switch(type) {
+    case 'success': return <CheckCircleRoundedIcon sx={{ mr: 1 }} />;
+    case 'error': return <ErrorRoundedIcon sx={{ mr: 1 }} />;
+    case 'warning': return <WarningRoundedIcon sx={{ mr: 1 }} />;
+    default: return <InfoRoundedIcon sx={{ mr: 1 }} />;
+  }
+};
 
 interface HueConfigModalProps {
   onClose: () => void;
@@ -303,9 +443,9 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
   // Render link button instructions
   const renderLinkButtonInstructions = () => {
     return (
-      <Paper elevation={2} sx={{ p: 2, mb: 3, bgcolor: '#f8f8f8', border: '1px solid #e0e0e0' }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
-          How to Press the Link Button:
+      <AppleInfoCard>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1.5 }}>
+          How to Press the Link Button
         </Typography>
         <Box component="ol" sx={{ pl: 2, mb: 0 }}>
           <Typography component="li" variant="body2" sx={{ mb: 1 }}>
@@ -321,16 +461,16 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
             After pressing, quickly click "Register" or "Discover Bridges" within 30 seconds
           </Typography>
         </Box>
-      </Paper>
+      </AppleInfoCard>
     );
   };
 
   // Render entertainment area creation instructions
   const renderEntertainmentAreaInstructions = () => {
     return (
-      <Paper elevation={2} sx={{ p: 2, mb: 3, bgcolor: '#f8f8f8', border: '1px solid #e0e0e0' }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
-          How to Create an Entertainment Area:
+      <AppleInfoCard>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1.5 }}>
+          How to Create an Entertainment Area
         </Typography>
         <Box component="ol" sx={{ pl: 2, mb: 2 }}>
           <Typography component="li" variant="body2" sx={{ mb: 1 }}>
@@ -349,7 +489,7 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
             Once created, return here and click "Refresh" to see your entertainment area
           </Typography>
         </Box>
-        <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
+        <Typography variant="body2" sx={{ fontStyle: 'italic', color: '#666' }}>
           Note: Only Hue color-capable lights can be added to entertainment areas.
         </Typography>
         <Box sx={{ mt: 2 }}>
@@ -357,12 +497,12 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
             href="https://www.philips-hue.com/en-us/explore-hue/propositions/entertainment/sync-with-music"
             target="_blank"
             rel="noopener"
-            sx={{ fontSize: '0.875rem' }}
+            sx={{ fontSize: '0.875rem', color: '#007AFF', textDecoration: 'none' }}
           >
             Learn more about Philips Hue Entertainment Areas
           </Link>
         </Box>
-      </Paper>
+      </AppleInfoCard>
     );
   };
 
@@ -371,30 +511,30 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
     switch (step) {
       case 0: // Bridge discovery
         return (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="body1" sx={{ mb: 2 }}>
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="body1" sx={{ mb: 3, lineHeight: 1.6 }}>
               To use Phillips Hue lights with the music visualizer, we need to discover your Hue Bridge on the network.
             </Typography>
 
             {error && error.includes('link button') && renderLinkButtonInstructions()}
 
-            <Button
+            <AppleButton
               variant="contained"
-              color="primary"
               onClick={discoverBridges}
               disabled={isLoading}
-              sx={{ mb: 2 }}
+              sx={{ mb: 3 }}
+              startIcon={<RefreshRoundedIcon />}
             >
-              {isLoading ? <><CircularProgress size={24} sx={{ mr: 1, color: 'white' }} /> Discovering...</> : 'Discover Bridges'}
-            </Button>
+              {isLoading ? 'Searching...' : 'Discover Bridges'}
+            </AppleButton>
 
-            <Typography variant="body2" sx={{ mb: 2 }}>
+            <Typography variant="body2" sx={{ mb: 2, color: '#666' }}>
               If automatic discovery fails, you can manually enter your bridge IP address.
             </Typography>
 
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel id="bridge-select-label">Select Bridge</InputLabel>
-              <Select
+            <FormControl fullWidth sx={{ mb: 3 }}>
+              <InputLabel id="bridge-select-label" sx={{ ml: 1 }}>Select Bridge</InputLabel>
+              <AppleSelect
                 labelId="bridge-select-label"
                 value={useManualIp ? '' : selectedBridge}
                 label="Select Bridge"
@@ -409,12 +549,12 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
                     {bridge.ip} {bridge.id ? `(${bridge.id})` : ''}
                   </MenuItem>
                 ))}
-              </Select>
+              </AppleSelect>
             </FormControl>
 
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>OR</Typography>
+            <Typography variant="subtitle2" sx={{ mb: 1.5, textAlign: 'center', color: '#888' }}>OR</Typography>
 
-            <TextField
+            <AppleTextField
               label="Manual Bridge IP"
               variant="outlined"
               fullWidth
@@ -430,36 +570,36 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
         );
       case 1: // Bridge registration
         return (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="body1" sx={{ mb: 2 }}>
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="body1" sx={{ mb: 3, lineHeight: 1.6 }}>
               Now you need to register this app with your Hue Bridge.
             </Typography>
 
             {renderLinkButtonInstructions()}
 
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Typography variant="body2" sx={{ mr: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, py: 1, px: 2, borderRadius: 2, backgroundColor: 'rgba(0, 122, 255, 0.08)' }}>
+              <Typography variant="body2" sx={{ mr: 1, color: '#666' }}>
                 Selected Bridge IP:
               </Typography>
-              <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+              <Typography variant="body1" sx={{ fontWeight: 500 }}>
                 {useManualIp ? manualBridgeIp : selectedBridge}
               </Typography>
             </Box>
 
-            <Button
+            <AppleButton
               variant="contained"
-              color="primary"
               onClick={registerBridge}
               disabled={isLoading}
+              startIcon={isLoading ? undefined : <CheckCircleRoundedIcon />}
             >
-              {isLoading ? <><CircularProgress size={24} sx={{ mr: 1, color: 'white' }} /> Registering...</> : 'Register with Bridge'}
-            </Button>
+              {isLoading ? <><CircularProgress size={20} sx={{ mr: 1, color: 'white' }} /> Registering...</> : 'Register with Bridge'}
+            </AppleButton>
           </Box>
         );
       case 2: // Entertainment group selection
         return (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="body1" sx={{ mb: 2 }}>
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="body1" sx={{ mb: 3, lineHeight: 1.6 }}>
               Select an entertainment area to use with the music visualizer.
             </Typography>
 
@@ -467,22 +607,33 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
 
             {entertainmentGroups.length === 0 ? (
               <Box>
-                <Alert severity="warning" sx={{ mb: 2 }}>
-                  No entertainment areas found. You need to create one in the Philips Hue app first.
-                </Alert>
+                <Box sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  bgcolor: 'rgba(255, 149, 0, 0.1)',
+                  p: 2,
+                  borderRadius: 3,
+                  mb: 3
+                }}>
+                  <WarningRoundedIcon sx={{ mr: 2, color: '#FF9500' }} />
+                  <Typography variant="body2" color="#996400">
+                    No entertainment areas found. You need to create one in the Philips Hue app first.
+                  </Typography>
+                </Box>
                 {renderEntertainmentAreaInstructions()}
-                <Button
+                <AppleButton
                   variant="contained"
                   onClick={fetchEntertainmentGroups}
                   sx={{ mt: 2 }}
+                  startIcon={<RefreshRoundedIcon />}
                 >
                   Refresh
-                </Button>
+                </AppleButton>
               </Box>
             ) : (
               <FormControl fullWidth sx={{ mb: 3 }}>
-                <InputLabel id="group-select-label">Select Entertainment Area</InputLabel>
-                <Select
+                <InputLabel id="group-select-label" sx={{ ml: 1 }}>Select Entertainment Area</InputLabel>
+                <AppleSelect
                   labelId="group-select-label"
                   value={selectedGroup}
                   label="Select Entertainment Area"
@@ -493,41 +644,39 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
                       {group.name}
                     </MenuItem>
                   ))}
-                </Select>
+                </AppleSelect>
               </FormControl>
             )}
           </Box>
         );
-
       case 3: // Setup complete
         return (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="h6" sx={{ mb: 3 }}>
-              Phillips Hue Setup Complete!
+          <Box sx={{ mt: 3, textAlign: 'center' }}>
+            <CheckCircleRoundedIcon sx={{ fontSize: 60, color: '#34C759', mb: 2 }} />
+            <Typography variant="h5" sx={{ mb: 3, fontWeight: 500 }}>
+              Phillips Hue Setup Complete
             </Typography>
-
-            <Typography variant="body1" sx={{ mb: 3 }}>
+            <Typography variant="body1" sx={{ mb: 4, lineHeight: 1.6, px: 2 }}>
               Your Phillips Hue entertainment area is now configured and ready to sync with your music.
               The lights will respond to the audio frequencies when you play songs.
             </Typography>
-
-            <Button
-              variant="outlined"
-              color="primary"
-              onClick={testLights}
-              disabled={isLoading}
-              sx={{ mb: 2, mr: 2 }}
-            >
-              {isLoading ? 'Testing...' : 'Test Lights'}
-            </Button>
-
-            <Button
-              variant="outlined"
-              onClick={() => setActiveStep(0)}
-              sx={{ mb: 2 }}
-            >
-              Reconfigure
-            </Button>
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 2 }}>
+              <AppleButton
+                variant="outlined"
+                onClick={testLights}
+                disabled={isLoading}
+                startIcon={<LightModeRoundedIcon />}
+              >
+                {isLoading ? 'Testing...' : 'Test Lights'}
+              </AppleButton>
+              <AppleButton
+                variant="outlined"
+                onClick={() => setActiveStep(0)}
+                startIcon={<SettingsRoundedIcon />}
+              >
+                Reconfigure
+              </AppleButton>
+            </Box>
           </Box>
         );
       default:
@@ -536,50 +685,52 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
   };
 
   return (
-    <Paper
-      elevation={3}
-      sx={{
-        position: 'relative',
-        width: '80%', // Set to 80% of screen width
-        maxHeight: '90vh',
-        overflowY: 'auto',
-        mx: 'auto',
-        p: 4,
-        bgcolor: '#ffffff',
-        borderRadius: 1.5
-      }}
-    >
-      <Button
-        aria-label="close"
+    <AppleCard>
+      <Box
         onClick={onClose}
-        sx={{ position: 'absolute', top: 12, right: 12 }}
+        sx={{
+          position: 'absolute',
+          top: 16,
+          right: 16,
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 30,
+          height: 30,
+          borderRadius: '50%',
+          '&:hover': {
+            bgcolor: 'rgba(0,0,0,0.04)'
+          }
+        }}
       >
-        Close
-      </Button>
+        <CloseRoundedIcon fontSize="small" />
+      </Box>
 
-      <Typography variant="h5" sx={{ mb: 3, textAlign: 'center' }}>
+      <Typography variant="h4" sx={{ mb: 4, textAlign: 'center', fontWeight: 500 }}>
         Phillips Hue Setup
       </Typography>
 
-      <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+      <AppleStepper activeStep={activeStep} sx={{ mb: 4 }} alternativeLabel>
         {steps.map((label) => (
           <Step key={label}>
             <StepLabel>{label}</StepLabel>
           </Step>
         ))}
-      </Stepper>
+      </AppleStepper>
 
       {getStepContent(activeStep)}
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
-        <Button
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4, mb: 1 }}>
+        <AppleButton
           variant="outlined"
           onClick={handleBack}
           disabled={activeStep === 0 || isLoading}
+          startIcon={<ArrowBackRoundedIcon />}
         >
           Back
-        </Button>
-        <Button
+        </AppleButton>
+        <AppleButton
           variant="contained"
           onClick={handleNext}
           disabled={
@@ -587,31 +738,34 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
             (activeStep === 0 && !selectedBridge && !manualBridgeIp) ||
             (activeStep === 2 && !selectedGroup)
           }
+          endIcon={activeStep !== steps.length - 1 ? <ArrowForwardRoundedIcon /> : undefined}
         >
           {activeStep === steps.length - 1 ? 'Finish' : 'Next'}
-        </Button>
+        </AppleButton>
       </Box>
 
-      {/* Toast Notification */}
+      {/* Apple-style Toast Notification */}
       <Snackbar
         open={toast.open}
         autoHideDuration={6000}
         onClose={handleToastClose}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
-        <Alert
-          onClose={handleToastClose}
-          severity={toast.type}
-          sx={{ width: '100%' }}
-          variant="filled"
-        >
-          {toast.title && (
-            <AlertTitle>{toast.title}</AlertTitle>
-          )}
-          {toast.message}
-        </Alert>
+        <ToastPill type={toast.type}>
+          {getToastIcon(toast.type)}
+          <Box>
+            {toast.title && (
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                {toast.title}
+              </Typography>
+            )}
+            <Typography variant="body2">
+              {toast.message}
+            </Typography>
+          </Box>
+        </ToastPill>
       </Snackbar>
-    </Paper>
+    </AppleCard>
   );
 };
 
