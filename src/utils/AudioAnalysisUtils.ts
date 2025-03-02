@@ -40,7 +40,8 @@ export function averageFrequency(dataArray: Uint8Array, start: number, end: numb
 const BEAT_HISTORY_SIZE = 20;
 let energyHistory: number[] = [];
 let lastBeatTime = 0;
-const MIN_BEAT_INTERVAL_MS = 300; // Prevent too frequent beat detection (300ms minimum)
+// Reduce minimum interval to allow faster beats to be detected
+const MIN_BEAT_INTERVAL_MS = 150; // Changed from 300ms to 150ms to allow faster beats
 
 /**
  * Detects a beat in audio data using energy levels and dynamic thresholds
@@ -71,8 +72,23 @@ export function detectBeat(dataArray: Uint8Array, threshold: number = 1.15): boo
   const averageEnergy = sortedHistory.slice(0, sortedHistory.length - 1)
     .reduce((a, b) => a + b, 0) / (sortedHistory.length - 1);
 
-  // A beat occurs when current energy is significantly higher than the average
-  if (currentEnergy > averageEnergy * threshold && currentEnergy > 30) {
+  // NEW: Detect if we're in a high-energy song section
+  const isHighEnergySong = averageEnergy > 80;
+
+  // NEW: Use different thresholds based on song energy
+  const effectiveThreshold = isHighEnergySong ?
+    Math.max(1.05, threshold * 0.8) : // Lower threshold for high-energy songs
+    threshold;                        // Normal threshold for regular songs
+
+  // NEW: For high-energy songs, also check absolute level
+  if (isHighEnergySong && currentEnergy > 120) {
+    // More likely to trigger for consistently high energy songs
+    lastBeatTime = now;
+    return true;
+  }
+
+  // Regular beat detection with adapted threshold
+  if (currentEnergy > averageEnergy * effectiveThreshold && currentEnergy > 30) {
     lastBeatTime = now;
     return true;
   }
@@ -83,17 +99,29 @@ export function detectBeat(dataArray: Uint8Array, threshold: number = 1.15): boo
 /**
  * Calculates energy in the bass frequency range (more relevant for beat detection)
  */
-function calculateBassEnergy(dataArray: Uint8Array): number {
+export function calculateBassEnergy(dataArray: Uint8Array): number {
   // Focus on lower frequencies where bass/beats typically occur
   // For a typical FFT of size 256, the first ~20 bins contain the bass frequencies
   const bassEnd = Math.min(20, Math.floor(dataArray.length * 0.15));
 
-  let total = 0;
+  // NEW: Also include some mid-range for better beat detection
+  const midEnd = Math.min(40, Math.floor(dataArray.length * 0.3));
+
+  let bassTotal = 0;
+  let midTotal = 0;
+
+  // Calculate bass energy
   for (let i = 0; i < bassEnd; i++) {
-    total += dataArray[i];
+    bassTotal += dataArray[i];
   }
 
-  return total / bassEnd;
+  // Calculate mid energy (gives better results for some electronic music)
+  for (let i = bassEnd; i < midEnd; i++) {
+    midTotal += dataArray[i];
+  }
+
+  // Weight bass more heavily but include some mid-range
+  return (bassTotal / bassEnd) * 0.8 + (midTotal / (midEnd - bassEnd)) * 0.2;
 }
 
 /**

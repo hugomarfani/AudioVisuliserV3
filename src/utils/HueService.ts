@@ -557,14 +557,15 @@ class HueService {
   }
 
   // Updated to work with either mode, but prioritize entertainment mode
-  async sendColorTransition(rgb: [number, number, number], transitionTime: number = 200): Promise<void> {
+  async sendColorTransition(rgb: [number, number, number], transitionTime: number = 200, forceSend: boolean = false): Promise<void> {
     if (!this.isConnected) {
       return;
     }
 
     try {
-      // Avoid sending the same color repeatedly
-      if (this.lastRGB[0] === rgb[0] && this.lastRGB[1] === rgb[1] && this.lastRGB[2] === rgb[2]) {
+      // Only check for duplicate commands if we're not forcing the send
+      // This ensures beat events always trigger light changes
+      if (!forceSend && this.lastRGB[0] === rgb[0] && this.lastRGB[1] === rgb[1] && this.lastRGB[2] === rgb[2]) {
         return;
       }
 
@@ -573,9 +574,9 @@ class HueService {
         await this.bridge.transition([0], rgb, transitionTime);
       } else if (!hueConfig.forceEntertainmentAPI) {
         // Regular API mode - use direct API calls
-        // Rate limit to avoid overwhelming the bridge (max 10 updates/sec)
+        // Rate limit to avoid overwhelming the bridge (max 15 updates/sec for responsive beats)
         const now = Date.now();
-        if (now - this.lastLightUpdateTime < 100) {
+        if (!forceSend && now - this.lastLightUpdateTime < 66) { // ~15 updates per second
           return;
         }
 
@@ -598,7 +599,9 @@ class HueService {
             lightId,
             on: true,
             brightness: Math.round(Math.max(...rgb) * 100), // Maximum RGB value for brightness
-            xy
+            xy,
+            // For forced sends (beats), use minimal transition time
+            transitiontime: forceSend ? 0 : Math.floor(transitionTime / 100)
           }).catch(console.error);
         });
 
