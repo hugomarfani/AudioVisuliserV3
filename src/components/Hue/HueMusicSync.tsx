@@ -375,10 +375,11 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
       audioContextRef.current = null;
     }
 
-    // Disconnect from Hue if necessary
+    // Disconnect from Hue if necessary - now this handles cleaning up properly
     if (connected) {
       HueService.stopEntertainmentMode().catch(console.error);
       setConnected(false);
+      setBeatDetected(false);
     }
   }, [connected]);
 
@@ -491,12 +492,26 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     }
   };
 
-  // Disconnect from Hue
+  // Disconnect from Hue with improved cleanup
   const disconnectFromHue = async () => {
     try {
+      console.log('🛑 Disconnecting from Hue...');
+
+      // Cancel animation frame first
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+
+      // Stop all Hue operations
       await HueService.stopEntertainmentMode();
+
       setConnected(false);
-      console.log('Disconnected from Hue bridge');
+      setBeatDetected(false);
+      console.log('Disconnected from Hue bridge and cleaned up');
+
+      // Send a clear notification to the UI
+      setLastLightCommand('Lights dimmed and sync stopped');
     } catch (error) {
       console.error('Error disconnecting from Hue:', error);
     }
@@ -752,10 +767,19 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
   // Toggle the enabled state
   const handleToggleEnabled = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newEnabled = event.target.checked;
-    setEnabled(newEnabled);
 
-    // Update in HueContext too if available
-    hueContext?.setEnabled(newEnabled);
+    // If turning off, make sure we disconnect properly first
+    if (!newEnabled && connected) {
+      disconnectFromHue().then(() => {
+        setEnabled(false);
+        // Update in HueContext too if available
+        hueContext?.setEnabled(false);
+      });
+    } else {
+      setEnabled(newEnabled);
+      // Update in HueContext too if available
+      hueContext?.setEnabled(newEnabled);
+    }
   };
 
   // Handle color mode change
@@ -861,6 +885,13 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
 
     // Run a 1.5 second color cycle animation with 5 steps
     await HueAnimations.createColorCycleAnimation(1500, 5);
+  };
+
+  // Add new reset handler
+  const handleReset = () => {
+    HueService.resetSync();
+    setLastLightCommand("Sync reset");
+    console.log("Hue sync has been reset.");
   };
 
   return (
@@ -1108,6 +1139,11 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
               variant="outlined"
             >
               Color Cycle
+            </Button>
+
+            {/* NEW: Reset Sync button */}
+            <Button onClick={handleReset} variant="outlined" color="error">
+              Reset Sync
             </Button>
           </Box>
 
