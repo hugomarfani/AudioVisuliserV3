@@ -15,6 +15,9 @@ import WarningRoundedIcon from '@mui/icons-material/WarningRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import LightModeRoundedIcon from '@mui/icons-material/LightModeRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import CodeIcon from '@mui/icons-material/Code';
 
 // Apple-inspired styled components
 const AppleCard = styled(Paper)(({ theme }) => ({
@@ -157,6 +160,12 @@ interface ToastMessage {
   open: boolean;
 }
 
+interface StoredCredential {
+  key: string;
+  value: string;
+  source: string;
+}
+
 const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [bridges, setBridges] = useState<any[]>([]);
@@ -174,6 +183,8 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
     type: 'info',
     open: false
   });
+  const [showCredentials, setShowCredentials] = useState<boolean>(false);
+  const [storedCredentials, setStoredCredentials] = useState<StoredCredential[]>([]);
 
   // Check if configuration exists
   useEffect(() => {
@@ -282,19 +293,43 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
       // Wait 2 seconds to give user time to read the message
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Use IPC to register with the bridge
-      await window.electron.ipcRenderer.invoke('hue:setManualBridge', bridgeIp);
+      // Use IPC to register with the bridge - now getting actual credentials back
+      const credentials = await window.electron.ipcRenderer.invoke('hue:setManualBridge', bridgeIp);
+
+      if (!credentials || !credentials.username || !credentials.clientKey) {
+        throw new Error("Registration failed - did not receive proper credentials from the bridge");
+      }
 
       showToast("Registration successful! Fetching entertainment groups...", 'success');
-      await fetchEntertainmentGroups();
 
-      // Save simplified config to localStorage
+      // Save all credentials to localStorage properly
       const config = {
         address: bridgeIp,
-        username: 'fromElectron', // Actual value managed by main process
+        username: credentials.username,
+        psk: credentials.clientKey,
         entertainmentGroupId: '1'  // Default, will be updated later
       };
       localStorage.setItem('hueConfig', JSON.stringify(config));
+
+      // Also save to hueBridgeInfo format for compatibility
+      const bridgeInfo = {
+        ip: bridgeIp,
+        username: credentials.username,
+        clientKey: credentials.clientKey,
+        psk: credentials.clientKey,
+        clientkey: credentials.clientKey // Include all variants for compatibility
+      };
+      localStorage.setItem('hueBridgeInfo', JSON.stringify(bridgeInfo));
+
+      // Log the stored credentials for debugging
+      console.log('Stored Hue credentials:', {
+        address: bridgeIp,
+        username: credentials.username,
+        pskExists: !!credentials.clientKey,
+        pskLength: credentials.clientKey?.length || 0
+      });
+
+      await fetchEntertainmentGroups();
 
       // Move to next step
       setActiveStep(2);
@@ -660,7 +695,7 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
               Your Phillips Hue entertainment area is now configured and ready to sync with your music.
               The lights will respond to the audio frequencies when you play songs.
             </Typography>
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 3 }}>
               <AppleButton
                 variant="outlined"
                 onClick={testLights}
@@ -677,11 +712,187 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
                 Reconfigure
               </AppleButton>
             </Box>
+
+            {/* Credentials Section */}
+            <Box sx={{ mt: 4, mb: 2, display: 'flex', justifyContent: 'center' }}>
+              <AppleButton
+                variant="outlined"
+                onClick={() => {
+                  if (!showCredentials) {
+                    getStoredCredentials();
+                  }
+                  setShowCredentials(!showCredentials);
+                }}
+                startIcon={showCredentials ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                size="small"
+              >
+                {showCredentials ? 'Hide Credentials' : 'Show Stored Credentials'}
+              </AppleButton>
+            </Box>
+
+            {showCredentials && (
+              <Box
+                sx={{
+                  mt: 2,
+                  textAlign: 'left',
+                  bgcolor: '#f5f5f7',
+                  p: 2,
+                  borderRadius: 2,
+                  border: '1px solid #e0e0e0',
+                  position: 'relative'
+                }}
+              >
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: -12,
+                    left: 16,
+                    bgcolor: 'white',
+                    px: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.5
+                  }}
+                >
+                  <CodeIcon fontSize="small" sx={{ color: '#666' }} />
+                  <Typography variant="caption" sx={{ color: '#666', fontWeight: 500 }}>
+                    Stored Credentials
+                  </Typography>
+                </Box>
+
+                {storedCredentials.length === 0 ? (
+                  <Typography variant="body2" sx={{ color: '#666', textAlign: 'center', py: 2 }}>
+                    No credentials found
+                  </Typography>
+                ) : (
+                  <>
+                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                      Storage locations:
+                    </Typography>
+                    {['hueConfig', 'hueBridgeInfo'].map(source => (
+                      <Box key={source} sx={{ mb: 3 }}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 600,
+                            mb: 1,
+                            color: '#007AFF',
+                            fontSize: '0.9rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1
+                          }}
+                        >
+                          localStorage["{source}"]
+                        </Typography>
+                        <Box
+                          sx={{
+                            bgcolor: 'white',
+                            p: 1.5,
+                            borderRadius: 1,
+                            border: '1px solid #e0e0e0',
+                            fontFamily: 'monospace',
+                            fontSize: '0.85rem',
+                            overflowX: 'auto'
+                          }}
+                        >
+                          {storedCredentials
+                            .filter(cred => cred.source === source)
+                            .map((cred, i) => (
+                              <Box
+                                key={i}
+                                sx={{
+                                  display: 'flex',
+                                  mb: 0.5,
+                                  "&:last-child": { mb: 0 }
+                                }}
+                              >
+                                <Typography
+                                  component="span"
+                                  sx={{
+                                    color: '#0c5d90',
+                                    mr: 1,
+                                    fontFamily: 'inherit',
+                                    minWidth: '120px'
+                                  }}
+                                >
+                                  "{cred.key}":
+                                </Typography>
+                                <Typography
+                                  component="span"
+                                  sx={{
+                                    color: cred.key.includes('key') || cred.key.includes('psk') ? '#c41a16' : '#007400',
+                                    fontFamily: 'inherit',
+                                    wordBreak: 'break-all'
+                                  }}
+                                >
+                                  "{cred.value}"
+                                </Typography>
+                              </Box>
+                            ))}
+
+                          {storedCredentials.filter(cred => cred.source === source).length === 0 && (
+                            <Typography sx={{ color: '#666', fontStyle: 'italic' }}>
+                              No data found
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                    ))}
+                  </>
+                )}
+
+                <Typography variant="caption" sx={{ display: 'block', mt: 2, color: '#666' }}>
+                  Note: These credentials are shown for verification purposes only. Do not share them.
+                </Typography>
+              </Box>
+            )}
           </Box>
         );
       default:
         return null;
     }
+  };
+
+  // Add this function inside the component
+  const getStoredCredentials = () => {
+    const credentials: StoredCredential[] = [];
+
+    // Check hueConfig
+    try {
+      const hueConfig = localStorage.getItem('hueConfig');
+      if (hueConfig) {
+        const config = JSON.parse(hueConfig);
+        Object.entries(config).forEach(([key, value]) => {
+          credentials.push({
+            key,
+            value: typeof value === 'string' ? value : JSON.stringify(value),
+            source: 'hueConfig'
+          });
+        });
+      }
+    } catch (e) {
+      console.error("Error parsing hueConfig:", e);
+    }
+
+    // Check hueBridgeInfo
+    try {
+      const hueBridgeInfo = localStorage.getItem('hueBridgeInfo');
+      if (hueBridgeInfo) {
+        const info = JSON.parse(hueBridgeInfo);
+        Object.entries(info).forEach(([key, value]) => {
+          credentials.push({
+            key,
+            value: typeof value === 'string' ? value : JSON.stringify(value),
+            source: 'hueBridgeInfo'
+          });
+        });
+      }
+    } catch (e) {
+      console.error("Error parsing hueBridgeInfo:", e);
+    }
+
+    setStoredCredentials(credentials);
   };
 
   return (

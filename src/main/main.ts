@@ -473,17 +473,27 @@ ipcMain.handle('hue:setManualBridge', async (_event, manualIp: string) => {
     api = await v3.api.createLocal(manualIp).connect(currentHueUsername);
     await api.configuration.getConfiguration();
     console.log("Manual bridge set successfully. Bridge IP:", currentHueBridgeIP, "Username:", currentHueUsername);
-    return { ip: currentHueBridgeIP, username: currentHueUsername };
+
+    // Return credentials including clientKey (as psk)
+    return {
+      ip: currentHueBridgeIP,
+      username: currentHueUsername,
+      clientKey: createdUser.clientkey, // Include clientKey
+      psk: createdUser.clientkey // Include as psk for compatibility
+    };
   } catch (error) {
     console.error('Error setting manual bridge IP:', error);
     throw error;
   }
 });
 
-ipcMain.handle('hue:setCredentials', async (_, credentials: { ip: string; username: string }) => {
+ipcMain.handle('hue:setCredentials', async (_, credentials: { ip: string; username: string; psk?: string; clientKey?: string }) => {
   try {
     currentHueBridgeIP = credentials.ip;
     currentHueUsername = credentials.username;
+
+    // Store additional credentials
+    const psk = credentials.psk || credentials.clientKey || '';
 
     // Validate the credentials immediately
     const isValid = await validateStoredCredentials();
@@ -494,8 +504,19 @@ ipcMain.handle('hue:setCredentials', async (_, credentials: { ip: string; userna
       throw new Error('Invalid credentials');
     }
 
-    console.log('Credentials set successfully:', { ip: currentHueBridgeIP, username: currentHueUsername });
-    return true;
+    console.log('Credentials set successfully:', {
+      ip: currentHueBridgeIP,
+      username: currentHueUsername,
+      hasClientKey: !!psk
+    });
+
+    // Return complete credentials
+    return {
+      ip: currentHueBridgeIP,
+      username: currentHueUsername,
+      clientKey: psk,
+      psk: psk
+    };
   } catch (error) {
     console.error('Error setting credentials:', error);
     throw error;

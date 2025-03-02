@@ -118,12 +118,26 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
 
   // Check if we have any Hue lights configured
   useEffect(() => {
+    // First check if we have a valid configuration according to HueService
+    if (HueService.hasValidConfig()) {
+      setHueConnected(true);
+    }
+
+    // Then retrieve light RIDs to confirm actual lights are available
     window.electron.ipcRenderer.invoke('hue:getLightRids')
       .then((rids: string[]) => {
-        setSelectedLights(rids);
-        setHueConnected(rids.length > 0);
+        if (rids && rids.length > 0) {
+          setSelectedLights(rids);
+          setHueConnected(true);
+          console.log(`HueMusicSync: Found ${rids.length} Hue lights`);
+        } else {
+          console.log('HueMusicSync: No Hue lights found');
+        }
       })
-      .catch(console.error);
+      .catch(err => {
+        console.error('HueMusicSync: Error getting lights:', err);
+        // Don't set hueConnected to false here in case we already determined it's true via config
+      });
   }, []);
 
   // This effect controls the automatic flashing
@@ -247,10 +261,10 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     }
   };
 
-  // Connect to Hue bridge
+  // Connect to Hue bridge with better error handling and fallback
   const connectToHue = async () => {
     if (!HueService.hasValidConfig()) {
-      setError('Hue bridge not configured. Please set up in Settings first.');
+      setError('Hue bridge not configured. Please go to Settings to set up your Hue Bridge.');
       setEnabled(false);
       return;
     }
@@ -261,26 +275,69 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     try {
       console.log('Connecting to Hue bridge...');
 
-      // Initialize Hue bridge connection
-      const initialized = await HueService.initialize({
-        updateRate: colorMode === 'pulse' ? 30 : 20 // Higher update rate for pulse mode
+      // Try forcing regular API mode if entertainment mode doesn't work
+      let initialized = false;
+      let useFallbackMode = false;
+
+      // First try with entertainment mode
+      initialized = await HueService.initialize({
+        updateRate: colorMode === 'pulse' ? 30 : 20
       });
 
       if (!initialized) {
-        throw new Error('Failed to initialize Hue bridge connection');
+        // If initialization failed, try with regular API mode
+        console.log('First attempt failed, trying with regular API mode');
+        HueService.useRegularAPIMode();
+        initialized = await HueService.initialize();
+        useFallbackMode = true;
+      }
+
+      if (!initialized) {
+        throw new Error('Failed to initialize Hue bridge connection. Check console for details.');
       }
 
       // Start entertainment mode
+      console.log('Starting entertainment mode...');
       const started = await HueService.startEntertainmentMode();
       if (!started) {
-        throw new Error('Failed to start entertainment mode');
+        throw new Error('Failed to start entertainment mode. Check console for details.');
       }
 
-      console.log('Connected to Hue bridge successfully');
+      console.log('Connected to Hue bridge successfully' + (useFallbackMode ? ' using regular API mode' : ''));
       setConnected(true);
+
+      // Show a different message if we're using regular API mode
+      if (useFallbackMode) {
+        setError('Using simplified light mode - some features may be limited. See console for details.');
+      }
     } catch (error: any) {
       console.error('Error connecting to Hue:', error);
-      setError(`Failed to connect to Hue: ${error.message}`);
+
+      // Try one more time with regular API mode
+      try {
+        console.log('Error encountered, trying with regular API mode...');
+        HueService.useRegularAPIMode();
+        const initialized = await HueService.initialize();
+        if (initialized) {
+          const started = await HueService.startEntertainmentMode();
+          if (started) {
+            console.log('Connected to Hue bridge successfully using regular API mode');
+            setConnected(true);
+            setError('Using simplified light mode - some features may be limited. See console for details.');
+            return;
+          }
+        }
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+      }
+
+      // More descriptive error message
+      let errorMessage = error.message || 'Unknown error';
+      if (errorMessage.includes('initialize')) {
+        errorMessage += '. Verify your Hue bridge is connected and try reconfiguring in Settings.';
+      }
+
+      setError(`Failed to connect to Hue: ${errorMessage}`);
       setEnabled(false);
     } finally {
       setIsConnecting(false);
@@ -701,7 +758,7 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
           Philips Hue Control
         </Typography>
 
-        {/* Debug flash toggle */}
+        {/* Debug flash toggle - Always show this */}
         <FormControlLabel
           control={
             <Switch
@@ -714,10 +771,11 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
           sx={{ mb: 1, display: 'block' }}
         />
 
-        {hueConnected ? (
+        {/* Update this conditional to also check HueService.hasValidConfig() as a fallback */}
+        {(hueConnected || selectedLights.length > 0 || HueService.hasValidConfig()) ? (
           <Box>
             <Typography sx={{ color: '#555555' }}>Connected to Hue Bridge</Typography>
-            <Typography sx={{ color: '#555555' }}>Selected Lights: {selectedLights.length}</Typography>
+            <Typography sx={{ color: '#555555' }}>Selected Lights: {selectedLights.length || "(Detecting...)"}</Typography>
             <Button
               variant="contained"
               color="primary"
@@ -736,3 +794,4 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
 };
 
 export default HueMusicSync;
+

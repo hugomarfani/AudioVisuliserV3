@@ -13,23 +13,54 @@ const HueDebugOverlay: React.FC = () => {
   const [manualPSK, setManualPSK] = useState<string>(''); // NEW state for PSK
   const [showManualInput, setShowManualInput] = useState<boolean>(false);
 
-  // NEW: Check for valid stored credentials on mount
+  // NEW: Check for valid stored credentials on mount with better PSK handling
   useEffect(() => {
     const stored = localStorage.getItem("hueBridgeInfo");
     if (stored) {
-      const creds = JSON.parse(stored);
-      if (creds?.ip && creds?.username && creds?.psk) {
-        console.log("Found stored Hue credentials, verifying...");
-        window.electron.ipcRenderer.invoke('hue:setCredentials', creds)
-          .then(() => {
-            setBridgeInfo({ ip: creds.ip });
-            setBridgeError(null);
+      try {
+        const creds = JSON.parse(stored);
+        if (creds?.ip && creds?.username) {
+          console.log("Found stored Hue credentials, verifying...");
+
+          // Ensure PSK/clientKey is present
+          const psk = creds.psk || creds.clientKey;
+          if (!psk) {
+            console.warn("No PSK/clientKey found in stored credentials");
+          } else {
+            console.log("PSK/clientKey found in stored credentials:", !!psk);
+          }
+
+          // Send credentials to main process
+          window.electron.ipcRenderer.invoke('hue:setCredentials', {
+            ip: creds.ip,
+            username: creds.username,
+            psk: psk,
+            clientKey: psk // Store it both ways for compatibility
           })
-          .catch(err => {
-            console.error("Stored Hue credentials invalid:", err);
-            localStorage.removeItem("hueBridgeInfo");
-            setBridgeInfo(null);
-          });
+            .then((result) => {
+              setBridgeInfo({
+                ip: creds.ip,
+                // Store returned values which might include generated keys
+                ...result
+              });
+
+              // Update localStorage with complete info
+              localStorage.setItem("hueBridgeInfo", JSON.stringify({
+                ...creds,
+                ...result
+              }));
+
+              setBridgeError(null);
+              console.log("Hue credentials verified successfully");
+            })
+            .catch(err => {
+              console.error("Stored Hue credentials invalid:", err);
+              setBridgeError(`Stored credentials error: ${err.message}`);
+              // Don't remove from localStorage to allow debugging
+            });
+        }
+      } catch (e) {
+        console.error("Error parsing stored Hue credentials:", e);
       }
     }
   }, []);
