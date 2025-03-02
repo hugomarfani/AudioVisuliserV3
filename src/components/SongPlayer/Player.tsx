@@ -34,17 +34,17 @@ const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUp
   }));
 
   useEffect(() => {
-    console.log('Player component mounted/updated with track:', track);
+    // console.log('Player component mounted/updated with track:', track);
     const audio = audioRef.current;
     if (!audio) {
-      console.log('No audio element reference');
+      // console.log('No audio element reference');
       return;
     }
 
     const updateProgress = () => {
       const currentProgress = (audio.currentTime / audio.duration) * 100 || 0;
       setProgress(currentProgress);
-      console.log('Audio progress:', currentProgress);
+      // console.log('Audio progress:', currentProgress);
       onTimeUpdate?.(audio.currentTime, audio.duration);
     };
 
@@ -52,22 +52,22 @@ const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUp
       const audioElement = e.target as HTMLAudioElement;
       // Only log error if we actually have a source
       if (track.audioSrc) {
-        console.error('Audio error:', {
-          error: audioElement.error,
-          src: audioElement.src,
-          readyState: audioElement.readyState,
-        });
+        // console.error('Audio error:', {
+        //   error: audioElement.error,
+        //   src: audioElement.src,
+        //   readyState: audioElement.readyState,
+        // });
         setIsPlaying(false);
       }
     };
 
     audio.addEventListener('timeupdate', updateProgress);
     audio.addEventListener('error', handleError);
-    audio.addEventListener('loadstart', () => console.log('Audio loading started'));
-    audio.addEventListener('canplay', () => console.log('Audio can play'));
-    audio.addEventListener('playing', () => console.log('Audio started playing'));
-    audio.addEventListener('pause', () => console.log('Audio paused'));
-    audio.addEventListener('ended', () => console.log('Audio ended'));
+    // audio.addEventListener('loadstart', () => console.log('Audio loading started'));
+    // audio.addEventListener('canplay', () => console.log('Audio can play'));
+    // audio.addEventListener('playing', () => console.log('Audio started playing'));
+    // audio.addEventListener('pause', () => console.log('Audio paused'));
+    // audio.addEventListener('ended', () => console.log('Audio ended'));
 
     // Reset player state when audio source changes
     setIsPlaying(false);
@@ -75,13 +75,13 @@ const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUp
 
     // Log the audio source when it changes
     if (track.audioSrc) {
-      console.log('Audio source:', track.audioSrc);
+      // console.log('Audio source:', track.audioSrc);
     }
 
     // Auto-play when track changes
     if (autoPlay && track.audioSrc) {
       audio.play().catch(error => {
-        console.error('Error auto-playing audio:', error);
+        // console.error('Error auto-playing audio:', error);
         setIsPlaying(false);
       });
       setIsPlaying(true); // Set playing state to true when auto-playing
@@ -124,13 +124,13 @@ const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUp
   const togglePlayPause = () => {
     if (!audioRef.current || !track.audioSrc) return;
 
-    console.log('Toggle play/pause, current state:', isPlaying);
+    // console.log('Toggle play/pause, current state:', isPlaying);
 
     if (isPlaying) {
       audioRef.current.pause();
     } else {
       audioRef.current.play().catch(error => {
-        console.error('Error playing audio:', error);
+        // console.error('Error playing audio:', error);
         setIsPlaying(false);
       });
     }
@@ -189,12 +189,12 @@ const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUp
     onAutoFlashToggle?.(isEnabled);
   };
 
-  console.log('Player rendering with states:', {
-    isPlaying,
-    progress,
-    trackTitle: track.title,
-    trackSrc: track.audioSrc
-  });
+  // console.log('Player rendering with states:', {
+  //   isPlaying,
+  //   progress,
+  //   trackTitle: track.title,
+  //   trackSrc: track.audioSrc
+  // });
 
   return (
     <div
@@ -324,7 +324,7 @@ const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUp
           ref={audioRef}
           src={track.audioSrc}
           crossOrigin="anonymous" // Add this to allow audio processing from different domains
-          onLoadedData={() => console.log('Audio loaded successfully')}
+          // onLoadedData={() => console.log('Audio loaded successfully')}
         />
       </div>
 

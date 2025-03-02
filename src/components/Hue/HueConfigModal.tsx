@@ -15,10 +15,9 @@ import WarningRoundedIcon from '@mui/icons-material/WarningRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import LightModeRoundedIcon from '@mui/icons-material/LightModeRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import VisibilityIcon from '@mui/icons-material/VisibilityOff';
 import CodeIcon from '@mui/icons-material/Code';
-import { testPheaLibrary, runDetailedPheaTest } from '../../utils/testPhea';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'; // <-- Added missing import
 
 // Apple-inspired styled components
 const AppleCard = styled(Paper)(({ theme }) => ({
@@ -149,6 +148,8 @@ const getToastIcon = (type) => {
     default: return <InfoRoundedIcon sx={{ mr: 1 }} />;
   }
 };
+
+import HueService from '../../utils/HueService';
 
 interface HueConfigModalProps {
   onClose: () => void;
@@ -403,6 +404,7 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
         const config = JSON.parse(storedConfig);
         config.entertainmentGroupId = selectedGroup;
         localStorage.setItem('hueConfig', JSON.stringify(config));
+        HueService.setEntertainmentGroupId(selectedGroup);
       }
 
       showToast("Setup complete! Your Hue lights are now configured.", 'success');
@@ -864,6 +866,19 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
                 <Typography variant="caption" sx={{ display: 'block', mt: 2, color: '#666' }}>
                   Note: These credentials are shown for verification purposes only. Do not share them.
                 </Typography>
+                {
+                  /* Display current entertainment area from HueService configuration */
+                  HueService.getConfig() && (
+                    <Box sx={{ mt: 2, p: 1, bgcolor: '#eef', borderRadius: 1 }}>
+                      <Typography variant="caption" sx={{ fontWeight: 600, color: '#333' }}>
+                        Selected Entertainment Area:
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#333', ml: 1 }}>
+                        {HueService.getConfig()?.entertainmentGroupId || 'Not set'}
+                      </Typography>
+                    </Box>
+                  )
+                }
               </Box>
             )}
           </Box>
@@ -912,12 +927,6 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
     }
 
     setStoredCredentials(credentials);
-  };
-
-  const handleTestPhea = () => {
-    console.log('Running detailed Phea diagnostics...');
-    const result = runDetailedPheaTest();
-    console.log('Test result:', result);
   };
 
   return (
@@ -979,14 +988,6 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
           {activeStep === steps.length - 1 ? 'Finish' : 'Next'}
         </AppleButton>
       </Box>
-
-      <Button
-        variant="contained"
-        onClick={handleTestPhea}
-        sx={{ mt: 2, backgroundColor: '#4caf50' }}
-      >
-        Run Detailed Phea Diagnostics
-      </Button>
 
       {/* Apple-style Toast Notification */}
       <Snackbar

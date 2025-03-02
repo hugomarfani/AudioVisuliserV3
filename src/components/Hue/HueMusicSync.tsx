@@ -374,7 +374,7 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
 
     // If a beat is detected, create a more dramatic effect
     if (isBeat) {
-      console.log('BEAT DETECTED - Flashing lights!');
+      console.log('Beat detected → flash mode');
 
       // Use a brighter, more vivid color for beat flashes
       switch (colorMode) {
@@ -424,6 +424,7 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
       transitionTime = 50;
 
       // Direct light control for stronger effect on beats
+      console.log('Direct flash command – rgb:', rgb);
       sendDirectLightCommand(rgb, 100); // 100% brightness on beats
     } else {
       // Between beats, use more subtle colors
@@ -498,6 +499,7 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     rgb = rgb.map(v => Math.max(0, Math.min(1, v))) as [number, number, number];
 
     // Send color to lights
+    console.log('updateLights sending rgb:', rgb, 'with transitionTime:', transitionTime);
     HueService.sendColorTransition(rgb, transitionTime).catch(err => {
       console.error('Error sending color to Hue:', err);
       // If we get frequent errors, disconnect

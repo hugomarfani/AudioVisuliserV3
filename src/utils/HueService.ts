@@ -73,7 +73,7 @@ class HueService {
             address: config.address,
             username: config.username,
             psk: clientKey ? validatePSK(clientKey) : '', // Validate if exists
-            entertainmentGroupId: config.entertainmentGroupId || '1'
+            entertainmentGroupId: config.entertainmentGroupId
           };
 
           if (clientKey && clientKey !== 'dummy-psk') {
@@ -119,7 +119,7 @@ class HueService {
       hasCredentials: !!config.username,
       hasPSK: !!config.psk && config.psk !== 'dummy-psk',
       pskLength: config.psk?.length || 0,
-      entertainmentGroupId: config.entertainmentGroupId
+      entertainmentGroupId: config.entertainmentGroupId  // Now uses the stored value
     });
   }
 
@@ -403,8 +403,9 @@ class HueService {
       return false;
     }
 
-    if (!this.config.entertainmentGroupId) {
-      console.error('No entertainment group ID specified');
+    // Require a valid entertainmentGroupId
+    if (!this.config.entertainmentGroupId || this.config.entertainmentGroupId === '1') {
+      console.error('No valid entertainment group ID specified.');
       return false;
     }
 
@@ -516,25 +517,18 @@ class HueService {
 
   // Updated to work with either mode and handle different bridge API structures
   async sendColorTransition(rgb: [number, number, number], transitionTime: number = 200): Promise<void> {
-    if (!this.isConnected) {
-      return;
-    }
-
+    if (!this.isConnected) return;
     try {
       // Avoid sending the same color repeatedly
       if (this.lastRGB[0] === rgb[0] && this.lastRGB[1] === rgb[1] && this.lastRGB[2] === rgb[2]) {
         return;
       }
-
+      console.log('sendColorTransition called with:', { rgb, transitionTime });
       if (this.useEntertainmentMode && this.bridge) {
-        // Entertainment mode - use the appropriate method
         if (typeof this.bridge.transition === 'function') {
-          // Use the transition method if it exists
           await this.bridge.transition([0], rgb, transitionTime);
-        }
-        // If there's a setLightState method, use that instead
-        else if (typeof this.bridge.setLightState === 'function') {
-          console.log('Using bridge.setLightState for color transition');
+        } else if (typeof this.bridge.setLightState === 'function') {
+          console.log('Using setLightState fallback; computed rgb:', rgb);
           // Convert RGB to XY color space for Hue
           const r = rgb[0], g = rgb[1], b = rgb[2];
           const X = r * 0.664511 + g * 0.154324 + b * 0.162028;
@@ -543,7 +537,8 @@ class HueService {
           const sum = X + Y + Z;
           const xy = sum === 0 ? [0.33, 0.33] : [X / sum, Y / sum];
 
-          await this.bridge.setLightState(this.config?.entertainmentGroupId || '1', {
+          // Use the stored entertainmentGroupId without fallback
+          await this.bridge.setLightState(this.config!.entertainmentGroupId, {
             on: true,
             bri: Math.round(Math.max(...rgb) * 254),
             xy: xy,
@@ -607,6 +602,7 @@ class HueService {
     if (this.config) {
       const updatedConfig = { ...this.config, entertainmentGroupId: groupId };
       this.saveConfig(updatedConfig);
+      console.log(`Updated entertainment group ID to: ${groupId}`);
     }
   }
 
