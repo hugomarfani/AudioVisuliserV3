@@ -22,7 +22,7 @@ class HueService {
   private lastRGB: [number, number, number] = [0, 0, 0]; // Track last RGB to avoid unnecessary updates
   private useEntertainmentMode: boolean = true; // Always use entertainment mode
   private lastLightUpdateTime: number = 0; // For rate limiting in non-entertainment mode
-  private debugLogsEnabled: boolean = hueConfig.debug; // Control verbose logging
+  private debugLogsEnabled: boolean = true; // Always keep debug logs enabled
   private connectionAttempts: number = 0; // Track connection attempts
 
   constructor() {
@@ -321,8 +321,6 @@ class HueService {
 
           if (this.bridge) {
             console.log('Bridge created successfully');
-            // Disable verbose logs after successful setup
-            this.debugLogsEnabled = false;
           } else {
             throw new Error('bridge() returned null or undefined');
           }
@@ -583,10 +581,10 @@ class HueService {
     console.log('Entertainment mode forced - will not fall back to regular API');
   }
 
-  // New method to disable verbose logging after initial setup
+  // Remove or modify the disableDebugLogs method to do nothing
   disableDebugLogs(): void {
-    this.debugLogsEnabled = false;
-    console.log('Disabled verbose Hue debug logs');
+    // Do nothing - we want to keep logs enabled
+    console.log('Debug logs will remain enabled');
   }
 
   // Reset connection attempts

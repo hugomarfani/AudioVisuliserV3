@@ -12,117 +12,118 @@ export function mapRange(value: number, inMin: number, inMax: number, outMin: nu
  * High-Mid (2000-8000Hz) -> cyan/blue (120-240)
  * High frequencies (8000-20000Hz) -> purple (240-300)
  */
-export function colorFromFrequency(frequency: number): number {
-  // Map logarithmically since human hearing perceives frequency logarithmically
-  if (frequency < 20) return 0; // Below human hearing -> red
-  if (frequency > 20000) return 300; // Above human hearing -> purple
+export function colorFromFrequency(frequency: number, min: number, max: number): [number, number, number] {
+  // Map frequency to hue (0-360)
+  const hue = mapRange(frequency, min, max, 0, 360);
 
-  // Log scale mapping to get better distribution across the spectrum
-  const logFreq = Math.log10(frequency);
-  const logMin = Math.log10(20);
-  const logMax = Math.log10(20000);
-
-  return mapRange(logFreq, logMin, logMax, 0, 300);
+  // Generate RGB from HSV with full saturation and value
+  return hsvToRgb(hue / 360, 1.0, 1.0);
 }
 
 /**
  * Calculate average value in a frequency data array between start and end indices
  */
 export function averageFrequency(dataArray: Uint8Array, start: number, end: number): number {
+  if (!dataArray || start >= end || start < 0 || end > dataArray.length) {
+    return 0;
+  }
+
   let sum = 0;
-  const adjustedEnd = Math.min(end, dataArray.length);
-  const adjustedStart = Math.min(start, dataArray.length - 1);
-  const count = adjustedEnd - adjustedStart;
-
-  if (count <= 0) return 0;
-
-  for (let i = adjustedStart; i < adjustedEnd; i++) {
+  for (let i = start; i < end; i++) {
     sum += dataArray[i];
   }
 
-  return sum / count;
+  return sum / (end - start);
 }
 
-/**
- * Extract dominant frequency from FFT data
- */
-export function extractDominantFrequency(dataArray: Uint8Array, sampleRate: number): number {
-  let maxValue = 0;
-  let maxIndex = 0;
+// History buffer size for beat detection
+const BEAT_HISTORY_SIZE = 20;
+let energyHistory: number[] = [];
+let lastBeatTime = 0;
+const MIN_BEAT_INTERVAL_MS = 300; // Prevent too frequent beat detection (300ms minimum)
 
-  for (let i = 0; i < dataArray.length; i++) {
-    if (dataArray[i] > maxValue) {
-      maxValue = dataArray[i];
-      maxIndex = i;
-    }
+/**
+ * Detects a beat in audio data using energy levels and dynamic thresholds
+ */
+export function detectBeat(dataArray: Uint8Array, threshold: number = 1.15): boolean {
+  if (!dataArray || dataArray.length === 0) return false;
+
+  // Get current energy (bass-focused for better beat detection)
+  const currentEnergy = calculateBassEnergy(dataArray);
+
+  // Prevent beat detection if it's too soon after the last beat
+  const now = performance.now();
+  if (now - lastBeatTime < MIN_BEAT_INTERVAL_MS) {
+    return false;
   }
 
-  // Convert bin index to frequency
-  // For a FFT, the frequency resolution is sampleRate / FFT size
-  // The FFT size is 2 * dataArray.length
-  const frequency = maxIndex * sampleRate / (2 * dataArray.length);
-  return frequency;
+  // Add energy to history, keep history at fixed size
+  energyHistory.push(currentEnergy);
+  if (energyHistory.length > BEAT_HISTORY_SIZE) {
+    energyHistory.shift();
+  }
+
+  // Need a minimum history to detect beats
+  if (energyHistory.length < 5) return false;
+
+  // Calculate average energy from history, excluding the highest value
+  const sortedHistory = [...energyHistory].sort((a, b) => a - b);
+  const averageEnergy = sortedHistory.slice(0, sortedHistory.length - 1)
+    .reduce((a, b) => a + b, 0) / (sortedHistory.length - 1);
+
+  // A beat occurs when current energy is significantly higher than the average
+  if (currentEnergy > averageEnergy * threshold && currentEnergy > 30) {
+    lastBeatTime = now;
+    return true;
+  }
+
+  return false;
 }
 
 /**
- * Detect beat from audio data
- * @returns true if a beat is detected
+ * Calculates energy in the bass frequency range (more relevant for beat detection)
  */
-export function detectBeat(dataArray: Uint8Array, threshold: number = 1.5, decay: number = 0.99): boolean {
-  // We focus on the bass frequencies for beat detection (typically <150Hz)
-  const bassEnd = Math.floor(dataArray.length / 8); // Approximate the bass region
+function calculateBassEnergy(dataArray: Uint8Array): number {
+  // Focus on lower frequencies where bass/beats typically occur
+  // For a typical FFT of size 256, the first ~20 bins contain the bass frequencies
+  const bassEnd = Math.min(20, Math.floor(dataArray.length * 0.15));
 
-  // Calculate current energy in the bass region
-  let energy = 0;
+  let total = 0;
   for (let i = 0; i < bassEnd; i++) {
-    energy += dataArray[i] * dataArray[i]; // Square to emphasize peaks
+    total += dataArray[i];
   }
 
-  // Store in a closure to track history between calls
-  let history: { energyHistory: number, threshold: number } = (detectBeat as any).history ||
-    { energyHistory: energy, threshold: energy };
-
-  // Update threshold with decay
-  history.threshold = history.threshold * decay + energy * (1 - decay);
-
-  // Check if energy exceeds threshold by the specified factor
-  const isBeat = energy > history.threshold * threshold;
-
-  // Update history
-  history.energyHistory = energy;
-  (detectBeat as any).history = history;
-
-  return isBeat;
+  return total / bassEnd;
 }
 
 /**
- * Calculate energy in different frequency bands
- * @returns Object with energy values for bass, mid, and treble
+ * Calculate frequency bands for visualization and light control
  */
-export function calculateFrequencyBands(dataArray: Uint8Array): { bass: number, mid: number, treble: number } {
-  const bufferLength = dataArray.length;
+export function calculateFrequencyBands(dataArray: Uint8Array) {
+  const length = dataArray.length;
 
-  // Define frequency bands (approximate)
-  const bassEnd = Math.floor(bufferLength / 8); // ~0-200Hz
-  const midEnd = Math.floor(bufferLength / 2);  // ~200Hz-2kHz
+  // Define frequency band ranges (approximate for common fft sizes)
+  const bassEnd = Math.floor(length * 0.1);        // 0-10% of spectrum
+  const midStart = bassEnd;
+  const midEnd = Math.floor(length * 0.5);         // 10-50% of spectrum
+  const trebleStart = midEnd;
+  const trebleEnd = length;                        // 50-100% of spectrum
 
-  // Calculate energy in each band
+  // Calculate average energy in each band
   const bass = averageFrequency(dataArray, 0, bassEnd);
-  const mid = averageFrequency(dataArray, bassEnd, midEnd);
-  const treble = averageFrequency(dataArray, midEnd, bufferLength);
+  const mid = averageFrequency(dataArray, midStart, midEnd);
+  const treble = averageFrequency(dataArray, trebleStart, trebleEnd);
 
   return { bass, mid, treble };
 }
 
 /**
- * Convert HSV color to RGB
- * @param h Hue (0 to 1)
- * @param s Saturation (0 to 1)
- * @param v Value (0 to 1)
- * @returns RGB values in range 0-1
+ * Converts HSV color values to RGB
+ * h: 0-1 (hue), s: 0-1 (saturation), v: 0-1 (value)
+ * Returns [r, g, b] each in 0-1 range
  */
 export function hsvToRgb(h: number, s: number, v: number): [number, number, number] {
-  let r = 0, g = 0, b = 0;
+  let r: number, g: number, b: number;
 
   const i = Math.floor(h * 6);
   const f = h * 6 - i;
@@ -131,12 +132,13 @@ export function hsvToRgb(h: number, s: number, v: number): [number, number, numb
   const t = v * (1 - (1 - f) * s);
 
   switch (i % 6) {
-    case 0: r = v; g = t; b = p; break;
-    case 1: r = q; g = v; b = p; break;
-    case 2: r = p; g = v; b = t; break;
-    case 3: r = p; g = q; b = v; break;
-    case 4: r = t; g = p; b = v; break;
-    case 5: r = v; g = p; b = q; break;
+    case 0: r = v, g = t, b = p; break;
+    case 1: r = q, g = v, b = p; break;
+    case 2: r = p, g = v, b = t; break;
+    case 3: r = p, g = q, b = v; break;
+    case 4: r = t, g = p, b = v; break;
+    case 5: r = v, g = p, b = q; break;
+    default: r = 0, g = 0, b = 0; break;
   }
 
   return [r, g, b];
@@ -444,3 +446,7 @@ export function transitionColors(
     current[2] + (target[2] - current[2]) * smoothingFactor
   ];
 }
+
+// Audio analysis utilities for enhanced beat detection and visualization
+
+// History buffer size for beat detection

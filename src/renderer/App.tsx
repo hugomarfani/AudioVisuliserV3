@@ -16,6 +16,11 @@ import { Button, Modal, Box } from '@mui/material';
 import PhillipsHueControls from '../components/Hue/PhillipsHueControls';
 import HueConfigModal from '../components/Hue/HueConfigModal';
 import '../styles/hue.css';
+import { testPheaLibrary } from '../utils/testPhea';
+
+// Run test on app start
+console.log('Testing Phea library on app start...');
+testPheaLibrary();
 
 // eslint-disable-next-line react/function-component-definition
 const App: React.FC = () => {
@@ -24,29 +29,13 @@ const App: React.FC = () => {
   const [hueModalOpen, setHueModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
 
-  // useEffect(() => {
-  //   async function getToken() {
-  //     const response = await fetch('http://localhost:5001/auth/token');
-  //     const json = await response.json();
-  //     setAccessToken(json.access_token);
-  //   }
-
-  //   getToken();
-  // }, []);
-
-  // function Hello() {
-  //   // useEffect(() => {
-  //   //   // Dynamic import of the sketch to ensure it only runs in the browser
-  //   //   import('../particles/sketch').catch(console.error);
-  //   // }, []);
-  //     <div>
-  //       <div className="Hello">
-  //         <img width="200" alt="icon" src={icon} />
-  //       </div>
-  //       <h1>Group 1</h1>
-  //       {/* <div className="particle-container" id="particle-container">
-  //       </div> */}
-
+  // Define a frozen track to play "Let It Go"
+  const frozenTrack = {
+    title: "Frozen - Let It Go",
+    artist: "Idina Menzel",
+    albumArt: "64x64", // using the imported icon as a placeholder album art
+    audioSrc: frozenLetItGo,
+  };
 
   const modalStyle = {
     position: 'absolute',
@@ -87,25 +76,13 @@ const App: React.FC = () => {
                 <Login />
               ) : (
                 <>
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                    }}
-                  >
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem' }}>
                     <SongSelector
                       onTrackSelect={setSelectedTrackURI}
                       accessToken={accessToken}
                     />
-                    <Modal
-                      open={settingsModalOpen}
-                      onClose={() => setSettingsModalOpen(false)}
-                    >
-                      <Box sx={modalStyle}>
-                        <HueConfigModal onClose={() => setSettingsModalOpen(false)} />
-                      </Box>
-                    </Modal>
+                    {/* Player instance now stacked vertically */}
+                    <Player track={frozenTrack} autoPlay={true} />
                   </div>
                   <Button
                     variant="contained"
@@ -127,6 +104,14 @@ const App: React.FC = () => {
                   >
                     <Box sx={modalStyle}>
                       <PhillipsHueControls lightId={'4738d2a5-4b1a-4699-9054-6b1028aa5140'} />
+                    </Box>
+                  </Modal>
+                  <Modal
+                    open={settingsModalOpen}
+                    onClose={() => setSettingsModalOpen(false)}
+                  >
+                    <Box sx={modalStyle}>
+                      <HueConfigModal onClose={() => setSettingsModalOpen(false)} />
                     </Box>
                   </Modal>
                 </>

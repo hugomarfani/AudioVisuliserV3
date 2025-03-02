@@ -1,23 +1,20 @@
 /**
  * Configuration for Philips Hue Entertainment API
  */
-
 export const hueConfig = {
-  // Don't force entertainment API to avoid blocking the app when it doesn't work
-  forceEntertainmentAPI: false,
+  // Force the app to use the Entertainment API and error if unavailable
+  forceEntertainmentAPI: true,
 
-  // Default update rate for DTLS (updates per second)
-  defaultDtlsUpdateRate: 50,
+  // Default rates for DTLS updates and color changes
+  defaultDtlsUpdateRate: 20,  // Updates per second (20Hz by default)
+  defaultColorUpdateRate: 20, // Color transitions per second
 
-  // Default update rate for color transitions (updates per second)
-  defaultColorUpdateRate: 25,
-
-  // Default port for DTLS communication
+  // Default port for DTLS connection to Hue Bridge
   defaultDtlsPort: 2100,
 
   // Timeout for DTLS connection in milliseconds
   dtlsConnectionTimeout: 10000,
 
-  // Debug mode - enables extra logging
+  // Enable debug logging
   debug: true
 };

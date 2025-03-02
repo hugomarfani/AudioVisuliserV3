@@ -24,7 +24,7 @@ interface PheaInterface {
 
 // Return a properly initialized Phea instance or mock
 export function getPheaInstance(): PheaInterface {
-  // Try to load the real Phea module
+  // Try to load the real Phea module with improved error logging
   try {
     console.log('Importing phea module...');
     const pheaModule = require('phea');
@@ -38,85 +38,41 @@ export function getPheaInstance(): PheaInterface {
       moduleKeys: Object.keys(pheaModule)
     });
 
-    // Check if module is usable
-    const hasRequiredFunctions = (
-      typeof pheaModule.discover === 'function' ||
-      (pheaModule.default && typeof pheaModule.default.discover === 'function')
-    ) && (
-      typeof pheaModule.bridge === 'function' ||
-      (pheaModule.default && typeof pheaModule.default.bridge === 'function')
-    );
-
-    if (!hasRequiredFunctions) {
-      console.warn('Phea module does not have required functions - using mock instead');
-      return PheaMock;
+    // First check if the module is a direct export with the required functions
+    if (typeof pheaModule.discover === 'function' &&
+        typeof pheaModule.bridge === 'function' &&
+        typeof pheaModule.register === 'function') {
+      console.log('Using direct phea exports - this is the preferred mode');
+      return pheaModule as PheaInterface;
     }
 
-    // Create a wrapper that has the expected API structure
-    const pheaWrapper: PheaInterface = {
-      discover: async () => {
-        try {
-          if (typeof pheaModule.discover === 'function') {
-            return await pheaModule.discover();
-          } else if (pheaModule.default && typeof pheaModule.default.discover === 'function') {
-            return await pheaModule.default.discover();
-          } else {
-            console.error('No discover method found on phea module - falling back to mock');
-            return PheaMock.discover();
-          }
-        } catch (error) {
-          console.error('Error in phea discover - falling back to mock:', error);
-          return PheaMock.discover();
-        }
-      },
+    // Then check if it's exported as default
+    if (pheaModule.default &&
+        typeof pheaModule.default.discover === 'function' &&
+        typeof pheaModule.default.bridge === 'function' &&
+        typeof pheaModule.default.register === 'function') {
+      console.log('Using phea.default exports');
+      return pheaModule.default as PheaInterface;
+    }
 
-      register: async (ipAddress: string) => {
-        try {
-          if (typeof pheaModule.register === 'function') {
-            return await pheaModule.register(ipAddress);
-          } else if (pheaModule.default && typeof pheaModule.default.register === 'function') {
-            return await pheaModule.default.register(ipAddress);
-          } else {
-            console.error('No register method found on phea module - falling back to mock');
-            return PheaMock.register(ipAddress);
-          }
-        } catch (error) {
-          console.error('Error in phea register - falling back to mock:', error);
-          return PheaMock.register(ipAddress);
-        }
-      },
-
-      bridge: (options: PheaOptions) => {
-        try {
-          console.log('Creating bridge with options:', options);
-
-          if (typeof pheaModule.bridge === 'function') {
-            console.log('Using pheaModule.bridge function');
-            return pheaModule.bridge(options);
-          } else if (pheaModule.default && typeof pheaModule.default.bridge === 'function') {
-            console.log('Using pheaModule.default.bridge function');
-            return pheaModule.default.bridge(options);
-          } else {
-            console.error('No bridge method found on phea module - falling back to mock');
-            return PheaMock.bridge(options);
-          }
-        } catch (error) {
-          console.error('Error creating Phea bridge - falling back to mock:', error);
-          return PheaMock.bridge(options);
-        }
-      }
-    };
-
-    return pheaWrapper;
+    // If we reach here, the module doesn't have the expected structure
+    console.error('Phea module loaded but does not have the expected API structure:', pheaModule);
+    throw new Error('Phea module has invalid structure');
   } catch (error) {
-    console.error('Error importing Phea module - using mock:', error);
+    console.error('Failed to load real Phea module:', error);
+
+    // Try to load it again with require.resolve to see detailed errors
+    try {
+      const pheaPath = require.resolve('phea');
+      console.error(`Phea module path: ${pheaPath}, but loading failed`);
+    } catch (resolveError) {
+      console.error('Phea module cannot be resolved:', resolveError);
+      console.error('Make sure the phea package is installed with: npm install phea');
+    }
+
+    console.warn('Falling back to mock implementation - ENTERTAINMENT API WILL NOT WORK PROPERLY');
     return PheaMock;
   }
-}
-
-// Helper function to check if we're in a development environment
-export function isDevelopment(): boolean {
-  return process.env.NODE_ENV === 'development';
 }
 
 // Helper function to parse the PSK into correct format if needed

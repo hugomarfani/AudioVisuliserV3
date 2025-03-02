@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button, Box, Typography } from '@mui/material';
+import { testPheaLibrary } from '../../utils/testPhea';
 
 interface PhillipsHueControlsProps {
   lightId: string;
@@ -7,6 +8,12 @@ interface PhillipsHueControlsProps {
 
 const PhillipsHueControls: React.FC<PhillipsHueControlsProps> = ({ lightId }) => {
   const [isOn, setIsOn] = useState(false);
+
+  useEffect(() => {
+    // Run the test when component mounts
+    const result = testPheaLibrary();
+    console.log('Phea test result:', result);
+  }, []);
 
   const handleToggleLight = async () => {
     try {

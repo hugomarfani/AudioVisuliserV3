@@ -306,10 +306,6 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
       // We can get this information from the HueService
       setIsEntertainmentAPI(HueService.isUsingEntertainmentMode());
 
-      // Disable verbose logging after successful connection
-      if (typeof HueService.disableDebugLogs === 'function') {
-        HueService.disableDebugLogs();
-      }
     } catch (error: any) {
       console.error('Error connecting to Hue:', error);
 
@@ -374,59 +370,41 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     // Calculate audio characteristics based on sensitivity and color mode
     let rgb: [number, number, number] = [0, 0, 0];
     let transitionTime = 100; // ms
+    let brightness = 1.0;
 
-    switch (colorMode) {
-      case 'spectrum': {
-        // Divide frequency spectrum into low, mid, high
-        const { bass, mid, treble } = calculateFrequencyBands(dataArray);
+    // If a beat is detected, create a more dramatic effect
+    if (isBeat) {
+      console.log('BEAT DETECTED - Flashing lights!');
 
-        // Apply sensitivity
-        const sensitivityFactor = sensitivity / 5;
+      // Use a brighter, more vivid color for beat flashes
+      switch (colorMode) {
+        case 'spectrum': {
+          // On beat, use more vibrant version of spectrum colors
+          const { bass, mid, treble } = calculateFrequencyBands(dataArray);
+          const sensitivityFactor = (sensitivity / 5) * 1.5; // Boost sensitivity on beats
 
-        // Map frequency levels to RGB components
-        const r = mapRange(bass * sensitivityFactor, 0, 255, 0.05, 1);
-        const g = mapRange(mid * sensitivityFactor, 0, 255, 0.05, 1);
-        const b = mapRange(treble * sensitivityFactor, 0, 255, 0.05, 1);
+          const r = Math.min(1, mapRange(bass * sensitivityFactor, 0, 255, 0.1, 1) * 1.3);
+          const g = Math.min(1, mapRange(mid * sensitivityFactor, 0, 255, 0.1, 1) * 1.3);
+          const b = Math.min(1, mapRange(treble * sensitivityFactor, 0, 255, 0.1, 1) * 1.3);
 
-        // If overall level is very low, dim the lights
-        const overallLevel = (bass + mid + treble) / 3;
-        const brightness = overallLevel < 20 ? 0.1 : 1;
+          rgb = [r, g, b];
+          break;
+        }
 
-        rgb = [
-          Math.min(1, r * brightness),
-          Math.min(1, g * brightness),
-          Math.min(1, b * brightness)
-        ];
+        case 'intensity': {
+          // On beat, use a brighter color based on volume
+          const volumeLevel = averageFrequency(dataArray, 0, bufferLength);
+          const scaledVolume = volumeLevel * (sensitivity / 5) * 1.3; // Boost sensitivity
 
-        transitionTime = 200; // Smooth transitions for spectrum mode
-        break;
-      }
+          // Map volume to a vibrant color (higher saturation and brightness)
+          const hue = mapRange(scaledVolume, 0, 255, 0, 360);
+          rgb = hsvToRgb(hue / 360, 1, 1); // Full saturation and brightness on beats
+          break;
+        }
 
-      case 'intensity': {
-        // Calculate overall volume level
-        const volumeLevel = averageFrequency(dataArray, 0, bufferLength);
-        const scaledVolume = volumeLevel * (sensitivity / 5);
-
-        // Map volume to brightness
-        const intensity = mapRange(scaledVolume, 0, 255, 0, 1);
-
-        // Create a color based on intensity
-        // Low intensity = warm (red/orange), high intensity = cool (blue/purple)
-        const hue = mapRange(intensity, 0, 1, 30, 260);
-        const sat = mapRange(intensity, 0, 1, 0.3, 1);
-        const val = mapRange(intensity, 0, 1, 0.05, 1);
-
-        // Convert HSV to RGB
-        rgb = hsvToRgb(hue / 360, sat, val);
-
-        transitionTime = 300; // Slower transitions for intensity mode
-        break;
-      }
-
-      case 'pulse': {
-        // If a beat is detected, pulse with a bright color
-        if (isBeat) {
-          // Use dominant frequency for hue
+        case 'pulse': {
+          // For pulse mode, use a very bright flash on beat
+          // Use dominant frequency for color
           let dominantIndex = 0;
           let maxEnergy = 0;
           for (let i = 0; i < bufferLength; i++) {
@@ -436,34 +414,83 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
             }
           }
 
-          // Map to hue (higher frequencies = cooler colors)
-          const hue = mapRange(dominantIndex, 0, bufferLength, 0, 330);
+          const hue = mapRange(dominantIndex, 0, bufferLength, 0, 360);
+          rgb = hsvToRgb(hue / 360, 1, 1); // Full saturation and brightness
+          break;
+        }
+      }
 
-          // Bright saturated color on beat
-          rgb = hsvToRgb(hue / 360, 1, 1);
-          transitionTime = 50; // Fast transition for beat
-        } else {
-          // Between beats, use a dimmer complementary color or neutral
+      // Use very fast transitions for beats to create flash effect
+      transitionTime = 50;
+
+      // Direct light control for stronger effect on beats
+      sendDirectLightCommand(rgb, 100); // 100% brightness on beats
+    } else {
+      // Between beats, use more subtle colors
+      switch (colorMode) {
+        case 'spectrum': {
+          // ...existing spectrum code...
+          const { bass, mid, treble } = calculateFrequencyBands(dataArray);
+          const sensitivityFactor = sensitivity / 5;
+
+          const r = mapRange(bass * sensitivityFactor, 0, 255, 0.05, 0.8);
+          const g = mapRange(mid * sensitivityFactor, 0, 255, 0.05, 0.8);
+          const b = mapRange(treble * sensitivityFactor, 0, 255, 0.05, 0.8);
+
+          // If overall level is very low, dim the lights
+          const overallLevel = (bass + mid + treble) / 3;
+          brightness = overallLevel < 20 ? 0.1 : 0.7; // Dimmer between beats
+
+          rgb = [
+            Math.min(1, r * brightness),
+            Math.min(1, g * brightness),
+            Math.min(1, b * brightness)
+          ];
+
+          transitionTime = 300; // Slower transitions between beats
+          break;
+        }
+
+        case 'intensity': {
+          // ...existing intensity code...
+          // Calculate overall volume level
+          const volumeLevel = averageFrequency(dataArray, 0, bufferLength);
+          const scaledVolume = volumeLevel * (sensitivity / 5);
+
+          // Map volume to a dimmer color
+          const intensity = mapRange(scaledVolume, 0, 255, 0, 0.7); // Cap at 70% brightness
+
+          // Create a color based on intensity
+          const hue = mapRange(intensity, 0, 1, 30, 260);
+          const sat = mapRange(intensity, 0, 1, 0.3, 0.8); // Less saturation
+          const val = mapRange(intensity, 0, 1, 0.05, 0.7); // Dimmer
+
+          rgb = hsvToRgb(hue / 360, sat, val);
+          transitionTime = 400; // Slower transitions for intensity mode between beats
+          break;
+        }
+
+        case 'pulse': {
+          // Between beats, use a dimmer complementary color
           const { bass, mid, treble } = calculateFrequencyBands(dataArray);
           const sensitivityFactor = sensitivity / 10;
 
           // Create a subtle base color
           const baseLevel = Math.max(bass, mid, treble) * sensitivityFactor;
-          const brightness = mapRange(baseLevel, 0, 255, 0.05, 0.3);
+          const dimBrightness = mapRange(baseLevel, 0, 255, 0.05, 0.2); // Very dim between beats
 
-          // Either use neutral light or subtle colored light
           if (baseLevel < 30) {
-            // Low energy, use neutral light
-            rgb = [brightness, brightness, brightness];
+            // Low energy, use very dim light
+            rgb = [dimBrightness, dimBrightness, dimBrightness];
           } else {
             // Some energy, use subtle colored light
             const hue = mid > bass ? 240 : 40; // Blue if more mid, orange if more bass
-            rgb = hsvToRgb(hue / 360, 0.6, brightness);
+            rgb = hsvToRgb(hue / 360, 0.5, dimBrightness); // Less saturation, very dim
           }
 
-          transitionTime = 200; // Slower transition between beats
+          transitionTime = 300; // Slower transition between beats
+          break;
         }
-        break;
       }
     }
 
@@ -480,6 +507,36 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
         setEnabled(false);
       }
     });
+  };
+
+  // Add a new function for direct light control on beats
+  const sendDirectLightCommand = (rgb: [number, number, number], brightness: number) => {
+    if (!hueConnected || selectedLights.length === 0) return;
+
+    try {
+      // Convert RGB to XY color space for Hue
+      const r = rgb[0], g = rgb[1], b = rgb[2];
+      const X = r * 0.664511 + g * 0.154324 + b * 0.162028;
+      const Y = r * 0.283881 + g * 0.668433 + b * 0.047685;
+      const Z = r * 0.000088 + g * 0.072310 + b * 0.986039;
+
+      const sum = X + Y + Z;
+      const x = sum > 0 ? X / sum : 0.33;
+      const y = sum > 0 ? Y / sum : 0.33;
+
+      // Send to all selected lights with minimal transition time for flash effect
+      selectedLights.forEach(async (lightId) => {
+        await window.electron.ipcRenderer.invoke('hue:setLightState', {
+          lightId,
+          on: true,
+          brightness: brightness,
+          xy: [x, y],
+          transitiontime: 0 // Immediate change for flash effect
+        });
+      });
+    } catch (error) {
+      console.error('Error sending direct light command:', error);
+    }
   };
 
   // Toggle the enabled state
@@ -513,37 +570,11 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
   const flashLights = () => {
     if (!hueConnected || selectedLights.length === 0) return;
 
-    const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#00FFFF', '#FF00FF'];
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    // Use a more dynamic color selection
+    const hue = Math.random() * 360;
+    const rgb = hsvToRgb(hue / 360, 1, 1); // Full saturation and brightness
 
-    try {
-      // Use setLightState directly for each light as a workaround
-      selectedLights.forEach(async (lightId) => {
-        // Parse the hex color to RGB
-        const hex = randomColor.replace('#', '');
-        const r = parseInt(hex.substring(0, 2), 16) / 255;
-        const g = parseInt(hex.substring(2, 4), 16) / 255;
-        const b = parseInt(hex.substring(4, 6), 16) / 255;
-
-        // Convert RGB to XY color space
-        const X = r * 0.664511 + g * 0.154324 + b * 0.162028;
-        const Y = r * 0.283881 + g * 0.668433 + b * 0.047685;
-        const Z = r * 0.000088 + g * 0.072310 + b * 0.986039;
-
-        const sum = X + Y + Z;
-        const x = sum > 0 ? X / sum : 0.33;
-        const y = sum > 0 ? Y / sum : 0.33;
-
-        await window.electron.ipcRenderer.invoke('hue:setLightState', {
-          lightId,
-          on: true,
-          brightness: 100,
-          xy: [x, y]
-        });
-      });
-    } catch (error) {
-      console.error('Error flashing lights:', error);
-    }
+    sendDirectLightCommand(rgb, 100); // 100% brightness for manual flash
   };
 
   const handleDebugFlashToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -789,4 +820,3 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
 };
 
 export default HueMusicSync;
-

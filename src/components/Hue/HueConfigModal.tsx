@@ -18,6 +18,7 @@ import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import CodeIcon from '@mui/icons-material/Code';
+import { testPheaLibrary } from '../../utils/testPhea';
 
 // Apple-inspired styled components
 const AppleCard = styled(Paper)(({ theme }) => ({
@@ -913,6 +914,12 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
     setStoredCredentials(credentials);
   };
 
+  const handleTestPhea = () => {
+    console.log('Running Phea test...');
+    const result = testPheaLibrary();
+    console.log('Test result:', result);
+  };
+
   return (
     <AppleCard>
       <Box
@@ -972,6 +979,14 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
           {activeStep === steps.length - 1 ? 'Finish' : 'Next'}
         </AppleButton>
       </Box>
+
+      <Button
+        variant="contained"
+        onClick={handleTestPhea}
+        sx={{ mt: 2, backgroundColor: '#4caf50' }}
+      >
+        Test Phea Library
+      </Button>
 
       {/* Apple-style Toast Notification */}
       <Snackbar
