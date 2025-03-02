@@ -15,13 +15,6 @@ export const createFlashSequence = async (
     return;
   }
 
-  // Ensure we have valid indices
-  const indices = lightIndices.length > 0 ?
-    lightIndices :
-    HueService.getEntertainmentLightIndices().length > 0 ?
-    HueService.getEntertainmentLightIndices() :
-    [0, 1, 2]; // Default to first three lights
-
   try {
     console.log(`🎭 Creating ${steps}-step flash sequence animation with base color:`, baseColor);
 
@@ -38,11 +31,11 @@ export const createFlashSequence = async (
     // Wait a short time
     await new Promise(r => setTimeout(r, 150));
 
-    // Second flash - dimmer
+    // Second flash - MUCH dimmer for dramatic effect
     const dimmedColor: [number, number, number] = [
-      Math.max(0.1, baseColor[0] * 0.3),
-      Math.max(0.1, baseColor[1] * 0.3),
-      Math.max(0.1, baseColor[2] * 0.3)
+      Math.max(0.05, baseColor[0] * 0.1), // Much dimmer - almost off
+      Math.max(0.05, baseColor[1] * 0.1),
+      Math.max(0.05, baseColor[2] * 0.1)
     ];
 
     // Send dimmed flash
@@ -76,14 +69,14 @@ export const createPulseAnimation = async (
 
     // Run multiple pulses
     for (let i = 0; i < pulseCount; i++) {
-      // Calculate pulse intensity - start bright, then diminish
-      const intensity = 1 - (i / (pulseCount * 1.5));
+      // Calculate pulse intensity - start bright, then diminish dramatically
+      const intensity = 1 - (i / (pulseCount * 1.1));
 
       // Create color for this pulse
       const pulseColor: [number, number, number] = [
-        Math.min(1, baseColor[0] * intensity * 1.5), // Boost it
-        Math.min(1, baseColor[1] * intensity * 1.5),
-        Math.min(1, baseColor[2] * intensity * 1.5)
+        baseColor[0] * intensity,
+        baseColor[1] * intensity,
+        baseColor[2] * intensity
       ];
 
       // Send this pulse
@@ -92,6 +85,13 @@ export const createPulseAnimation = async (
       // Wait for next pulse
       if (i < pulseCount - 1) {
         await new Promise(r => setTimeout(r, pulseSpeed));
+
+        // NEW: Send a very dim intermediate "off" state for more contrast
+        if (i === 0) { // Only after first pulse for efficiency
+          const offColor: [number, number, number] = [0.05, 0.05, 0.05]; // Almost off
+          await HueService.sendColorTransition(offColor, 0, true);
+          await new Promise(r => setTimeout(r, pulseSpeed / 2)); // Shorter wait in dim state
+        }
       }
     }
 
@@ -104,8 +104,7 @@ export const createPulseAnimation = async (
 // Create a dramatic color cycle animation
 export const createColorCycleAnimation = async (
   duration: number = 1000, // Total duration in ms
-  steps: number = 5, // Number of color steps
-  intensity: number = 1.0 // How bright the colors should be (0.0-1.0)
+  steps: number = 5 // Number of color steps
 ): Promise<void> => {
   if (!HueService.isInitialized()) {
     console.warn("Cannot create color cycle - HueService not properly initialized");
@@ -116,13 +115,13 @@ export const createColorCycleAnimation = async (
     console.log(`🌈 Creating color cycle animation with ${steps} steps over ${duration}ms`);
 
     const stepDuration = duration / steps;
+    // Use more contrasting colors
     const colors: [number, number, number][] = [
-      [intensity, 0, 0], // Red
-      [intensity, intensity, 0], // Yellow
-      [0, intensity, 0], // Green
-      [0, intensity, intensity], // Cyan
-      [0, 0, intensity], // Blue
-      [intensity, 0, intensity]  // Purple
+      [1, 0, 0],     // Pure red
+      [1, 0.8, 0],   // Yellow-orange
+      [0, 1, 0],     // Pure green
+      [0, 0.5, 1],   // Sky blue
+      [0.8, 0, 1]    // Purple
     ];
 
     // Send each color in sequence
@@ -141,90 +140,106 @@ export const createColorCycleAnimation = async (
   }
 };
 
-// Color strobe effect - rapid flashing between colors and black
-export const createStrobeEffect = async (
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-};  testFlash  createStrobeEffect,  createColorCycleAnimation,  createPulseAnimation,  createFlashSequence,export default {};  }    return false;    console.error('Failed to execute test flash animation:', error);  } catch (error) {    return true;        }        break;        await createColorCycleAnimation(800, 6, 1.0);      case 'cycle':        break;        await createStrobeEffect(color, 4, 70);      case 'strobe':        break;        await createPulseAnimation(color, 4, 80);      case 'pulse':        break;        await createFlashSequence(color, [], 3);      case 'flash':    switch (randomAnimation) {        console.log(`Selected animation type: ${randomAnimation}`);        const randomAnimation = animationTypes[Math.floor(Math.random() * animationTypes.length)];    const animationTypes = ['flash', 'pulse', 'strobe', 'cycle'];    // Generate a random animation style for variety        console.log('🌠 Running advanced test flash with animations');  try {): Promise<boolean> => {  color: [number, number, number] = [1, 0, 0]export const testFlash = async (// Test flash with multiple animation styles};  }    console.error("Error creating strobe effect:", error);  } catch (error) {    console.log('✨ Strobe effect completed');        await HueService.sendColorTransition(brightColor, 0, true);    // End with the light on        }      await new Promise(r => setTimeout(r, strobeSpeed));      await HueService.sendColorTransition(blackColor, 0, true);      // Flash off            await new Promise(r => setTimeout(r, strobeSpeed));      await HueService.sendColorTransition(brightColor, 0, true);      // Flash on    for (let i = 0; i < strobeCount; i++) {        const blackColor: [number, number, number] = [0.01, 0.01, 0.01];    // The off state - almost black        ];      Math.min(1, baseColor[2] * 2.0)      Math.min(1, baseColor[1] * 2.0),      Math.min(1, baseColor[0] * 2.0),    const brightColor: [number, number, number] = [    // Enhanced colors for maximum impact        console.log(`⚡ Creating strobe effect with ${strobeCount} flashes at ${strobeSpeed}ms intervals`);  try {    }    return;    console.warn("Cannot create strobe effect - HueService not properly initialized");  if (!HueService.isInitialized()) {): Promise<void> => {  strobeSpeed: number = 80 // milliseconds between flashes  strobeCount: number = 5,  baseColor: [number, number, number],
+// A special test flash that creates a dramatic animated sequence
+export const testFlash = async (
+  color: [number, number, number] = [1, 0, 0]
+): Promise<boolean> => {
+  try {
+    console.log('🔍 DRAMATIC TEST FLASH requested with color:', color);
+
+    // First, try the service's built-in test flash
+    await HueService.testFlash(color);
+
+    // Then add our own more dramatic sequence with off states
+    setTimeout(async () => {
+      try {
+        // Create an even more dramatic flash sequence
+        const dramaticColor: [number, number, number] = [
+          Math.min(1, color[0] * 2.0), // Even brighter
+          Math.min(1, color[1] * 2.0),
+          Math.min(1, color[2] * 2.0)
+        ];
+
+        // Full brightness
+        await HueService.sendColorTransition(dramaticColor, 0, true);
+        await new Promise(r => setTimeout(r, 200));
+
+        // Almost off
+        await HueService.sendColorTransition([0.05, 0.05, 0.05], 0, true);
+        await new Promise(r => setTimeout(r, 200));
+
+        // Full brightness again
+        await HueService.sendColorTransition(dramaticColor, 0, true);
+        await new Promise(r => setTimeout(r, 200));
+
+        // Almost off
+        await HueService.sendColorTransition([0.05, 0.05, 0.05], 0, true);
+        await new Promise(r => setTimeout(r, 150));
+
+        // Final bright flash
+        await HueService.sendColorTransition(dramaticColor, 0, true);
+      } catch (e) {
+        console.error('Error during additional animation sequence:', e);
+      }
+    }, 600); // Start after the initial test flash finishes
+
+    return true;
+  } catch (error) {
+    console.error('Failed to run animated test flash:', error);
+    return false;
+  }
+};
+
+// ENHANCED: Beat animation sequence that creates a dramatic beat flash with near-off states
+export const createBeatAnimation = async (
+  color: [number, number, number],
+  intensity: number = 1.0
+): Promise<void> => {
+  if (!HueService.isInitialized()) return;
+
+  try {
+    console.log(`🎵 Creating ULTRA dramatic beat animation with intensity ${intensity}`);
+
+    // Enhanced colors for more drama
+    const enhancedColor: [number, number, number] = [
+      Math.min(1, color[0] * (1.5 + intensity)), // Much higher multiplier
+      Math.min(1, color[1] * (1.5 + intensity)),
+      Math.min(1, color[2] * (1.5 + intensity))
+    ];
+
+    // ULTRA bright initial flash
+    await HueService.sendColorTransition(enhancedColor, 0, true);
+
+    // Quick follow-up with NEARLY OFF state - dramatic contrast
+    setTimeout(async () => {
+      // Go to nearly off state - for high contrast
+      const offColor: [number, number, number] = [0.05, 0.05, 0.05]; // Almost completely off
+      await HueService.sendColorTransition(offColor, 0, true);
+
+      // Brief second flash at 60% brightness after off state
+      setTimeout(async () => {
+        const secondColor: [number, number, number] = [
+          color[0] * 0.6,
+          color[1] * 0.6,
+          color[2] * 0.6
+        ];
+        await HueService.sendColorTransition(secondColor, 0, true);
+
+        // And back to almost off again
+        setTimeout(async () => {
+          await HueService.sendColorTransition(offColor, 0, true);
+        }, 100);
+      }, 100);
+    }, 100);
+  } catch (error) {
+    console.error('Error in beat animation:', error);
+  }
+};
+
+export default {
+  createFlashSequence,
+  createPulseAnimation,
+  createColorCycleAnimation,
+  testFlash,
+  createBeatAnimation
+};

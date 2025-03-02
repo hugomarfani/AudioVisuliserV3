@@ -56,7 +56,6 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
   const [lastLightCommand, setLastLightCommand] = useState<string>("");
 
   // Add new state variables for additional debug options
-  const [lightCount, setLightCount] = useState<number>(3);
   const [lastFlashTime, setLastFlashTime] = useState<string>('');
   const [flashColor, setFlashColor] = useState<[number, number, number]>([1, 0, 0]); // Default red
 
@@ -557,23 +556,24 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
   };
 
   // Add this improved helper function to generate super vibrant colors for beats
+  // UPDATED to create more dramatic color contrasts
   const generateBeatColor = (dataArray: Uint8Array): [number, number, number] => {
     const { bass, mid, treble } = calculateFrequencyBands(dataArray);
 
-    // Determine dominant frequency range - ENHANCED for much more vibrant colors
+    // Determine dominant frequency range - ENHANCED for much more vibrant colors with higher contrast
     if (bass > mid && bass > treble) {
-      // Bass-heavy beat - intense red/orange
-      return [1, 0.2 + Math.random() * 0.3, 0]; // Pure red with hint of orange
+      // Bass-heavy beat - intense red with almost no other components
+      return [1, Math.random() * 0.15, 0]; // Pure intense red
     } else if (mid > treble) {
-      // Mid-heavy beat - vibrant green or cyan
-      return [0, 1, 0.7 + Math.random() * 0.3]; // Bright green/cyan
+      // Mid-heavy beat - pure green/cyan with minimal red
+      return [0, 1, 0.8 + Math.random() * 0.2]; // Bright green/cyan
     } else {
-      // Treble-heavy beat - deep purple/blue
-      return [0.7 + Math.random() * 0.3, 0, 1]; // Vibrant purple
+      // Treble-heavy beat - intense purple/blue with no green
+      return [0.8 + Math.random() * 0.2, 0, 1]; // Vibrant purple/blue
     }
   };
 
-  // Update the updateLights function to make beat handling much more dramatic
+  // Update the updateLights function for more dramatic contrast between beats and non-beats
   const updateLights = (dataArray: Uint8Array, isBeat: boolean) => {
     const bufferLength = dataArray.length;
 
@@ -591,12 +591,12 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
         case 'spectrum': {
           // On beat, use ULTRA vibrant version of spectrum colors
           const { bass, mid, treble } = calculateFrequencyBands(dataArray);
-          const sensitivityFactor = (sensitivity / 5) * 3.0; // Even higher boost for beats
+          const sensitivityFactor = (sensitivity / 5) * 4.0; // Even higher boost for beats
 
           // Max out the colors for extreme saturation
-          const r = Math.min(1, mapRange(bass * sensitivityFactor, 0, 255, 0.3, 1) * 2.0);
-          const g = Math.min(1, mapRange(mid * sensitivityFactor, 0, 255, 0.3, 1) * 2.0);
-          const b = Math.min(1, mapRange(treble * sensitivityFactor, 0, 255, 0.3, 1) * 2.0);
+          const r = Math.min(1, mapRange(bass * sensitivityFactor, 0, 255, 0.3, 1) * 2.5);
+          const g = Math.min(1, mapRange(mid * sensitivityFactor, 0, 255, 0.3, 1) * 2.5);
+          const b = Math.min(1, mapRange(treble * sensitivityFactor, 0, 255, 0.3, 1) * 2.5);
 
           rgb = [r, g, b];
           break;
@@ -607,7 +607,7 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
           // For both these modes on a beat, use a SUPER bright flash
           const volumeLevel = averageFrequency(dataArray, 0, bufferLength);
           const hue = mapRange(volumeLevel, 0, 255, 0, 360);
-          // Max saturation and brightness
+          // Max saturation and brightness - completely saturated
           rgb = hsvToRgb(hue / 360, 1, 1);
           break;
         }
@@ -615,47 +615,56 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
 
       // NEW: Add more randomization for even more dramatic variation
       rgb = [
-        Math.min(1, rgb[0] + (Math.random() * 0.2)), // More random variation
+        Math.min(1, rgb[0] + (Math.random() * 0.2)),
         Math.min(1, rgb[1] + (Math.random() * 0.2)),
         Math.min(1, rgb[2] + (Math.random() * 0.2))
       ] as [number, number, number];
 
-      // Use INSTANT transitions for beats - no delay at all
+      // Use INSTANT transitions for beats
       transitionTime = 0; // Immediate for maximum impact
     } else {
-      // Between beats logic stays the same...
+      // Between beats - MAKE MUCH DIMMER for extreme contrast
       switch (colorMode) {
         case 'spectrum': {
           const { bass, mid, treble } = calculateFrequencyBands(dataArray);
           const sensitivityFactor = sensitivity / 5;
-          const r = mapRange(bass * sensitivityFactor, 0, 255, 0.05, 0.8);
-          const g = mapRange(mid * sensitivityFactor, 0, 255, 0.05, 0.8);
-          const b = mapRange(treble * sensitivityFactor, 0, 255, 0.05, 0.8);
+
+          // Get normal color values but make them MUCH dimmer
+          const r = mapRange(bass * sensitivityFactor, 0, 255, 0.02, 0.2); // Much lower range
+          const g = mapRange(mid * sensitivityFactor, 0, 255, 0.02, 0.2);  // Much lower range
+          const b = mapRange(treble * sensitivityFactor, 0, 255, 0.02, 0.2); // Much lower range
+
+          // Make them extremely dim between beats for more contrast - almost off
           const overallLevel = (bass + mid + treble) / 3;
-          const brightness = overallLevel < 20 ? 0.1 : 0.7;
+          const brightness = overallLevel < 40 ? 0.05 : 0.15; // Much dimmer
+
           rgb = [Math.min(1, r * brightness), Math.min(1, g * brightness), Math.min(1, b * brightness)];
-          transitionTime = 300;
+          transitionTime = 400; // Slower transition to dimness
           break;
         }
-        // Other cases remain unchanged...
+
         case 'intensity': {
           const volumeLevel = averageFrequency(dataArray, 0, bufferLength);
           const scaledVolume = volumeLevel * (sensitivity / 5);
-          const intensity = mapRange(scaledVolume, 0, 255, 0, 0.7);
+          const intensity = mapRange(scaledVolume, 0, 255, 0, 0.3); // Reduced maximum intensity
           const hue = mapRange(intensity, 0, 1, 30, 260);
-          const sat = mapRange(intensity, 0, 1, 0.3, 0.8);
-          const val = mapRange(intensity, 0, 1, 0.05, 0.7);
+          const sat = mapRange(intensity, 0, 1, 0.2, 0.6);
+          const val = mapRange(intensity, 0, 1, 0.02, 0.2); // Much lower brightness
           rgb = hsvToRgb(hue / 360, sat, val);
           transitionTime = 400;
           break;
         }
+
         case 'pulse': {
           const { bass, mid, treble } = calculateFrequencyBands(dataArray);
           const sensitivityFactor = sensitivity / 10;
           const baseLevel = Math.max(bass, mid, treble) * sensitivityFactor;
-          const dimBrightness = mapRange(baseLevel, 0, 255, 0.05, 0.2);
+          // Make it much dimmer between pulses
+          const dimBrightness = mapRange(baseLevel, 0, 255, 0.02, 0.1); // Much lower brightness
+
           if (baseLevel < 30) {
-            rgb = [dimBrightness, dimBrightness, dimBrightness];
+            // Almost off when quiet
+            rgb = [0.02, 0.02, 0.02]; // Nearly off
           } else {
             const hue = mid > bass ? 240 : 40;
             rgb = hsvToRgb(hue / 360, 0.5, dimBrightness);
@@ -810,25 +819,6 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     } else {
       // Any -> Red
       setFlashColor([1, 0, 0]);
-    }
-  };
-
-  // Add new function to manually configure the entertainment light count
-  const setLightConfiguration = async () => {
-    try {
-      if (!HueService.isInitialized()) {
-        alert('Please connect to the Hue bridge first');
-        return;
-      }
-
-      console.log(`Configuring for ${lightCount} lights`);
-      await HueService.configureEntertainmentLights(lightCount);
-
-      // Flash to confirm configuration
-      setTimeout(() => flashLights(), 500);
-    } catch (err) {
-      console.error('Failed to set light configuration:', err);
-      alert('Failed to configure lights');
     }
   };
 
@@ -1095,7 +1085,7 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
             Selected Lights: {selectedLights.length || "(Detecting...)"}
           </Typography>
 
-          {/* Updated button row with multiple animation options */}
+          {/* Updated button row with multiple animation options - remove light count slider */}
           <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
             <Button
               onClick={flashLights}
@@ -1118,29 +1108,6 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
               variant="outlined"
             >
               Color Cycle
-            </Button>
-          </Box>
-
-          {/* Configuration controls for light count */}
-          <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography sx={{ color: '#555555' }}>
-              Light Count:
-            </Typography>
-            <Slider
-              value={lightCount}
-              onChange={(_, value) => setLightCount(value as number)}
-              min={1}
-              max={10}
-              step={1}
-              sx={{ width: '100px', mx: 2 }}
-            />
-            <Typography>{lightCount}</Typography>
-            <Button
-              onClick={setLightConfiguration}
-              variant="outlined"
-              size="small"
-            >
-              Configure
             </Button>
           </Box>
 
