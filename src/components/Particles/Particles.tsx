@@ -39,6 +39,7 @@ const Particles: React.FC = () => {
   const [songDuration, setSongDuration] = useState(0);
   const playerRef = useRef<any>(null);
   const [hueLights, setHueLights] = useState<string[]>([]);
+  const [autoFlashEnabled, setAutoFlashEnabled] = useState<boolean>(false); // Add this state to control flashing
 
   useEffect(() => {
     const loadAssets = async () => {
@@ -149,9 +150,9 @@ const Particles: React.FC = () => {
       // .catch((err: any) => console.error('Error fetching Hue lights:', err));
   }, []);
 
-  // Modified flash lights effect: toggles on/off each second and cycles song color
+  // Modified flash lights effect: only flash if autoFlashEnabled is true
   useEffect(() => {
-    if (!isActive || hueLights.length === 0 || !songDetails) return;
+    if (!isActive || hueLights.length === 0 || !songDetails || !autoFlashEnabled) return; // Add autoFlashEnabled check
 
     let flashIndex = 0;
     const flashInterval = setInterval(() => {
@@ -183,7 +184,7 @@ const Particles: React.FC = () => {
       flashIndex++;
     }, 1000);
     return () => clearInterval(flashInterval);
-  }, [isActive, hueLights, songDetails]);
+  }, [isActive, hueLights, songDetails, autoFlashEnabled]); // Add autoFlashEnabled to the dependency array
 
   // New effect: Refresh Hue lights periodically if none are present
   useEffect(() => {
@@ -241,6 +242,11 @@ const Particles: React.FC = () => {
       // console.log('Current image path:', backgroundImages[newIndex]);
       setCurrentImageIndex(newIndex);
     }
+  };
+
+  // Handler for the auto flash toggle
+  const handleAutoFlashToggle = (isEnabled: boolean) => {
+    setAutoFlashEnabled(isEnabled);
   };
 
   if (!songDetails) return null;
@@ -330,6 +336,7 @@ const Particles: React.FC = () => {
             }}
             autoPlay={true}
             onTimeUpdate={handleTimeUpdate}
+            onAutoFlashToggle={handleAutoFlashToggle} // Add this prop to receive the toggle state
           />
         </div>
       )}

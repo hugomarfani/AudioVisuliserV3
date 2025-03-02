@@ -3,7 +3,7 @@ import { AiOutlineForward, AiOutlineBackward } from 'react-icons/ai';
 import { FaPlay, FaPause } from 'react-icons/fa';
 import { IoSettingsOutline } from 'react-icons/io5';
 import HueMusicSync from '../Hue/HueMusicSync';
-import { Popover } from '@mui/material';
+import { Popover, Switch, FormControlLabel, Divider } from '@mui/material';
 
 interface PlayerProps {
   track: {
@@ -14,15 +14,17 @@ interface PlayerProps {
   };
   autoPlay?: boolean;
   onTimeUpdate?: (currentTime: number, duration: number) => void;
+  onAutoFlashToggle?: (isEnabled: boolean) => void; // Add this prop
 }
 
-const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUpdate }, ref) => {
+const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUpdate, onAutoFlashToggle }, ref) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [hoverProgress, setHoverProgress] = useState<number | null>(null);
   const [rotation, setRotation] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [settingsAnchorEl, setSettingsAnchorEl] = useState<null | HTMLElement>(null);
+  const [isAutoFlashEnabled, setIsAutoFlashEnabled] = useState(false); // New state for controlling auto flashing
 
   useImperativeHandle(ref, () => ({
     play: () => audioRef.current?.play(),
@@ -114,6 +116,11 @@ const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUp
     }
   }, [track]);
 
+  // Notify parent component when auto flash is toggled
+  useEffect(() => {
+    onAutoFlashToggle?.(isAutoFlashEnabled);
+  }, [isAutoFlashEnabled, onAutoFlashToggle]);
+
   const togglePlayPause = () => {
     if (!audioRef.current || !track.audioSrc) return;
 
@@ -175,6 +182,10 @@ const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUp
   // Handle settings close
   const handleSettingsClose = () => {
     setSettingsAnchorEl(null);
+  };
+
+  const handleAutoFlashToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setIsAutoFlashEnabled(event.target.checked);
   };
 
   console.log('Player rendering with states:', {
@@ -330,7 +341,25 @@ const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUp
           horizontal: 'center',
         }}
       >
-        <HueMusicSync audioRef={audioRef} isPlaying={isPlaying} />
+        <div style={{ padding: '1rem', minWidth: '250px' }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={isAutoFlashEnabled}
+                onChange={handleAutoFlashToggle}
+                color="primary"
+              />
+            }
+            label="Enable Auto Light Flashing"
+            style={{ marginBottom: '0.5rem' }}
+          />
+          <Divider style={{ margin: '0.5rem 0' }} />
+          <HueMusicSync
+            audioRef={audioRef}
+            isPlaying={isPlaying}
+            autoFlashEnabled={isAutoFlashEnabled}
+          />
+        </div>
       </Popover>
     </div>
   );

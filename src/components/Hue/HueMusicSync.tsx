@@ -21,9 +21,10 @@ import './HueMusicVisualStyles.css';
 interface HueMusicSyncProps {
   audioRef?: React.RefObject<HTMLAudioElement>;
   isPlaying?: boolean;
+  autoFlashEnabled?: boolean; // New prop to control auto flashing
 }
 
-const HueMusicSync: React.FC<HueMusicSyncProps> = ({ audioRef, isPlaying = false }) => {
+const HueMusicSync: React.FC<HueMusicSyncProps> = ({ audioRef, isPlaying = false, autoFlashEnabled = false }) => {
   // State variables
   const [enabled, setEnabled] = useState<boolean>(false);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
@@ -33,6 +34,8 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({ audioRef, isPlaying = false
   const [colorMode, setColorMode] = useState<'spectrum' | 'intensity' | 'pulse'>('spectrum');
   const [visualizer, setVisualizer] = useState<boolean>(true);
   const [beatDetected, setBeatDetected] = useState<boolean>(false);
+  const [hueConnected, setHueConnected] = useState(false);
+  const [selectedLights, setSelectedLights] = useState<string[]>([]);
 
   // Refs
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -106,6 +109,40 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({ audioRef, isPlaying = false
       animationFrameRef.current = null;
     }
   }, [isPlaying, enabled]);
+
+  // Check if we have any Hue lights configured
+  useEffect(() => {
+    window.electron.ipcRenderer.invoke('hue:getLightRids')
+      .then((rids: string[]) => {
+        setSelectedLights(rids);
+        setHueConnected(rids.length > 0);
+      })
+      .catch(console.error);
+  }, []);
+
+  // This effect controls the automatic flashing
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
+    if (isPlaying && autoFlashEnabled && hueConnected && selectedLights.length > 0) {
+      // Only set up the interval if auto flash is enabled
+      intervalId = setInterval(() => {
+        const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#00FFFF', '#FF00FF'];
+        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+        window.electron.ipcRenderer.invoke('hue:setLights', selectedLights, {
+          on: true,
+          rgb: randomColor,
+          brightness: 100
+        }).catch(console.error);
+      }, 1000);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isPlaying, hueConnected, selectedLights, autoFlashEnabled]);
 
   // Cleanup function
   const cleanup = useCallback(() => {
@@ -408,6 +445,19 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({ audioRef, isPlaying = false
     return null;
   };
 
+  const flashLights = () => {
+    if (!hueConnected || selectedLights.length === 0) return;
+
+    const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#00FFFF', '#FF00FF'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+    window.electron.ipcRenderer.invoke('hue:setLights', selectedLights, {
+      on: true,
+      rgb: randomColor,
+      brightness: 100
+    }).catch(console.error);
+  };
+
   return (
     <Paper
       sx={{
@@ -591,12 +641,12 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({ audioRef, isPlaying = false
           </Box>
         </Grid>
       </Grid>
-      
+
       {visualizer && enabled && (
-        <Box 
-          sx={{ 
-            mt: 2, 
-            height: 150, 
+        <Box
+          sx={{
+            mt: 2,
+            height: 150,
             width: '100%',
             borderRadius: 2,
             overflow: 'hidden',
@@ -610,10 +660,10 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({ audioRef, isPlaying = false
           />
         </Box>
       )}
-      
+
       {!HueService.hasValidConfig() && (
         <Box sx={{ mt: 2 }}>
-          <Alert 
+          <Alert
             severity="info"
             sx={{
               backgroundColor: 'rgba(0, 122, 255, 0.1)',
@@ -627,6 +677,28 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({ audioRef, isPlaying = false
           </Alert>
         </Box>
       )}
+
+      <Box sx={{ mt: 2 }}>
+        <Typography variant="h6" gutterBottom sx={{ color: '#fff', fontWeight: 500 }}>
+          Philips Hue Control
+        </Typography>
+        {hueConnected ? (
+          <Box>
+            <Typography sx={{ color: '#ccc' }}>Connected to Hue Bridge</Typography>
+            <Typography sx={{ color: '#ccc' }}>Selected Lights: {selectedLights.length}</Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={flashLights}
+              sx={{ mt: 2 }}
+            >
+              Flash Lights Manually
+            </Button>
+          </Box>
+        ) : (
+          <Typography sx={{ color: '#ccc' }}>No Hue lights configured. Go to settings to set up Philips Hue.</Typography>
+        )}
+      </Box>
     </Paper>
   );
 };
