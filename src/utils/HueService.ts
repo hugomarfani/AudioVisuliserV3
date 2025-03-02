@@ -36,6 +36,7 @@ class HueService {
   private requestsInLastMinute: number = 0;
   private lastRequestTimestamp: number = 0;
   private lastRequestReset: number = 0;
+  private entertainmentGroupConfigured: boolean = false;
 
   constructor() {
     // Try to load saved config
@@ -556,6 +557,34 @@ class HueService {
         console.log("Connection object doesn't support events - will skip event registration");
       }
 
+      // 🔴 NEW: Fetch light IDs immediately to ensure we have them
+      try {
+        const lightIds = await this.getLightsForRegularAPI();
+        if (lightIds && lightIds.length > 0) {
+          console.log(`Got ${lightIds.length} lights before starting entertainment mode`);
+          this.cachedLightIds = [...lightIds];
+
+          // Create matching numerical indices
+          const indices = Array.from({ length: lightIds.length }, (_, i) => i);
+          this.entertainmentLightIds = indices;
+          this.stable_entertainmentLightIndices = [...indices];
+        }
+      } catch (err) {
+        console.warn('Could not prefetch lights before entertainment mode:', err);
+      }
+
+      // 🔴 NEW: Always try to configure the entertainment group
+      await this.ensureEntertainmentGroupSetup();
+
+      // CRITICAL CHANGE: Force entertainment indices to match number of lights
+      // Even if the configuration didn't work above, we'll try to use the right indices
+      if (this.cachedLightIds.length > 0) {
+        const forceIndices = Array.from({ length: this.cachedLightIds.length }, (_, i) => i);
+        console.log('🔴 FORCE SETTING ENTERTAINMENT INDICES:', forceIndices);
+        this.entertainmentLightIds = forceIndices;
+        this.stable_entertainmentLightIndices = [...forceIndices];
+      }
+
       console.log('Entertainment mode started successfully');
       return true;
     } catch (error) {
@@ -593,47 +622,64 @@ class HueService {
 
   // COMPLETELY REWRITTEN to guarantee beat commands are processed
   async sendColorTransition(rgb: [number, number, number], transitionTime: number = 200, forceSend: boolean = false): Promise<void> {
-    // CRITICAL CHANGE: If it's a beat (forceSend=true), we MUST process this command
     if (forceSend) {
       this.beatCommandCounter++;
       const now = Date.now();
       this.lastBeatTime = now;
-
-      // Add extremely visible logging for beat commands
       console.log(`🔴 BEAT COMMAND #${this.beatCommandCounter} - RGB: ${rgb.map(v => v.toFixed(2)).join(', ')}`);
 
-      let entertainmentMethodSucceeded = false;
-
-      // First try entertainment method if connected and available
+      // Always use Entertainment API only
       if (this.isConnected && this.useEntertainmentMode && this.bridge) {
         try {
-          // Use very short transition time for beats to enhance flash effect
-          const fastTransitionTime = 10; // 10ms for beats
+          const fastTransitionTime = 0; // CHANGED: Set to 0 for immediate changes - this is key for flashing!
 
-          // Always ensure we have valid indices
-          const indicesForCommand = this.entertainmentLightIds.length > 0 ?
-                                   this.entertainmentLightIds :
-                                   this.stable_entertainmentLightIndices.length > 0 ?
-                                   this.stable_entertainmentLightIndices : [0];
+          // IMPORTANT: Make sure we use indices from 0 based on how many lights we expect
+          let indicesForCommand: number[] = [];
 
-          console.log(`🔴 Sending urgent beat flash via Entertainment API - RGB=${rgb.map(v => v.toFixed(2)).join(',')} to indices:`, indicesForCommand);
+          if (this.entertainmentLightIds.length > 0) {
+            indicesForCommand = [...this.entertainmentLightIds];
+            console.log('Using explicitly set entertainment light IDs:', indicesForCommand);
+          } else if (this.stable_entertainmentLightIndices.length > 0) {
+            indicesForCommand = [...this.stable_entertainmentLightIndices];
+            console.log('Using stable entertainment indices:', indicesForCommand);
+          } else if (this.cachedLightIds.length > 0) {
+            // Create indices based on the number of cached lights (0, 1, 2, etc.)
+            indicesForCommand = Array.from({ length: this.cachedLightIds.length }, (_, i) => i);
+            console.log('Using indices based on cached light count:', indicesForCommand);
+          } else {
+            // If we don't know anything about our lights, try indices 0-9
+            indicesForCommand = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+            console.log('No light info available, trying all possible indices 0-9');
+          }
 
-          await this.bridge.transition(indicesForCommand, rgb, fastTransitionTime);
+          // ALWAYS normalize RGB values to 0-1 range
+          const normalizedRGB: [number, number, number] = rgb.map(v => Math.max(0, Math.min(1, v))) as [number, number, number];
+
+          console.log(`🔴 Sending urgent beat flash via Entertainment API - RGB=${normalizedRGB.map(v => v.toFixed(2)).join(',')} to indices:`, indicesForCommand);
+
+          // Send the command multiple times to ensure it gets through (Entertainment API drops packets)
+          for (let attempt = 0; attempt < 3; attempt++) {
+            await this.bridge.transition(indicesForCommand, normalizedRGB, fastTransitionTime);
+            // Small delay between attempts
+            if (attempt < 2) await new Promise(r => setTimeout(r, 5));
+          }
 
           console.log('✅ Beat entertainment transition sent successfully');
-          entertainmentMethodSucceeded = true;
-          this.entertainmentAPIWorking = true; // Remember that entertainment API is working
+          this.entertainmentAPIWorking = true;
+
+          // ALSO send via regular API for redundancy
+          this.sendRegularAPICommandForBeats(normalizedRGB);
+
         } catch (err) {
-          console.error('❌ Error sending beat via entertainment API:', err);
+          console.error('❌ Error sending beat via Entertainment API:', err);
+          // Fallback to regular API
+          await this.sendRegularAPICommandForBeats(rgb);
           this.entertainmentAPIWorking = false;
         }
-      }
-
-      // Only try regular API if entertainment didn't work OR we want to ensure delivery
-      if (!entertainmentMethodSucceeded || !this.entertainmentAPIWorking) {
+      } else {
+        console.log('Entertainment API not available, using regular API for beat');
         await this.sendRegularAPICommandForBeats(rgb);
       }
-
       return;
     }
 
@@ -677,14 +723,6 @@ class HueService {
   // New dedicated method just for beat flashes via regular API
   private async sendRegularAPICommandForBeats(rgb: [number, number, number]): Promise<void> {
     try {
-      // If entertainment API is working, we don't need to worry about the regular API
-      // This prevents unnecessary logging of warnings
-      if (this.entertainmentAPIWorking) {
-        // Entertainment API seems to be working fine
-        this.lightDiscoveryAttempts++; // Just increment this for statistics
-        return;
-      }
-
       // Use cached lights first if available
       let lights: string[] = [];
       if (this.cachedLightIds.length > 0) {
@@ -733,6 +771,7 @@ class HueService {
       console.log(`🔴 URGENT BEAT API command: RGB=${rgb.map(v => v.toFixed(2)).join(',')} → xy=${xy.map(v => v.toFixed(3)).join(',')}`);
       console.log(`🕒 Beat command sent at ${new Date().toISOString()} to ${lights.length} lights`);
 
+      // IMPORTANT: Set brightness to 100% and transitiontime to 0 for immediate flashing
       // Send command to each light as quickly as possible
       const promises = lights.map(lightId =>
         window.electron.ipcRenderer.invoke('hue:setLightState', {
@@ -740,7 +779,7 @@ class HueService {
           on: true,
           brightness: 100, // Always full brightness for beats
           xy,
-          transitiontime: 0 // No transition for beats - instant change
+          transitiontime: 0 // CRITICAL: No transition for beats - instant change
         }).catch(err => console.error(`Error setting light ${lightId}:`, err))
       );
 
@@ -983,6 +1022,89 @@ class HueService {
     this.requestsInLastMinute++;
     this.lastRequestTimestamp = now;
     return true;
+  }
+
+  // Add a new method to manually force light indices for entertainment group
+  async forceEntertainmentLightIndices(count: number): Promise<void> {
+    if (!count || count <= 0) count = 3; // Default to 3 lights if no count provided
+
+    const indices = Array.from({ length: count }, (_, i) => i);
+    console.log(`🔴 MANUALLY FORCING ENTERTAINMENT INDICES FOR ${count} LIGHTS:`, indices);
+
+    this.entertainmentLightIds = [...indices];
+    this.stable_entertainmentLightIndices = [...indices];
+
+    // If we're already connected, try to apply these settings
+    if (this.isConnected && this.useEntertainmentMode && this.bridge) {
+      try {
+        // Send a dummy command to all indices to test
+        const testRgb: [number, number, number] = [1, 1, 1];
+        await this.bridge.transition(indices, testRgb, 10);
+        console.log('✅ Successfully tested forcibly set indices');
+      } catch (e) {
+        console.error('Failed to test forced indices:', e);
+      }
+    }
+  }
+
+  // Modified method to check if the entertainment group is properly configured
+  private async ensureEntertainmentGroupSetup(): Promise<boolean> {
+    if (!this.config?.entertainmentGroupId || !this.isConnected || !this.bridge) {
+      return false;
+    }
+
+    try {
+      // Get the current entertainment group configuration
+      const groupId = this.config.entertainmentGroupId;
+      console.log(`Configuring entertainment group ${groupId}...`);
+
+      // Try to get group details if possible
+      let groupDetails;
+      try {
+        if (typeof this.bridge.getGroup === 'function') {
+          groupDetails = await this.bridge.getGroup(groupId);
+          console.log('Entertainment group details:', groupDetails);
+        }
+      } catch (e) {
+        console.warn('Could not get entertainment group details:', e);
+      }
+
+      // If we have lights identified, try to ensure they're in the entertainment group
+      if (this.cachedLightIds.length > 0) {
+        console.log(`Ensuring ${this.cachedLightIds.length} lights are configured for entertainment...`);
+
+        // Create indices based on the number of lights
+        const indices = Array.from({ length: this.cachedLightIds.length }, (_, i) => i);
+        console.log('Setting entertainment indices:', indices);
+
+        // Always update both sets of indices
+        this.entertainmentLightIds = [...indices];
+        this.stable_entertainmentLightIndices = [...indices];
+
+        // Store the actual UUIDs for reference
+        this.entertainmentGroupLights = [...this.cachedLightIds];
+
+        // Try to use the setLights method if available
+        try {
+          if (typeof this.bridge.setLights === 'function') {
+            await this.bridge.setLights(groupId, this.cachedLightIds);
+            console.log('☑️ Successfully configured entertainment group lights');
+          }
+        } catch (e) {
+          console.warn('Could not set entertainment group lights:', e);
+        }
+
+        this.entertainmentGroupConfigured = true;
+        return true;
+      } else {
+        console.warn('No lights available to configure entertainment group');
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Failed to configure entertainment group:', error);
+      return false;
+    }
   }
 }
 

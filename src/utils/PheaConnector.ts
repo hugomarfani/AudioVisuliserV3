@@ -45,7 +45,13 @@ export function getPheaInstance(): PheaInterface {
 
       // The library uses HueBridge instead of bridge
       bridge: (options: PheaOptions) => {
-        console.log('Creating Hue bridge with options:', options);
+        console.log('Creating Hue bridge with options:', {
+          address: options.address,
+          username: options.username,
+          pskLength: options.psk?.length || 0,
+          dtlsUpdatesPerSecond: options.dtlsUpdatesPerSecond,
+          colorUpdatesPerSecond: options.colorUpdatesPerSecond
+        });
 
         try {
           let bridgeInstance;
@@ -63,9 +69,13 @@ export function getPheaInstance(): PheaInterface {
             // Define our own start method that uses connect if it exists
             bridgeInstance.start = function(groupId: string) {
               console.log('Custom start method called with groupId:', groupId);
+
+              // Ensure the groupId is a string (important for compatibility)
+              const safeGroupId = String(groupId);
+
               if (typeof this.connect === 'function') {
-                console.log('Delegating to connect() method');
-                return this.connect(groupId);
+                console.log('Delegating to connect() method with groupId:', safeGroupId);
+                return this.connect(safeGroupId);
               } else {
                 console.error('Neither start nor connect method available');
                 throw new Error('Bridge API incompatible - no start/connect method');
@@ -88,29 +98,77 @@ export function getPheaInstance(): PheaInterface {
             if (!bridgeInstance.transition && bridgeInstance.setLightState) {
               console.log('Adding transition method based on setLightState');
 
+              // IMPORTANT UPDATE: Fixed transition method to ensure it works correctly
               bridgeInstance.transition = function(lightIds: (string|number)[],
                                               rgb: [number, number, number],
                                               transitionTime: number) {
-                console.log('Custom transition called:', { lightIds, rgb, transitionTime });
+                // IMPORTANT - ensure RGB values are in proper 0-1 range
+                const normalizedRgb = rgb.map(v => Math.max(0, Math.min(1, v))) as [number, number, number];
+
+                console.log('Custom transition called:', {
+                  lightIds,
+                  rgb: normalizedRgb.map(v => v.toFixed(2)),
+                  transitionTime
+                });
+
                 // Convert RGB to XY color space
-                const r = rgb[0], g = rgb[1], b = rgb[2];
+                const r = normalizedRgb[0], g = normalizedRgb[1], b = normalizedRgb[2];
                 const X = r * 0.664511 + g * 0.154324 + b * 0.162028;
                 const Y = r * 0.283881 + g * 0.668433 + b * 0.047685;
                 const Z = r * 0.000088 + g * 0.072310 + b * 0.986039;
                 const sum = X + Y + Z;
                 const xy = sum === 0 ? [0.33, 0.33] : [X / sum, Y / sum];
 
-                // Apply to all lights
-                const promises = lightIds.map(lightId =>
-                  this.setLightState(lightId, {
+                // Calculate brightness from RGB max (0-254 range for Hue API)
+                const brightness = Math.max(1, Math.min(254, Math.round(Math.max(...normalizedRgb) * 254)));
+
+                // For DTLS streaming API, we need to directly update light channels
+                // This is what the Entertainment API uses
+                if (typeof this.updateLightState === 'function') {
+                  try {
+                    console.log('Using updateLightState for Entertainment API');
+                    // Entertainment API uses indices
+                    lightIds.forEach(id => {
+                      this.updateLightState(id, normalizedRgb);
+                    });
+                    return Promise.resolve();
+                  } catch (err) {
+                    console.error('Error using updateLightState:', err);
+                  }
+                }
+
+                // Apply to all lights using setLightState if updateLightState isn't available
+                const promises = lightIds.map(lightId => {
+                  const lightState = {
                     on: true,
-                    bri: Math.round(Math.max(...rgb) * 254),
+                    bri: brightness,
                     xy: xy,
-                    transitiontime: Math.round(transitionTime / 100)
-                  })
-                );
+                    transitiontime: Math.max(0, Math.round(transitionTime / 100))
+                  };
+
+                  console.log(`Setting light ${lightId} to:`, lightState);
+                  return this.setLightState(lightId, lightState);
+                });
 
                 return Promise.all(promises);
+              };
+            }
+
+            // IMPORTANT: Add direct RGB streaming for entertainment API if needed
+            if (!bridgeInstance.updateLightState) {
+              console.log('Adding direct RGB updateLightState method');
+
+              bridgeInstance.updateLightState = function(channelId: number, rgb: [number, number, number]) {
+                // Implementation depends on the library's specific requirements
+                console.log(`Direct update for channel ${channelId} with RGB ${rgb.map(v => v.toFixed(2)).join()}`);
+
+                if (typeof this.setChannelRGB === 'function') {
+                  // Some versions use this method
+                  return this.setChannelRGB(channelId, rgb[0], rgb[1], rgb[2]);
+                }
+
+                // Default no-op implementation
+                return Promise.resolve();
               };
             }
 
@@ -118,7 +176,8 @@ export function getPheaInstance(): PheaInterface {
             console.log('Bridge methods after enhancement:', {
               hasStart: typeof bridgeInstance.start === 'function',
               hasStop: typeof bridgeInstance.stop === 'function',
-              hasTransition: typeof bridgeInstance.transition === 'function'
+              hasTransition: typeof bridgeInstance.transition === 'function',
+              hasUpdateLightState: typeof bridgeInstance.updateLightState === 'function'
             });
 
             return bridgeInstance;
