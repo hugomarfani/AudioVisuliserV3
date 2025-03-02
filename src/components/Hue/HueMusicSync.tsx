@@ -18,6 +18,7 @@ import {
 import { useHue } from '../../context/HueContext';
 import HueMusicVisualizer from './HueMusicVisualizer';
 import './HueMusicVisualStyles.css';
+import HueAnimations from '../../utils/HueAnimations';
 
 interface HueMusicSyncProps {
   audioRef?: React.RefObject<HTMLAudioElement>;
@@ -521,29 +522,27 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     if (isBeat !== beatDetected) {
       setBeatDetected(isBeat);
 
-      // If new beat detected, send to lights immediately!
+      // If new beat detected, send to lights immediately with enhanced animation!
       if (isBeat) {
         const energy = calculateBassEnergy(dataArray);
         console.log(`🥁 BEAT DETECTED! Energy: ${energy.toFixed(2)}`);
 
-        // On beat detection, immediately flash the lights
+        // On beat detection, immediately flash the lights with animation
         if (connected || hueConnected) {
           // Generate vibrant color for beat flash
           const beatColor = generateBeatColor(dataArray);
 
-          // Use more vibrant colors for beats
-          const boostedColor: [number, number, number] = [
-            Math.min(1, beatColor[0] * 1.5),
-            Math.min(1, beatColor[1] * 1.5),
-            Math.min(1, beatColor[2] * 1.5)
+          // ENHANCED: Make colors super vibrant
+          const superBoostedColor: [number, number, number] = [
+            Math.min(1, beatColor[0] * 2.0), // Double the intensity
+            Math.min(1, beatColor[1] * 2.0),
+            Math.min(1, beatColor[2] * 2.0)
           ];
 
-          // Send direct command for immediate response
-          console.log('🔴 BEAT DETECTED - Sending immediate flash command');
-          HueService.sendColorTransition(boostedColor, 0, true);
-          setLastLightCommand(`Beat Flash: ${boostedColor.map(v => v.toFixed(2)).join(', ')}`);
+          // Use the animation utility for beats
+          HueAnimations.createBeatAnimation(superBoostedColor, energy / 100);
 
-          // Save the time of this beat flash
+          setLastLightCommand(`Super Flash: ${superBoostedColor.map(v => v.toFixed(2)).join(', ')}`);
           setLastFlashTime(new Date().toLocaleTimeString());
         }
       }
@@ -557,24 +556,24 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     animationFrameRef.current = requestAnimationFrame(updateVisualization);
   };
 
-  // Add this new helper function to generate vibrant colors for beats
+  // Add this improved helper function to generate super vibrant colors for beats
   const generateBeatColor = (dataArray: Uint8Array): [number, number, number] => {
     const { bass, mid, treble } = calculateFrequencyBands(dataArray);
 
-    // Determine dominant frequency range
+    // Determine dominant frequency range - ENHANCED for much more vibrant colors
     if (bass > mid && bass > treble) {
-      // Bass-heavy beat - use red/orange
-      return [1, 0.3 + Math.random() * 0.3, 0];
+      // Bass-heavy beat - intense red/orange
+      return [1, 0.2 + Math.random() * 0.3, 0]; // Pure red with hint of orange
     } else if (mid > treble) {
-      // Mid-heavy beat - use green/cyan
-      return [0, 0.8 + Math.random() * 0.2, 0.5 + Math.random() * 0.5];
+      // Mid-heavy beat - vibrant green or cyan
+      return [0, 1, 0.7 + Math.random() * 0.3]; // Bright green/cyan
     } else {
-      // Treble-heavy beat - use blue/purple
-      return [0.5 + Math.random() * 0.5, 0, 1];
+      // Treble-heavy beat - deep purple/blue
+      return [0.7 + Math.random() * 0.3, 0, 1]; // Vibrant purple
     }
   };
 
-  // Update the updateLights function to make beat handling more aggressive
+  // Update the updateLights function to make beat handling much more dramatic
   const updateLights = (dataArray: Uint8Array, isBeat: boolean) => {
     const bufferLength = dataArray.length;
 
@@ -582,22 +581,22 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     let rgb: [number, number, number] = [0, 0, 0];
     let transitionTime = 100; // ms
 
-    // If a beat is detected, create a more dramatic effect
+    // If a beat is detected, create a MUCH more dramatic effect
     if (isBeat) {
       // Log prominently
-      console.log('🎵 STRONG BEAT → FLASH MODE');
+      console.log('🎵 STRONG BEAT → DRAMATIC FLASH MODE');
 
-      // For beats, use much more vivid colors
+      // For beats, use extremely vivid colors with max saturation
       switch (colorMode) {
         case 'spectrum': {
-          // On beat, use more vibrant version of spectrum colors
+          // On beat, use ULTRA vibrant version of spectrum colors
           const { bass, mid, treble } = calculateFrequencyBands(dataArray);
-          const sensitivityFactor = (sensitivity / 5) * 2.0; // Higher boost for beats
+          const sensitivityFactor = (sensitivity / 5) * 3.0; // Even higher boost for beats
 
-          // Use more saturated colors for beats
-          const r = Math.min(1, mapRange(bass * sensitivityFactor, 0, 255, 0.2, 1) * 1.5);
-          const g = Math.min(1, mapRange(mid * sensitivityFactor, 0, 255, 0.2, 1) * 1.5);
-          const b = Math.min(1, mapRange(treble * sensitivityFactor, 0, 255, 0.2, 1) * 1.5);
+          // Max out the colors for extreme saturation
+          const r = Math.min(1, mapRange(bass * sensitivityFactor, 0, 255, 0.3, 1) * 2.0);
+          const g = Math.min(1, mapRange(mid * sensitivityFactor, 0, 255, 0.3, 1) * 2.0);
+          const b = Math.min(1, mapRange(treble * sensitivityFactor, 0, 255, 0.3, 1) * 2.0);
 
           rgb = [r, g, b];
           break;
@@ -605,23 +604,24 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
 
         case 'intensity':
         case 'pulse': {
-          // For both these modes on a beat, use a very bright flash
+          // For both these modes on a beat, use a SUPER bright flash
           const volumeLevel = averageFrequency(dataArray, 0, bufferLength);
           const hue = mapRange(volumeLevel, 0, 255, 0, 360);
-          rgb = hsvToRgb(hue / 360, 1, 1); // Full saturation and brightness
+          // Max saturation and brightness
+          rgb = hsvToRgb(hue / 360, 1, 1);
           break;
         }
       }
 
-      // NEW: Add subtle variation to prevent command filtering
+      // NEW: Add more randomization for even more dramatic variation
       rgb = [
-        Math.min(1, rgb[0] + (Math.random() * 0.05)),
-        Math.min(1, rgb[1] + (Math.random() * 0.05)),
-        Math.min(1, rgb[2] + (Math.random() * 0.05))
+        Math.min(1, rgb[0] + (Math.random() * 0.2)), // More random variation
+        Math.min(1, rgb[1] + (Math.random() * 0.2)),
+        Math.min(1, rgb[2] + (Math.random() * 0.2))
       ] as [number, number, number];
 
-      // Use VERY fast transitions for beats
-      transitionTime = 20; // Much faster than before
+      // Use INSTANT transitions for beats - no delay at all
+      transitionTime = 0; // Immediate for maximum impact
     } else {
       // Between beats logic stays the same...
       switch (colorMode) {
@@ -768,7 +768,7 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     return null;
   };
 
-  // Update the flash lights function to use our new testFlash method
+  // Update the flash lights function to use advanced animations
   const flashLights = async () => {
     if (!hueConnected) {
       alert('Please connect to Hue bridge first');
@@ -776,13 +776,19 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     }
 
     setLastFlashTime(new Date().toLocaleTimeString());
-    console.log('🎮 Manual flash requested');
+    console.log('🎮 Manual DRAMATIC flash sequence requested');
 
-    // Use the testFlash method which tries multiple methods to flash the lights
-    const success = await HueService.testFlash(flashColor);
+    // Use our new animation utilities for a more dramatic effect
+    try {
+      // First try a standard test flash using HueService
+      const success = await HueAnimations.testFlash(flashColor);
 
-    if (!success) {
-      alert('Failed to flash lights. Check console for details.');
+      if (!success) {
+        alert('Failed to flash lights. Check console for details.');
+      }
+    } catch (err) {
+      console.error('Error during animated flash sequence:', err);
+      alert('Error during animation sequence');
     }
   };
 
@@ -851,6 +857,20 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
         </Box>
       </Box>
     );
+  };
+
+  // Add new button for a dramatic color cycle animation
+  const runColorCycleAnimation = async () => {
+    if (!hueConnected) {
+      alert('Please connect to Hue bridge first');
+      return;
+    }
+
+    setLastFlashTime(new Date().toLocaleTimeString());
+    console.log('🌈 Color cycle animation requested');
+
+    // Run a 1.5 second color cycle animation with 5 steps
+    await HueAnimations.createColorCycleAnimation(1500, 5);
   };
 
   return (
@@ -1074,16 +1094,34 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
           <Typography sx={{ color: '#555555' }}>
             Selected Lights: {selectedLights.length || "(Detecting...)"}
           </Typography>
-          <Button
-            sx={{ mt: 2 }}
-            onClick={flashLights}
-            color="primary"
-            variant="contained"
-          >
-            Flash Lights Manually
-          </Button>
 
-          {/* Add configuration controls for light count */}
+          {/* Updated button row with multiple animation options */}
+          <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            <Button
+              onClick={flashLights}
+              color="primary"
+              variant="contained"
+            >
+              Flash Lights
+            </Button>
+
+            <Button
+              onClick={rotateFlashColor}
+              variant="outlined"
+            >
+              Change Color
+            </Button>
+
+            <Button
+              onClick={runColorCycleAnimation}
+              color="secondary"
+              variant="outlined"
+            >
+              Color Cycle
+            </Button>
+          </Box>
+
+          {/* Configuration controls for light count */}
           <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
             <Typography sx={{ color: '#555555' }}>
               Light Count:
@@ -1106,18 +1144,9 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
             </Button>
           </Box>
 
-          {/* Add color rotation button */}
-          <Button
-            sx={{ mt: 2, ml: 1 }}
-            onClick={rotateFlashColor}
-            variant="outlined"
-          >
-            Change Flash Color
-          </Button>
-
           {lastFlashTime && (
             <Typography variant="caption" sx={{ display: 'block', mt: 1, color: '#666' }}>
-              Last flash: {lastFlashTime}
+              Last animation: {lastFlashTime}
             </Typography>
           )}
         </Box>

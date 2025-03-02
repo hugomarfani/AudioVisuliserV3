@@ -628,10 +628,18 @@ class HueService {
       this.lastBeatTime = now;
       console.log(`🔴 BEAT COMMAND #${this.beatCommandCounter} - RGB: ${rgb.map(v => v.toFixed(2)).join(', ')}`);
 
+      // ENHANCED: Add dramatic effect with color boost
+      const dramaticColor: [number, number, number] = [
+        Math.min(1, rgb[0] * 2.0), // Boost red component significantly
+        Math.min(1, rgb[1] * 2.0), // Boost green component significantly
+        Math.min(1, rgb[2] * 2.0)  // Boost blue component significantly
+      ];
+
       // Always use Entertainment API only
       if (this.isConnected && this.useEntertainmentMode && this.bridge) {
         try {
-          const fastTransitionTime = 0; // CHANGED: Set to 0 for immediate changes - this is key for flashing!
+          // CHANGED: Always use zero transition time for immediate dramatic changes
+          const fastTransitionTime = 0;
 
           // IMPORTANT: Make sure we use indices from 0 based on how many lights we expect
           let indicesForCommand: number[] = [];
@@ -652,38 +660,47 @@ class HueService {
             console.log('No light info available, trying all possible indices 0-9');
           }
 
-          // ALWAYS normalize RGB values to 0-1 range
-          const normalizedRGB: [number, number, number] = rgb.map(v => Math.max(0, Math.min(1, v))) as [number, number, number];
+          // ENHANCED: Use dramatically boosted colors for beat flashes
+          console.log(`🔴 Sending DRAMATIC beat flash via Entertainment API - RGB=${dramaticColor.map(v => v.toFixed(2)).join(',')} to indices:`, indicesForCommand);
 
-          console.log(`🔴 Sending urgent beat flash via Entertainment API - RGB=${normalizedRGB.map(v => v.toFixed(2)).join(',')} to indices:`, indicesForCommand);
+          // IMPROVED: Send multiple varying commands in quick succession for a more animated effect
+          // First send original color
+          await this.bridge.transition(indicesForCommand, rgb, 0);
 
-          // Send the command multiple times to ensure it gets through (Entertainment API drops packets)
-          for (let attempt = 0; attempt < 3; attempt++) {
-            await this.bridge.transition(indicesForCommand, normalizedRGB, fastTransitionTime);
-            // Small delay between attempts
-            if (attempt < 2) await new Promise(r => setTimeout(r, 5));
-          }
+          // Then quickly send boosted color (creates a flash effect)
+          await this.bridge.transition(indicesForCommand, dramaticColor, 0);
 
-          console.log('✅ Beat entertainment transition sent successfully');
+          // Send another pulse with a brief delay
+          setTimeout(async () => {
+            // Create a slight variation for the second flash
+            const secondFlash: [number, number, number] = [
+              Math.min(1, dramaticColor[0] * 0.8),
+              Math.min(1, dramaticColor[1] * 0.8),
+              Math.min(1, dramaticColor[2] * 0.8)
+            ];
+            await this.bridge.transition(indicesForCommand, secondFlash, 0);
+          }, 120); // Brief delay for animation effect
+
+          console.log('✅ Enhanced beat entertainment transition sequence sent successfully');
           this.entertainmentAPIWorking = true;
 
-          // ALSO send via regular API for redundancy
-          this.sendRegularAPICommandForBeats(normalizedRGB);
+          // ALSO send via regular API for redundancy with enhanced colors
+          this.sendRegularAPICommandForBeats(dramaticColor);
 
         } catch (err) {
           console.error('❌ Error sending beat via Entertainment API:', err);
           // Fallback to regular API
-          await this.sendRegularAPICommandForBeats(rgb);
+          await this.sendRegularAPICommandForBeats(dramaticColor);
           this.entertainmentAPIWorking = false;
         }
       } else {
-        console.log('Entertainment API not available, using regular API for beat');
-        await this.sendRegularAPICommandForBeats(rgb);
+        console.log('Entertainment API not available, using regular API for beat with enhanced colors');
+        await this.sendRegularAPICommandForBeats(dramaticColor);
       }
       return;
     }
 
-    // Non-beat regular transitions
+    // Non-beat regular transitions - also enhanced for more animation
     if (!this.isConnected) {
       return; // Skip if not connected
     }
@@ -702,7 +719,9 @@ class HueService {
                                  this.stable_entertainmentLightIndices.length > 0 ?
                                  this.stable_entertainmentLightIndices : [0];
 
-        await this.bridge.transition(indicesForCommand, rgb, transitionTime);
+        // ENHANCED: Make regular transitions faster and more noticeable
+        const enhancedTransitionTime = Math.min(transitionTime, 100); // Cap at 100ms for faster changes
+        await this.bridge.transition(indicesForCommand, rgb, enhancedTransitionTime);
       } else if (!hueConfig.forceEntertainmentAPI) {
         // Rate limit regular API calls for non-beat transitions
         const now = Date.now();
@@ -710,7 +729,9 @@ class HueService {
           return;
         }
 
-        await this.sendRegularAPICommand(rgb, transitionTime, false);
+        // ENHANCED: Use modified transition time for regular API too
+        const enhancedTransitionTime = Math.min(transitionTime, 200); // Cap at 200ms for regular API
+        await this.sendRegularAPICommand(rgb, enhancedTransitionTime, false);
         this.lastLightUpdateTime = now;
       }
 
@@ -720,7 +741,7 @@ class HueService {
     }
   }
 
-  // New dedicated method just for beat flashes via regular API
+  // New dedicated method just for beat flashes via regular API - enhanced for more dramatic effects
   private async sendRegularAPICommandForBeats(rgb: [number, number, number]): Promise<void> {
     try {
       // Use cached lights first if available
@@ -771,9 +792,10 @@ class HueService {
       console.log(`🔴 URGENT BEAT API command: RGB=${rgb.map(v => v.toFixed(2)).join(',')} → xy=${xy.map(v => v.toFixed(3)).join(',')}`);
       console.log(`🕒 Beat command sent at ${new Date().toISOString()} to ${lights.length} lights`);
 
-      // IMPORTANT: Set brightness to 100% and transitiontime to 0 for immediate flashing
-      // Send command to each light as quickly as possible
-      const promises = lights.map(lightId =>
+      // ENHANCED: Create an animated effect with regular API by sending multiple commands in sequence
+
+      // First command - immediate flash to full brightness
+      const promises1 = lights.map(lightId =>
         window.electron.ipcRenderer.invoke('hue:setLightState', {
           lightId,
           on: true,
@@ -783,9 +805,32 @@ class HueService {
         }).catch(err => console.error(`Error setting light ${lightId}:`, err))
       );
 
-      // Wait for all commands to complete
-      await Promise.all(promises);
-      console.log(`✅ Beat commands sent to all ${lights.length} lights`);
+      await Promise.all(promises1);
+
+      // ENHANCED: Add a second flash after a brief delay
+      setTimeout(async () => {
+        // Create a slightly different color for animation effect
+        const X2 = rgb[0] * 0.8 * 0.664511 + rgb[1] * 0.8 * 0.154324 + rgb[2] * 0.8 * 0.162028;
+        const Y2 = rgb[0] * 0.8 * 0.283881 + rgb[1] * 0.8 * 0.668433 + rgb[2] * 0.8 * 0.047685;
+        const Z2 = rgb[0] * 0.8 * 0.000088 + rgb[1] * 0.8 * 0.072310 + rgb[2] * 0.8 * 0.986039;
+        const sum2 = X2 + Y2 + Z2;
+        const xy2 = sum2 === 0 ? [0.33, 0.33] : [X2 / sum2, Y2 / sum2];
+
+        // Second flash command with slightly different color
+        const promises2 = lights.map(lightId =>
+          window.electron.ipcRenderer.invoke('hue:setLightState', {
+            lightId,
+            on: true,
+            brightness: 85, // Slightly lower brightness for pulsing effect
+            xy: xy2,
+            transitiontime: 1 // Very slight transition
+          }).catch(err => console.error(`Error setting second pulse for light ${lightId}:`, err))
+        );
+
+        await Promise.all(promises2);
+      }, 150); // Short delay between pulses
+
+      console.log(`✅ Enhanced animated beat commands sent to all ${lights.length} lights`);
 
     } catch (error) {
       console.error('❌ ERROR sending beat commands via regular API:', error);
@@ -1103,6 +1148,150 @@ class HueService {
       return false;
     } catch (error) {
       console.error('Failed to configure entertainment group:', error);
+      return false;
+    }
+  }
+
+  // ADD a new public testFlash method with dramatic animation
+  public async testFlash(color: [number, number, number] = [1, 0, 0]): Promise<boolean> {
+    console.log('🔍 TEST FLASH REQUESTED with color:', color);
+    try {
+      // Force recreation of entertainment indices if needed
+      if (this.entertainmentLightIds.length === 0 && this.cachedLightIds.length > 0) {
+        const indices = Array.from({ length: this.cachedLightIds.length }, (_, i) => i);
+        this.entertainmentLightIds = indices;
+        this.stable_entertainmentLightIndices = [...indices];
+        console.log('Created entertainment indices for test flash:', indices);
+      }
+
+      // Boost the color for more dramatic effect
+      const dramaticColor: [number, number, number] = [
+        Math.min(1, color[0] * 1.5),
+        Math.min(1, color[1] * 1.5),
+        Math.min(1, color[2] * 1.5)
+      ];
+
+      // First try entertainment API for immediate flash - ENHANCED with animation
+      if (this.isConnected && this.useEntertainmentMode && this.bridge) {
+        try {
+          // Get all possible indices to maximize chance of success
+          const allIndices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+          console.log('🔴 SENDING ANIMATED TEST FLASH SEQUENCE via Entertainment API');
+
+          // First flash - bright
+          await this.bridge.transition(allIndices, dramaticColor, 0);
+
+          // Wait 100ms
+          await new Promise(r => setTimeout(r, 100));
+
+          // Second flash - dimmer
+          const dimmedColor: [number, number, number] = [
+            color[0] * 0.6, color[1] * 0.6, color[2] * 0.6
+          ];
+          await this.bridge.transition(allIndices, dimmedColor, 0);
+
+          // Wait 100ms
+          await new Promise(r => setTimeout(r, 100));
+
+          // Third flash - brightest
+          const brightestColor: [number, number, number] = [
+            Math.min(1, color[0] * 2.0),
+            Math.min(1, color[1] * 2.0),
+            Math.min(1, color[2] * 2.0)
+          ];
+          await this.bridge.transition(allIndices, brightestColor, 0);
+
+          // Send another test command with specific indices if we have them
+          if (this.entertainmentLightIds.length > 0) {
+            console.log('🔴 Sending follow-up animated flash to specific indices:', this.entertainmentLightIds);
+            await this.bridge.transition(this.entertainmentLightIds, dramaticColor, 0);
+          }
+
+          console.log('✅ Entertainment API test flash animation sent');
+        } catch (e) {
+          console.error('❌ Error with Entertainment API test flash:', e);
+        }
+      }
+
+      // ALWAYS also try regular API as backup with enhanced animation
+      try {
+        if (this.cachedLightIds.length === 0) {
+          // Try to get lights
+          const lights = await this.getLightsForRegularAPI();
+          if (lights && lights.length > 0) {
+            this.cachedLightIds = [...lights];
+          }
+        }
+
+        if (this.cachedLightIds.length > 0) {
+          console.log('🔴 SENDING ANIMATED TEST FLASH via Regular API to', this.cachedLightIds.length, 'lights');
+
+          // Convert RGB to XY
+          const X = dramaticColor[0] * 0.664511 + dramaticColor[1] * 0.154324 + dramaticColor[2] * 0.162028;
+          const Y = dramaticColor[0] * 0.283881 + dramaticColor[1] * 0.668433 + dramaticColor[2] * 0.047685;
+          const Z = dramaticColor[0] * 0.000088 + dramaticColor[1] * 0.072310 + dramaticColor[2] * 0.986039;
+          const sum = X + Y + Z;
+          const xy = sum === 0 ? [0.33, 0.33] : [X / sum, Y / sum];
+
+          // First flash - full brightness
+          for (const lightId of this.cachedLightIds) {
+            await window.electron.ipcRenderer.invoke('hue:setLightState', {
+              lightId,
+              on: true,
+              brightness: 100,
+              xy,
+              transitiontime: 0
+            });
+          }
+
+          // Add a second flash after a brief delay for animation
+          setTimeout(async () => {
+            // Create a second flash with slight color variation
+            const dimmedColor: [number, number, number] = [
+              color[0] * 0.5, color[1] * 0.5, color[2] * 0.5
+            ];
+            const X2 = dimmedColor[0] * 0.664511 + dimmedColor[1] * 0.154324 + dimmedColor[2] * 0.162028;
+            const Y2 = dimmedColor[0] * 0.283881 + dimmedColor[1] * 0.668433 + dimmedColor[2] * 0.047685;
+            const Z2 = dimmedColor[0] * 0.000088 + dimmedColor[1] * 0.072310 + dimmedColor[2] * 0.986039;
+            const sum2 = X2 + Y2 + Z2;
+            const xy2 = sum2 === 0 ? [0.33, 0.33] : [X2 / sum2, Y2 / sum2];
+
+            for (const lightId of this.cachedLightIds) {
+              window.electron.ipcRenderer.invoke('hue:setLightState', {
+                lightId,
+                on: true,
+                brightness: 60, // Lower brightness for contrast
+                xy: xy2,
+                transitiontime: 0
+              });
+            }
+
+            // Add a third flash back to full color after another short delay
+            setTimeout(async () => {
+              for (const lightId of this.cachedLightIds) {
+                window.electron.ipcRenderer.invoke('hue:setLightState', {
+                  lightId,
+                  on: true,
+                  brightness: 100, // Back to full brightness
+                  xy,
+                  transitiontime: 0
+                });
+              }
+
+              console.log('✅ Regular API animated test flash sequence completed');
+            }, 150); // Third flash delay
+          }, 150); // Second flash delay
+        } else {
+          console.warn('⚠️ No light IDs available for regular API test');
+        }
+      } catch (e) {
+        console.error('❌ Error with regular API test flash:', e);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('❌ Test flash failed completely:', error);
       return false;
     }
   }
