@@ -58,46 +58,61 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     setConfig(HueService.getConfig());
   }, []);
 
-  // Updated effect to handle error cases better
+  // Add a UUID validator function
+  const isValidUuid = (id: string): boolean => {
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidPattern.test(id);
+  };
+
+  // Updated effect to handle error cases better and ensure UUID entertainment groups
   useEffect(() => {
     if (!config) return;
     async function fetchGroups() {
       try {
         if (HueService.hasValidConfig()) {
           const groups = await HueService.getEntertainmentGroups();
-          if (groups && groups.length > 0) {
+
+          // Filter to only include UUID format group IDs
+          const validGroups = groups.filter(group => isValidUuid(group.id));
+
+          if (validGroups.length > 0) {
             // Convert to expected format if necessary
-            const formattedGroups = groups.map(group => {
+            const formattedGroups = validGroups.map(group => {
               return {
-                id: group.id || 'default',
-                name: group.name || `Group ${group.id || 'Default'}`
+                id: group.id,
+                name: group.name || `Group ${group.id.substring(0, 8)}`
               };
             });
 
             setAvailableGroups(formattedGroups);
 
-            // If current selected group not found, default to first group
-            if (!formattedGroups.find(g => g.id === selectedGroup)) {
-              setSelectedGroup(formattedGroups[0].id);
-              HueService.setEntertainmentGroupId(formattedGroups[0].id);
+            // If current selected group not found or not a UUID, default to first group
+            if (!isValidUuid(selectedGroup) || !formattedGroups.find(g => g.id === selectedGroup)) {
+              const newGroupId = formattedGroups[0].id;
+              console.log(`Selecting UUID entertainment group: ${newGroupId}`);
+              setSelectedGroup(newGroupId);
+              HueService.setEntertainmentGroupId(newGroupId);
             }
           } else {
-            // Fallback: use current stored entertainment group as option
-            const defaultId = config.entertainmentGroupId || 'default';
+            console.warn("No valid UUID entertainment groups found");
+            // Create a fallback UUID entertainment group
+            const defaultUuid = 'ef7e1b9f-159d-42f9-868f-013ec47978dc';
             setAvailableGroups([
-              { id: defaultId, name: `Default (${defaultId})` }
+              { id: defaultUuid, name: `Default Group (${defaultUuid.substring(0, 8)}...)` }
             ]);
-            setSelectedGroup(defaultId);
+            setSelectedGroup(defaultUuid);
+            HueService.setEntertainmentGroupId(defaultUuid);
           }
         }
       } catch (error) {
         console.error("Error fetching entertainment groups", error);
-        // Create a fallback option even when there's an error
-        const defaultId = config.entertainmentGroupId || 'default';
+        // Create a fallback option with UUID even when there's an error
+        const defaultUuid = 'ef7e1b9f-159d-42f9-868f-013ec47978dc';
         setAvailableGroups([
-          { id: defaultId, name: `Default Group (${defaultId})` }
+          { id: defaultUuid, name: `Default Group (${defaultUuid.substring(0, 8)}...)` }
         ]);
-        setSelectedGroup(defaultId);
+        setSelectedGroup(defaultUuid);
+        HueService.setEntertainmentGroupId(defaultUuid);
       }
     }
     fetchGroups();
@@ -705,9 +720,12 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     onAutoFlashToggle?.(isEnabled);
   };
 
-  // Add additional debug info to UI
+  // Add UUID info to the debug display
   const renderDebugInfo = () => {
     if (!enabled) return null;
+
+    const currentGroupId = HueService.getConfig()?.entertainmentGroupId || 'None';
+    const isUuid = isValidUuid(currentGroupId);
 
     return (
       <Box sx={{ mt: 2, p: 2, borderRadius: 1, bgcolor: '#f5f5f7', fontSize: '0.75rem' }}>
@@ -715,7 +733,8 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
         <Box component="ul" sx={{ m: 0, pl: 2 }}>
           <li>Connection: {connected ? 'Connected' : 'Disconnected'}</li>
           <li>API Mode: {isEntertainmentAPI ? 'Entertainment' : 'Regular'}</li>
-          <li>Selected Group: {HueService.getConfig()?.entertainmentGroupId || 'None'}</li>
+          <li>Selected Group: {currentGroupId}</li>
+          <li>Is UUID Format: {isUuid ? 'Yes' : 'No'}</li>
           <li>Lights: {selectedLights.join(', ') || 'None'}</li>
           <li>Last Command: {lastLightCommand || 'None'}</li>
         </Box>

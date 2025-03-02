@@ -181,7 +181,14 @@ class HueService {
     }
   }
 
-  // Get all entertainment groups - updated to handle missing getGroup method
+  // Helper function to check if a string is a UUID (simple validation)
+  private isUuidFormat(id: string): boolean {
+    // Simple UUID pattern check: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidPattern.test(id);
+  }
+
+  // Get all entertainment groups - updated to filter non-UUID groups
   async getEntertainmentGroups(): Promise<any[]> {
     if (!this.config) {
       throw new Error('No Hue bridge configuration found');
@@ -211,10 +218,18 @@ class HueService {
           }
 
           const entertainmentGroups = Object.entries(allGroups)
-            .filter(([_, group]: [string, any]) => group.type === 'Entertainment')
+            .filter(([id, group]: [string, any]) => {
+              // Only include entertainment groups with UUID format IDs
+              return group.type === 'Entertainment' && this.isUuidFormat(id);
+            })
             .map(([id, details]: [string, any]) => ({ id, ...details }));
 
-          console.log("Entertainment groups:", entertainmentGroups);
+          console.log("UUID-only entertainment groups:", entertainmentGroups);
+
+          if (entertainmentGroups.length === 0) {
+            console.warn("No UUID-format entertainment groups found. Please create one in the Philips Hue app.");
+          }
+
           return entertainmentGroups;
         } catch (e) {
           console.error("Error calling bridge.getGroup:", e);
@@ -229,24 +244,28 @@ class HueService {
       if (typeof bridge.getLights === 'function') {
         try {
           const allLights = await bridge.getLights();
-          lights = Object.keys(allLights);
+          lights = Object.keys(allLights).filter(id => this.isUuidFormat(id));
         } catch (e) {
           console.error("Error getting lights:", e);
         }
       }
 
-      // Use current entertainment group ID from config or create one if missing
-      const groupId = this.config.entertainmentGroupId || 'default-group-1';
+      // Generate a UUID-like ID for the mock entertainment group if needed
+      let groupId = this.config.entertainmentGroupId;
+      if (!this.isUuidFormat(groupId)) {
+        groupId = 'ef7e1b9f-159d-42f9-868f-013ec47978dc'; // A default UUID-like ID
+        console.log(`Replacing non-UUID entertainment group ID with: ${groupId}`);
+      }
 
       // Create a mock entertainment group
       const defaultGroup = {
         id: groupId,
         name: 'Default Entertainment Group',
         type: 'Entertainment',
-        lights: lights.length > 0 ? lights : ['1', '2', '3'] // Use detected lights or fallback
+        lights: lights.length > 0 ? lights : [] // Use detected lights or empty array
       };
 
-      console.log("Created fallback entertainment group:", defaultGroup);
+      console.log("Created fallback UUID entertainment group:", defaultGroup);
       return [defaultGroup];
     } catch (error) {
       console.error('Failed to get entertainment groups:', error);
@@ -455,6 +474,26 @@ class HueService {
       return false;
     }
 
+    // Add UUID validation
+    if (!this.isUuidFormat(this.config.entertainmentGroupId)) {
+      console.error(`Entertainment group ID is not in UUID format: ${this.config.entertainmentGroupId}`);
+      console.log('Attempting to find a valid entertainment group...');
+
+      try {
+        const groups = await this.getEntertainmentGroups();
+        if (groups.length > 0) {
+          console.log(`Found valid entertainment group, using: ${groups[0].id}`);
+          this.updateGroupIdInConfig(groups[0].id);
+        } else {
+          console.error('No valid entertainment groups found');
+          return false;
+        }
+      } catch (error) {
+        console.error('Failed to find valid entertainment group:', error);
+        return false;
+      }
+    }
+
     try {
       // Display PSK info before attempting to start entertainment mode
       console.log(`Starting entertainment mode for group ${this.config.entertainmentGroupId}`);
@@ -582,8 +621,28 @@ class HueService {
     }
   }
 
-  // Set the entertainment group ID
+  // Set the entertainment group ID with UUID validation
   setEntertainmentGroupId(groupId: string): void {
+    // Validate that it's a UUID format
+    if (!this.isUuidFormat(groupId)) {
+      console.warn(`Invalid entertainment group ID format: ${groupId}. Must be a UUID.`);
+      // Try to find a valid entertainment group
+      this.getEntertainmentGroups()
+        .then(groups => {
+          if (groups.length > 0) {
+            console.log(`Using first valid entertainment group: ${groups[0].id}`);
+            this.updateGroupIdInConfig(groups[0].id);
+          }
+        })
+        .catch(err => console.error("Error finding valid entertainment group:", err));
+      return;
+    }
+
+    this.updateGroupIdInConfig(groupId);
+  }
+
+  // Helper to update group ID in config
+  private updateGroupIdInConfig(groupId: string): void {
     if (this.config) {
       const updatedConfig = { ...this.config, entertainmentGroupId: groupId };
       this.saveConfig(updatedConfig);
@@ -663,4 +722,3 @@ class HueService {
 
 // Export as a singleton
 export default new HueService();
-
