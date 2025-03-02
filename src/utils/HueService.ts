@@ -1,7 +1,6 @@
 // Import our Phea connector utility
 import { getPheaInstance, validatePSK } from './PheaConnector';
 import { hueConfig } from '../config/hueConfig';
-import { inspectObject, enhanceBridgeWithDebug } from './HueDebugUtil';
 
 // Get the Phea instance
 const Phea = getPheaInstance();
@@ -23,7 +22,7 @@ class HueService {
   private lastRGB: [number, number, number] = [0, 0, 0]; // Track last RGB to avoid unnecessary updates
   private useEntertainmentMode: boolean = true; // Always use entertainment mode
   private lastLightUpdateTime: number = 0; // For rate limiting in non-entertainment mode
-  private debugLogsEnabled: boolean = true; // Always keep debug logs enabled
+  private debugLogsEnabled: boolean = hueConfig.debug; // Control verbose logging
   private connectionAttempts: number = 0; // Track connection attempts
 
   constructor() {
@@ -73,7 +72,7 @@ class HueService {
             address: config.address,
             username: config.username,
             psk: clientKey ? validatePSK(clientKey) : '', // Validate if exists
-            entertainmentGroupId: config.entertainmentGroupId
+            entertainmentGroupId: config.entertainmentGroupId || '1'
           };
 
           if (clientKey && clientKey !== 'dummy-psk') {
@@ -119,7 +118,7 @@ class HueService {
       hasCredentials: !!config.username,
       hasPSK: !!config.psk && config.psk !== 'dummy-psk',
       pskLength: config.psk?.length || 0,
-      entertainmentGroupId: config.entertainmentGroupId  // Now uses the stored value
+      entertainmentGroupId: config.entertainmentGroupId
     });
   }
 
@@ -322,16 +321,8 @@ class HueService {
 
           if (this.bridge) {
             console.log('Bridge created successfully');
-
-            // Inspect bridge and enhance it with debug wrappers
-            inspectObject(this.bridge, 'Bridge');
-            this.bridge = enhanceBridgeWithDebug(this.bridge);
-
-            // Double-check we have a start or connect method
-            if (!this.bridge.start && this.bridge.connect) {
-              console.log('Adding start as alias to connect');
-              this.bridge.start = this.bridge.connect.bind(this.bridge);
-            }
+            // Disable verbose logs after successful setup
+            this.debugLogsEnabled = false;
           } else {
             throw new Error('bridge() returned null or undefined');
           }
@@ -383,7 +374,7 @@ class HueService {
     }
   }
 
-  // Updated start method that works with the actual API structure
+  // Updated start method that works with entertainment mode
   async startEntertainmentMode(): Promise<boolean> {
     // If we're not using entertainment mode and it's forced, return failure
     if (!this.useEntertainmentMode && hueConfig.forceEntertainmentAPI) {
@@ -403,9 +394,8 @@ class HueService {
       return false;
     }
 
-    // Require a valid entertainmentGroupId
-    if (!this.config.entertainmentGroupId || this.config.entertainmentGroupId === '1') {
-      console.error('No valid entertainment group ID specified.');
+    if (!this.config.entertainmentGroupId) {
+      console.error('No entertainment group ID specified');
       return false;
     }
 
@@ -418,60 +408,18 @@ class HueService {
         setTimeout(() => reject(new Error('Connection timeout')), hueConfig.dtlsConnectionTimeout);
       });
 
-      // Inspect bridge again before trying to use it
-      inspectObject(this.bridge, 'Bridge before starting entertainment');
+      // Race the connection against the timeout
+      this.connection = await Promise.race([
+        this.bridge.start(this.config.entertainmentGroupId),
+        timeoutPromise
+      ]);
 
-      // IMPORTANT: Bridge method existence checks
-      const hasStartMethod = typeof this.bridge.start === 'function';
-      const hasConnectMethod = typeof this.bridge.connect === 'function';
-
-      console.log('Bridge methods available:', {
-        hasStartMethod,
-        hasConnectMethod
-      });
-
-      let connectionResult;
-
-      // Try different methods based on what's available
-      if (hasStartMethod) {
-        console.log('Using bridge.start() method');
-        try {
-          // Race the connection against the timeout
-          connectionResult = await Promise.race([
-            this.bridge.start(this.config.entertainmentGroupId),
-            timeoutPromise
-          ]);
-        } catch (error) {
-          console.error('Error using start():', error);
-          throw error;
-        }
-      } else if (hasConnectMethod) {
-        console.log('Using bridge.connect() method');
-        try {
-          // Race the connection against the timeout
-          connectionResult = await Promise.race([
-            this.bridge.connect(this.config.entertainmentGroupId),
-            timeoutPromise
-          ]);
-        } catch (error) {
-          console.error('Error using connect():', error);
-          throw error;
-        }
-      } else {
-        console.error('Bridge has neither start nor connect method');
-        throw new Error('Bridge API incompatible - missing required methods');
-      }
-
-      this.connection = connectionResult;
       this.isConnected = true;
 
-      // Add event listener if connection has an 'on' method
-      if (this.connection && typeof this.connection.on === 'function') {
-        this.connection.on("close", () => {
-          console.log("Hue connection closed");
-          this.isConnected = false;
-        });
-      }
+      this.connection.on("close", () => {
+        console.log("Hue connection closed");
+        this.isConnected = false;
+      });
 
       console.log('Entertainment mode started successfully');
       return true;
@@ -495,19 +443,12 @@ class HueService {
     }
   }
 
-  // Updated stopEntertainmentMode method
+  // Stop entertainment mode
   async stopEntertainmentMode(): Promise<void> {
     if (this.bridge && this.isConnected) {
       try {
         console.log("Stopping entertainment mode");
-        // Check if the bridge has a disconnect method instead of stop
-        if (typeof this.bridge.disconnect === 'function') {
-          await this.bridge.disconnect();
-        } else if (typeof this.bridge.stop === 'function') {
-          await this.bridge.stop();
-        } else {
-          console.warn('No stop or disconnect method found on bridge');
-        }
+        await this.bridge.stop();
         this.isConnected = false;
       } catch (error) {
         console.error('Error stopping entertainment mode', error);
@@ -515,38 +456,21 @@ class HueService {
     }
   }
 
-  // Updated to work with either mode and handle different bridge API structures
+  // Updated to work with either mode, but prioritize entertainment mode
   async sendColorTransition(rgb: [number, number, number], transitionTime: number = 200): Promise<void> {
-    if (!this.isConnected) return;
+    if (!this.isConnected) {
+      return;
+    }
+
     try {
       // Avoid sending the same color repeatedly
       if (this.lastRGB[0] === rgb[0] && this.lastRGB[1] === rgb[1] && this.lastRGB[2] === rgb[2]) {
         return;
       }
-      console.log('sendColorTransition called with:', { rgb, transitionTime });
-      if (this.useEntertainmentMode && this.bridge) {
-        if (typeof this.bridge.transition === 'function') {
-          await this.bridge.transition([0], rgb, transitionTime);
-        } else if (typeof this.bridge.setLightState === 'function') {
-          console.log('Using setLightState fallback; computed rgb:', rgb);
-          // Convert RGB to XY color space for Hue
-          const r = rgb[0], g = rgb[1], b = rgb[2];
-          const X = r * 0.664511 + g * 0.154324 + b * 0.162028;
-          const Y = r * 0.283881 + g * 0.668433 + b * 0.047685;
-          const Z = r * 0.000088 + g * 0.072310 + b * 0.986039;
-          const sum = X + Y + Z;
-          const xy = sum === 0 ? [0.33, 0.33] : [X / sum, Y / sum];
 
-          // Use the stored entertainmentGroupId without fallback
-          await this.bridge.setLightState(this.config!.entertainmentGroupId, {
-            on: true,
-            bri: Math.round(Math.max(...rgb) * 254),
-            xy: xy,
-            transitiontime: Math.round(transitionTime / 100) // Convert to 100ms units
-          });
-        } else {
-          console.warn('No suitable light control method found on bridge');
-        }
+      if (this.useEntertainmentMode && this.bridge) {
+        // Entertainment mode - use Phea
+        await this.bridge.transition([0], rgb, transitionTime);
       } else if (!hueConfig.forceEntertainmentAPI) {
         // Regular API mode - use direct API calls
         // Rate limit to avoid overwhelming the bridge (max 10 updates/sec)
@@ -602,7 +526,6 @@ class HueService {
     if (this.config) {
       const updatedConfig = { ...this.config, entertainmentGroupId: groupId };
       this.saveConfig(updatedConfig);
-      console.log(`Updated entertainment group ID to: ${groupId}`);
     }
   }
 
@@ -660,10 +583,10 @@ class HueService {
     console.log('Entertainment mode forced - will not fall back to regular API');
   }
 
-  // Remove or modify the disableDebugLogs method to do nothing
+  // New method to disable verbose logging after initial setup
   disableDebugLogs(): void {
-    // Do nothing - we want to keep logs enabled
-    console.log('Debug logs will remain enabled');
+    this.debugLogsEnabled = false;
+    console.log('Disabled verbose Hue debug logs');
   }
 
   // Reset connection attempts

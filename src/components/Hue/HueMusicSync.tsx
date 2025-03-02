@@ -44,6 +44,41 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
   const [selectedLights, setSelectedLights] = useState<string[]>([]);
   // Add new state to track which API mode is being used
   const [isEntertainmentAPI, setIsEntertainmentAPI] = useState<boolean>(true);
+  const [selectedGroup, setSelectedGroup] = useState<string>(HueService.getConfig()?.entertainmentGroupId || '');
+
+  // Use a state for config so that dependency changes trigger refetch
+  const [config, setConfig] = useState(HueService.getConfig());
+
+  useEffect(() => {
+    setConfig(HueService.getConfig());
+  }, []);
+
+  // Updated effect to fetch available entertainment groups once config is ready
+  useEffect(() => {
+    if (!config) return;
+    async function fetchGroups() {
+      try {
+        const groups = await HueService.getEntertainmentGroups();
+        if (groups && groups.length > 0) {
+          setAvailableGroups(groups);
+          // If current selected group not found, default to first group
+          if (!groups.find(g => g.id === selectedGroup)) {
+            setSelectedGroup(groups[0].id);
+            HueService.setEntertainmentGroupId(groups[0].id);
+          }
+        } else {
+          // Fallback: use current stored entertainment group as option
+          setAvailableGroups([
+            { id: config.entertainmentGroupId, name: `Default (${config.entertainmentGroupId})` }
+          ]);
+          setSelectedGroup(config.entertainmentGroupId);
+        }
+      } catch (error) {
+        console.error("Error fetching entertainment groups", error);
+      }
+    }
+    fetchGroups();
+  }, [config?.address]); // re-run if config becomes available
 
   // Refs
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -185,6 +220,26 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
       }
     };
   }, [isPlaying, hueConnected, selectedLights, autoFlashEnabled]);
+
+  // New effect to fetch available entertainment groups on mount
+  useEffect(() => {
+    async function fetchGroups() {
+      try {
+        if (HueService.hasValidConfig()) {
+          const groups = await HueService.getEntertainmentGroups();
+          setAvailableGroups(groups);
+          // If current selected group is not in fetched groups, update state
+          if (groups.length > 0 && !groups.find(g => g.id === selectedGroup)) {
+            setSelectedGroup(groups[0].id);
+            HueService.setEntertainmentGroupId(groups[0].id);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching entertainment groups", error);
+      }
+    }
+    fetchGroups();
+  }, []);
 
   // Cleanup function
   const cleanup = useCallback(() => {
@@ -598,6 +653,19 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
       <Typography variant="h6" gutterBottom sx={{ color: '#333333', fontWeight: 500 }}>
         Phillips Hue Music Sync
       </Typography>
+
+      {/* Replace dropdown with static display of current entertainment group */}
+      <Box sx={{ mb: 2, p: 2, borderRadius: 1, bgcolor: 'rgba(0, 0, 0, 0.05)' }}>
+        <Typography variant="body2" sx={{ color: '#555', mb: 0.5 }}>
+          Current Entertainment Group:
+        </Typography>
+        <Typography variant="body1" sx={{ fontWeight: 500 }}>
+          {HueService.getConfig()?.entertainmentGroupId || 'Not set'}
+        </Typography>
+        <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: '#666' }}>
+          To change, use the Hue Setup in Settings
+        </Typography>
+      </Box>
 
       {error && (
         <Alert
