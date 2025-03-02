@@ -3,11 +3,18 @@ import {
   Box, Typography, Button, Stepper, Step, StepLabel,
   CircularProgress, Select, MenuItem, FormControl,
   InputLabel, TextField, Alert, Paper, AlertTitle,
-  Link
+  Link, Snackbar
 } from '@mui/material';
 
 interface HueConfigModalProps {
   onClose: () => void;
+}
+
+interface ToastMessage {
+  message: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+  title?: string;
+  open: boolean;
 }
 
 const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
@@ -22,6 +29,11 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
   const [selectedGroup, setSelectedGroup] = useState<string>('');
   const [useManualIp, setUseManualIp] = useState<boolean>(false);
   const [setupComplete, setSetupComplete] = useState<boolean>(false);
+  const [toast, setToast] = useState<ToastMessage>({
+    message: '',
+    type: 'info',
+    open: false
+  });
 
   // Check if configuration exists
   useEffect(() => {
@@ -72,6 +84,24 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
     }
   };
 
+  // Show toast notification
+  const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning', title?: string) => {
+    setToast({
+      message,
+      type,
+      title,
+      open: true
+    });
+  };
+
+  // Handle toast close
+  const handleToastClose = () => {
+    setToast(prev => ({
+      ...prev,
+      open: false
+    }));
+  };
+
   // Discover bridges using the main process
   const discoverBridges = async () => {
     setIsLoading(true);
@@ -82,13 +112,14 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
       if (discoveredBridgeIP) {
         setBridges([{ ip: discoveredBridgeIP }]);
         setSelectedBridge(discoveredBridgeIP);
-        setSuccess("Bridge discovered successfully!");
+        showToast("Bridge discovered successfully!", 'success');
       } else {
-        setError("No bridges discovered. Try entering an IP address manually.");
+        showToast("No bridges discovered. Try entering an IP address manually.", 'warning');
       }
     } catch (error: any) {
       const errorMsg = error.message || "Unknown error";
       setError(`${errorMsg}`);
+      showToast(errorMsg, 'error', 'Bridge Discovery Failed');
       console.error('Error discovering bridges:', error);
     } finally {
       setIsLoading(false);
@@ -99,14 +130,14 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
   const registerBridge = async () => {
     const bridgeIp = useManualIp ? manualBridgeIp : selectedBridge;
     if (!bridgeIp) {
-      setError("Please select or enter a bridge IP address");
+      showToast("Please select or enter a bridge IP address", 'error');
       return;
     }
 
     setIsLoading(true);
     setError(null);
     try {
-      setSuccess("Press the link button on your Hue Bridge now...");
+      showToast("Press the link button on your Hue Bridge now...", 'info');
 
       // Wait 2 seconds to give user time to read the message
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -114,7 +145,7 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
       // Use IPC to register with the bridge
       await window.electron.ipcRenderer.invoke('hue:setManualBridge', bridgeIp);
 
-      setSuccess("Registration successful! Fetching entertainment groups...");
+      showToast("Registration successful! Fetching entertainment groups...", 'success');
       await fetchEntertainmentGroups();
 
       // Save simplified config to localStorage
@@ -128,7 +159,9 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
       // Move to next step
       setActiveStep(2);
     } catch (error: any) {
-      setError(`Registration failed: ${error.message || "Unknown error"}. Make sure you pressed the link button on the bridge.`);
+      const errorMsg = error.message || "Unknown error";
+      setError(`Registration failed: ${errorMsg}. Make sure you pressed the link button on the bridge.`);
+      showToast(`Registration failed: ${errorMsg}. Make sure you pressed the link button on the bridge.`, 'error', 'Registration Failed');
       console.error('Registration failed:', error);
     } finally {
       setIsLoading(false);
@@ -146,12 +179,16 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
       if (entertainmentAreas && entertainmentAreas.length > 0) {
         setEntertainmentGroups(entertainmentAreas);
         setSelectedGroup(entertainmentAreas[0].id);
-        setSuccess(`Found ${entertainmentAreas.length} entertainment area(s)`);
+        showToast(`Found ${entertainmentAreas.length} entertainment area(s)`, 'success');
       } else {
-        setError("No entertainment areas found. You need to create an entertainment area in the Philips Hue app first.");
+        const errorMsg = "No entertainment areas found. You need to create an entertainment area in the Philips Hue app first.";
+        setError(errorMsg);
+        showToast(errorMsg, 'warning', 'No Entertainment Areas');
       }
     } catch (error: any) {
-      setError(`Error fetching entertainment areas: ${error.message || "Unknown error"}`);
+      const errorMsg = error.message || "Unknown error";
+      setError(`Error fetching entertainment areas: ${errorMsg}`);
+      showToast(`Error fetching entertainment areas: ${errorMsg}`, 'error');
       console.error('Error fetching entertainment areas:', error);
     } finally {
       setIsLoading(false);
@@ -161,7 +198,7 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
   // Save selected entertainment group
   const saveSelectedGroup = () => {
     if (!selectedGroup) {
-      setError("Please select a light");
+      showToast("Please select a light", 'error');
       return;
     }
 
@@ -174,11 +211,12 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
         localStorage.setItem('hueConfig', JSON.stringify(config));
       }
 
-      setSuccess("Setup complete! Your Hue lights are now configured.");
+      showToast("Setup complete! Your Hue lights are now configured.", 'success');
       setSetupComplete(true);
       setActiveStep(3);
     } catch (error: any) {
-      setError(`Error saving group: ${error.message || "Unknown error"}`);
+      const errorMsg = error.message || "Unknown error";
+      showToast(`Error saving group: ${errorMsg}`, 'error');
       console.error('Error saving group:', error);
     }
   };
@@ -211,7 +249,7 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
   // Test lights
   const testLights = async () => {
     if (!setupComplete) {
-      setError("Setup is not complete. Cannot test lights.");
+      showToast("Setup is not complete. Cannot test lights.", 'error');
       return;
     }
 
@@ -223,7 +261,7 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
       const config = JSON.parse(storedConfig);
       const lightId = config.entertainmentGroupId;
 
-      setSuccess("Testing lights...");
+      showToast("Testing lights...", 'info');
 
       // Turn on
       await window.electron.ipcRenderer.invoke('hue:turnOn', lightId);
@@ -253,9 +291,10 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
         xy: [0.33, 0.33] // White
       });
 
-      setSuccess("Lights test completed successfully!");
+      showToast("Lights test completed successfully!", 'success');
     } catch (error: any) {
-      setError(`Error testing lights: ${error.message || "Unknown error"}`);
+      const errorMsg = error.message || "Unknown error";
+      showToast(`Error testing lights: ${errorMsg}`, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -530,27 +569,6 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
         ))}
       </Stepper>
 
-      {error && (
-        <Alert
-          severity="error"
-          variant="outlined"
-          sx={{ mb: 3 }}
-        >
-          <AlertTitle>{formatErrorMessage(error).title}</AlertTitle>
-          <Typography variant="body2">{formatErrorMessage(error).message}</Typography>
-        </Alert>
-      )}
-
-      {success && (
-        <Alert
-          severity="success"
-          variant="outlined"
-          sx={{ mb: 3 }}
-        >
-          <Typography variant="body2">{success}</Typography>
-        </Alert>
-      )}
-
       {getStepContent(activeStep)}
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
@@ -573,6 +591,26 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
           {activeStep === steps.length - 1 ? 'Finish' : 'Next'}
         </Button>
       </Box>
+
+      {/* Toast Notification */}
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={6000}
+        onClose={handleToastClose}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={handleToastClose}
+          severity={toast.type}
+          sx={{ width: '100%' }}
+          variant="filled"
+        >
+          {toast.title && (
+            <AlertTitle>{toast.title}</AlertTitle>
+          )}
+          {toast.message}
+        </Alert>
+      </Snackbar>
     </Paper>
   );
 };
