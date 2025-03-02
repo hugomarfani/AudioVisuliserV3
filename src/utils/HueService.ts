@@ -30,6 +30,12 @@ class HueService {
   private lightDiscoveryAttempts: number = 0;
   private entertainmentAPIWorking: boolean = false; // Track if entertainment API is working
   private lastSuccessfulLightFetchTime: number = 0;
+  private entertainmentLightIds: number[] = [0]; // Add this property to store entertainment light indices
+  private entertainmentGroupLights: string[] = []; // Add a property to track entertainment group light IDs directly
+  private stable_entertainmentLightIndices: number[] = [0]; // More persistent storage for indices
+  private requestsInLastMinute: number = 0;
+  private lastRequestTimestamp: number = 0;
+  private lastRequestReset: number = 0;
 
   constructor() {
     // Try to load saved config
@@ -517,6 +523,29 @@ class HueService {
 
       this.isConnected = true;
 
+      // Always initialize with stable indices if available
+      if (this.stable_entertainmentLightIndices.length > 0) {
+        this.entertainmentLightIds = [...this.stable_entertainmentLightIndices];
+        console.log('Using stable entertainment light indices:', this.entertainmentLightIds);
+      }
+      // Fallback to initialized indices based on cached lights
+      else if (this.cachedLightIds.length > 0) {
+        this.entertainmentLightIds = Array.from(
+          { length: this.cachedLightIds.length },
+          (_, i) => i
+        );
+        // Update stable storage too
+        this.stable_entertainmentLightIndices = [...this.entertainmentLightIds];
+        console.log('Initialized entertainment light indices:', this.entertainmentLightIds);
+      } else {
+        // Default to [0] if no known lights, but keep any existing indices
+        if (this.entertainmentLightIds.length === 0) {
+          this.entertainmentLightIds = [0];
+          this.stable_entertainmentLightIndices = [0];
+          console.log('No cached lights, defaulting to light index [0]');
+        }
+      }
+
       // Check if connection object has 'on' method before using it
       if (this.connection && typeof this.connection.on === 'function') {
         this.connection.on("close", () => {
@@ -580,9 +609,17 @@ class HueService {
         try {
           // Use very short transition time for beats to enhance flash effect
           const fastTransitionTime = 10; // 10ms for beats
-          console.log(`🔴 Sending urgent beat flash via Entertainment API - RGB=${rgb.map(v => v.toFixed(2)).join(',')}`);
 
-          await this.bridge.transition([0], rgb, fastTransitionTime);
+          // Always ensure we have valid indices
+          const indicesForCommand = this.entertainmentLightIds.length > 0 ?
+                                   this.entertainmentLightIds :
+                                   this.stable_entertainmentLightIndices.length > 0 ?
+                                   this.stable_entertainmentLightIndices : [0];
+
+          console.log(`🔴 Sending urgent beat flash via Entertainment API - RGB=${rgb.map(v => v.toFixed(2)).join(',')} to indices:`, indicesForCommand);
+
+          await this.bridge.transition(indicesForCommand, rgb, fastTransitionTime);
+
           console.log('✅ Beat entertainment transition sent successfully');
           entertainmentMethodSucceeded = true;
           this.entertainmentAPIWorking = true; // Remember that entertainment API is working
@@ -593,7 +630,6 @@ class HueService {
       }
 
       // Only try regular API if entertainment didn't work OR we want to ensure delivery
-      // with both methods (useful for important beats)
       if (!entertainmentMethodSucceeded || !this.entertainmentAPIWorking) {
         await this.sendRegularAPICommandForBeats(rgb);
       }
@@ -607,13 +643,24 @@ class HueService {
     }
 
     try {
+      // Apply rate limiting for non-forced transitions
+      if (!this.checkRateLimit()) {
+        return; // Skip if we're rate limited
+      }
+
       // For normal transitions, use the proper API based on connection type
       if (this.useEntertainmentMode && this.bridge) {
-        await this.bridge.transition([0], rgb, transitionTime);
+        // Always ensure we have valid indices
+        const indicesForCommand = this.entertainmentLightIds.length > 0 ?
+                                 this.entertainmentLightIds :
+                                 this.stable_entertainmentLightIndices.length > 0 ?
+                                 this.stable_entertainmentLightIndices : [0];
+
+        await this.bridge.transition(indicesForCommand, rgb, transitionTime);
       } else if (!hueConfig.forceEntertainmentAPI) {
         // Rate limit regular API calls for non-beat transitions
         const now = Date.now();
-        if (now - this.lastLightUpdateTime < 66) { // ~15 updates/sec limit
+        if (now - this.lastLightUpdateTime < 100) { // ~10 updates/sec limit
           return;
         }
 
@@ -638,50 +685,42 @@ class HueService {
         return;
       }
 
-      // Only fetch lights every 5 seconds or if we have none cached
-      const now = Date.now();
-      const shouldFetchLights =
-        this.cachedLightIds.length === 0 ||
-        now - this.lastSuccessfulLightFetchTime > 5000;
-
+      // Use cached lights first if available
       let lights: string[] = [];
-
-      if (shouldFetchLights) {
+      if (this.cachedLightIds.length > 0) {
+        console.log('🔄 Using cached light IDs for beat command:', this.cachedLightIds);
+        lights = this.cachedLightIds;
+      }
+      // Only fetch lights if we have none cached
+      else {
         try {
-          console.log(`🔍 Attempting to discover lights (attempt #${this.lightDiscoveryAttempts+1})`);
-          this.lightDiscoveryAttempts++;
+          console.log(`🔍 Attempting to discover lights for beat command`);
 
           // Try to get lights from electron IPC
           lights = await window.electron.ipcRenderer.invoke('hue:getLightRids');
 
           if (lights && lights.length > 0) {
-            console.log(`✅ Found ${lights.length} lights via regular API`, lights);
+            console.log(`✅ Found ${lights.length} lights for beat command`, lights);
             this.cachedLightIds = [...lights]; // Cache for future use
-            this.lastSuccessfulLightFetchTime = now;
+            this.lastSuccessfulLightFetchTime = Date.now();
+
+            // Update indices as well
+            const indices = Array.from({ length: lights.length }, (_, i) => i);
+            this.entertainmentLightIds = indices;
+            this.stable_entertainmentLightIndices = [...indices];
           } else {
-            console.warn('⚠️ No lights returned from regular API');
+            console.warn('⚠️ No lights returned from regular API for beat command');
           }
         } catch (err) {
-          console.error('🚫 Error fetching lights from regular API:', err);
+          console.error('🚫 Error fetching lights for beat command:', err);
         }
       }
 
-      // If we still don't have lights, use cached ones
-      if (lights.length === 0 && this.cachedLightIds.length > 0) {
-        console.log('🔄 Using cached light IDs:', this.cachedLightIds);
-        lights = this.cachedLightIds;
-      }
-
-      // Still no lights? Try to create dummy entertainment light IDs as a last resort
-      if (lights.length === 0 && this.config?.entertainmentGroupId) {
+      // Still no lights? Use a fallback
+      if (lights.length === 0) {
         const fallbackId = this.generateFallbackLightId();
-        console.log(`🚨 No lights found - using fallback ID: ${fallbackId}`);
+        console.log(`🚨 No lights found for beat command - using fallback ID: ${fallbackId}`);
         lights = [fallbackId];
-      }
-
-      if (!lights || lights.length === 0) {
-        console.warn('❌ No lights available for regular API beat command - entertainment API only');
-        return;
       }
 
       // Convert RGB to XY color space for Hue
@@ -752,6 +791,42 @@ class HueService {
       console.error('Failed to get lights for regular API:', error);
       return [];
     }
+  }
+
+  // Add a method to update light IDs
+  updateLightIds(lightIds: string[]): void {
+    // Don't update if the provided array is empty but we already have cached IDs
+    if (!lightIds?.length && this.cachedLightIds.length > 0) {
+      console.log('⚠️ Ignoring empty light IDs update - keeping existing cached IDs');
+      return;
+    }
+
+    try {
+      console.log('Updating available light IDs:', lightIds);
+
+      // Store for regular API use
+      this.cachedLightIds = [...lightIds];
+
+      // For entertainment API, we update indices
+      if (lightIds?.length > 0) {
+        // Entertainment API actually uses indices (0, 1, 2) rather than UUIDs
+        const indices = Array.from({ length: lightIds.length }, (_, i) => i);
+        console.log('Using entertainment light indices:', indices);
+        this.entertainmentLightIds = indices;
+
+        // Also store in the stable storage
+        this.stable_entertainmentLightIndices = [...indices];
+      } else {
+        console.log('No valid lights to update');
+      }
+    } catch (err) {
+      console.error('Error updating light IDs:', err);
+    }
+  }
+
+  // Add a method to check if service is initialized
+  isInitialized(): boolean {
+    return !!this.bridge && !!this.config;
   }
 
   // Add a method to generate a fallback light ID based on the entertainment group
@@ -863,6 +938,51 @@ class HueService {
   // New method to check if we're using Entertainment API
   isUsingEntertainmentMode(): boolean {
     return this.useEntertainmentMode;
+  }
+
+  // Add a method to get the current cached lights - useful for debugging
+  getCachedLightIds(): string[] {
+    return this.cachedLightIds;
+  }
+
+  // Add a method to get entertainment light indices - useful for debugging
+  getEntertainmentLightIndices(): number[] {
+    return this.entertainmentLightIds;
+  }
+
+  // Add a method to manually set entertainment light indices
+  setEntertainmentLightIndices(indices: number[]): void {
+    if (indices && indices.length > 0) {
+      console.log('Manually setting entertainment light indices:', indices);
+      this.entertainmentLightIds = [...indices];
+      this.stable_entertainmentLightIndices = [...indices];
+    }
+  }
+
+  // Add method to handle rate limiting
+  private checkRateLimit(): boolean {
+    const now = Date.now();
+
+    // Reset counter if it's been more than a minute
+    if (now - this.lastRequestReset > 60000) {
+      this.requestsInLastMinute = 0;
+      this.lastRequestReset = now;
+    }
+
+    // Limit to 10 requests per second (600 per minute)
+    if (this.requestsInLastMinute >= 600) {
+      console.warn('⚠️ Rate limit reached - delaying request');
+      return false;
+    }
+
+    // Ensure at least 100ms between requests
+    if (now - this.lastRequestTimestamp < 100) {
+      return false;
+    }
+
+    this.requestsInLastMinute++;
+    this.lastRequestTimestamp = now;
+    return true;
   }
 }
 
