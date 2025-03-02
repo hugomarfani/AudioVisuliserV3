@@ -46,12 +46,91 @@ export function getPheaInstance(): PheaInterface {
       // The library uses HueBridge instead of bridge
       bridge: (options: PheaOptions) => {
         console.log('Creating Hue bridge with options:', options);
-        if (typeof pheaModule.HueBridge === 'function') {
-          return new pheaModule.HueBridge(options);
-        } else if (typeof pheaModule.bridge === 'function') {
-          return pheaModule.bridge(options);
-        } else {
-          console.error('No compatible bridge constructor found in phea module');
+
+        try {
+          let bridgeInstance;
+
+          if (typeof pheaModule.HueBridge === 'function') {
+            console.log('Using HueBridge constructor');
+            bridgeInstance = new pheaModule.HueBridge(options);
+
+            // Log the methods that actually exist for debugging
+            console.log('Available bridge methods:', Object.getOwnPropertyNames(
+              Object.getPrototypeOf(bridgeInstance)
+            ));
+
+            // IMPORTANT: Make sure connect/disconnect methods are explicity wrapped as start/stop
+            // Define our own start method that uses connect if it exists
+            bridgeInstance.start = function(groupId: string) {
+              console.log('Custom start method called with groupId:', groupId);
+              if (typeof this.connect === 'function') {
+                console.log('Delegating to connect() method');
+                return this.connect(groupId);
+              } else {
+                console.error('Neither start nor connect method available');
+                throw new Error('Bridge API incompatible - no start/connect method');
+              }
+            };
+
+            // Define our own stop method that uses disconnect if it exists
+            bridgeInstance.stop = function() {
+              console.log('Custom stop method called');
+              if (typeof this.disconnect === 'function') {
+                console.log('Delegating to disconnect() method');
+                return this.disconnect();
+              } else {
+                console.warn('No disconnect method found, stop is a no-op');
+                return Promise.resolve();
+              }
+            };
+
+            // Create a transition method if needed
+            if (!bridgeInstance.transition && bridgeInstance.setLightState) {
+              console.log('Adding transition method based on setLightState');
+
+              bridgeInstance.transition = function(lightIds: (string|number)[],
+                                              rgb: [number, number, number],
+                                              transitionTime: number) {
+                console.log('Custom transition called:', { lightIds, rgb, transitionTime });
+                // Convert RGB to XY color space
+                const r = rgb[0], g = rgb[1], b = rgb[2];
+                const X = r * 0.664511 + g * 0.154324 + b * 0.162028;
+                const Y = r * 0.283881 + g * 0.668433 + b * 0.047685;
+                const Z = r * 0.000088 + g * 0.072310 + b * 0.986039;
+                const sum = X + Y + Z;
+                const xy = sum === 0 ? [0.33, 0.33] : [X / sum, Y / sum];
+
+                // Apply to all lights
+                const promises = lightIds.map(lightId =>
+                  this.setLightState(lightId, {
+                    on: true,
+                    bri: Math.round(Math.max(...rgb) * 254),
+                    xy: xy,
+                    transitiontime: Math.round(transitionTime / 100)
+                  })
+                );
+
+                return Promise.all(promises);
+              };
+            }
+
+            // Verify that our methods were added correctly
+            console.log('Bridge methods after enhancement:', {
+              hasStart: typeof bridgeInstance.start === 'function',
+              hasStop: typeof bridgeInstance.stop === 'function',
+              hasTransition: typeof bridgeInstance.transition === 'function'
+            });
+
+            return bridgeInstance;
+          } else if (typeof pheaModule.bridge === 'function') {
+            console.log('Using bridge function');
+            return pheaModule.bridge(options);
+          } else {
+            console.error('No compatible bridge constructor found in phea module');
+            return PheaMock.bridge(options);
+          }
+        } catch (error) {
+          console.error('Error creating bridge:', error);
           return PheaMock.bridge(options);
         }
       },
