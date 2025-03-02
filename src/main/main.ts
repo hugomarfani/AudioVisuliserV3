@@ -694,45 +694,45 @@ const createWindow = async () => {
  * Add event listeners...
  */
 
+app.on('window-all-closed', () => {
+  // Respect the OSX convention of having the application in memory even
+  // after all windows have been closed
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
 
+app.on('before-quit', () => {
+  db.close((err) => {
+    if (err) {
+      console.error('Error closing database:', err);
+    } else {
+      console.log('Database connection closed');
+    }
+  });
+});
 
+app.whenReady()
+  .then(async () => {
+    try {
+      await initDatabase();
+      console.log('✨ Database system ready!');
+      if (mainWindow) {
+        mainWindow.setTitle('App (Database: Connected)');
+      }
+    } catch (error) {
+      console.error('💥 Failed to initialize database:', error);
+      if (mainWindow) {
+        mainWindow.setTitle('App (Database: Error)');
+      }
+    }
 
+    createWindow();
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-});  });    }      console.log('Database connection closed');    } else {      console.error('Error closing database:', err);    if (err) {  db.close((err) => {app.on('before-quit', () => {  .catch(console.log);  })    });      if (mainWindow === null) createWindow();    app.on('activate', () => {    createWindow();    }      }        mainWindow.setTitle('App (Database: Error)');      if (mainWindow) {      console.error('💥 Failed to initialize database:', error);    } catch (error) {      }        mainWindow.setTitle('App (Database: Connected)');      if (mainWindow) {      console.log('✨ Database system ready!');      await initDatabase();    try {  .then(async () => {  .whenReady()app});  }    app.quit();  if (process.platform !== 'darwin') {  // after all windows have been closed  // Respect the OSX convention of having the application in memory evenapp.on('window-all-closed', () => {
+    app.on('activate', () => {
+      // On macOS it's common to re-create a window in the app when the
+      // dock icon is clicked and there are no other windows open.
+      if (mainWindow === null) createWindow();
+    });
+  })
+  .catch(console.log);
