@@ -135,11 +135,31 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
       intervalId = setInterval(() => {
         const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#00FFFF', '#FF00FF'];
         const randomColor = colors[Math.floor(Math.random() * colors.length)];
-        window.electron.ipcRenderer.invoke('hue:setLights', selectedLights, {
-          on: true,
-          rgb: randomColor,
-          brightness: 100
-        }).catch(console.error);
+
+        // Use setLightState directly for each light as a workaround
+        selectedLights.forEach(async (lightId) => {
+          // Parse the hex color to RGB
+          const hex = randomColor.replace('#', '');
+          const r = parseInt(hex.substring(0, 2), 16) / 255;
+          const g = parseInt(hex.substring(2, 4), 16) / 255;
+          const b = parseInt(hex.substring(4, 6), 16) / 255;
+
+          // Convert RGB to XY color space
+          const X = r * 0.664511 + g * 0.154324 + b * 0.162028;
+          const Y = r * 0.283881 + g * 0.668433 + b * 0.047685;
+          const Z = r * 0.000088 + g * 0.072310 + b * 0.986039;
+
+          const sum = X + Y + Z;
+          const x = sum > 0 ? X / sum : 0.33;
+          const y = sum > 0 ? Y / sum : 0.33;
+
+          await window.electron.ipcRenderer.invoke('hue:setLightState', {
+            lightId,
+            on: true,
+            brightness: 100,
+            xy: [x, y]
+          });
+        });
       }, 1000);
     }
 
@@ -457,11 +477,34 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#00FFFF', '#FF00FF'];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
-    window.electron.ipcRenderer.invoke('hue:setLights', selectedLights, {
-      on: true,
-      rgb: randomColor,
-      brightness: 100
-    }).catch(console.error);
+    try {
+      // Use setLightState directly for each light as a workaround
+      selectedLights.forEach(async (lightId) => {
+        // Parse the hex color to RGB
+        const hex = randomColor.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16) / 255;
+        const g = parseInt(hex.substring(2, 4), 16) / 255;
+        const b = parseInt(hex.substring(4, 6), 16) / 255;
+
+        // Convert RGB to XY color space
+        const X = r * 0.664511 + g * 0.154324 + b * 0.162028;
+        const Y = r * 0.283881 + g * 0.668433 + b * 0.047685;
+        const Z = r * 0.000088 + g * 0.072310 + b * 0.986039;
+
+        const sum = X + Y + Z;
+        const x = sum > 0 ? X / sum : 0.33;
+        const y = sum > 0 ? Y / sum : 0.33;
+
+        await window.electron.ipcRenderer.invoke('hue:setLightState', {
+          lightId,
+          on: true,
+          brightness: 100,
+          xy: [x, y]
+        });
+      });
+    } catch (error) {
+      console.error('Error flashing lights:', error);
+    }
   };
 
   const handleDebugFlashToggle = (event: React.ChangeEvent<HTMLInputElement>) => {

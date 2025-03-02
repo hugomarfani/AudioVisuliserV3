@@ -32,13 +32,41 @@ const electronHandler = {
     once(channel: Channels, func: (...args: unknown[]) => void): void {
       ipcRenderer.once(channel, (_event, ...args) => func(...args));
     },
-    invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args),
-    runGemmaTest() {
-      ipcRenderer.send('run-gemma-test');
+    invoke: (channel: string, ...args: any[]): Promise<any> => {
+      const validChannels = [
+        'user:create',
+        'user:getAll',
+        'user:getById',
+        'user:update',
+        'user:delete',
+        'fetch-songs',
+        'add-song',
+        'merge-asset-path',
+        'reload-songs',
+        'download-wav',
+        'run-whisper',
+        'run-gemma',
+        'hue:turnOn',
+        'hue:turnOff',
+        'hue:getLightRids',
+        'hue:discoverBridge',
+        'hue:setManualBridge',
+        'hue:setCredentials',
+        'hue:getLightDetails',
+        'hue:setLightState',
+        'hue:getEntertainmentAreas',
+        'hue:setLights',
+      ];
+      if (validChannels.includes(channel)) {
+        return ipcRenderer.invoke(channel, ...args);
+      }
+      return Promise.reject(new Error(`Unauthorized IPC channel: ${channel}`));
     },
-    // Add the invoke method
-    invoke(channel: Channels, ...args: unknown[]): Promise<unknown> {
-      return ipcRenderer.invoke(channel, ...args);
+    send: (channel: string, ...args: any[]): void => {
+      const validChannels = ['ipc-example', 'run-gemma-test'];
+      if (validChannels.includes(channel)) {
+        ipcRenderer.send(channel, ...args);
+      }
     },
   },
   database: {

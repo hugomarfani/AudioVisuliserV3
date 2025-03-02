@@ -607,6 +607,64 @@ ipcMain.handle('hue:getEntertainmentAreas', async () => {
   }
 });
 
+// New IPC handler to set multiple lights at once
+ipcMain.handle('hue:setLights', async (_event, lightIds: string[], state: { on: boolean, rgb?: string, brightness?: number }) => {
+  console.log(`Setting multiple lights (${lightIds.length}):`, state);
+
+  try {
+    const promises = lightIds.map(async (lightId) => {
+      const url = `https://${currentHueBridgeIP}/clip/v2/resource/light/${lightId}`;
+      const payload: any = {};
+
+      // Add on state if provided
+      if (state.on !== undefined) {
+        payload.on = { on: state.on };
+      }
+
+      // Add brightness if provided
+      if (state.brightness !== undefined) {
+        payload.dimming = { brightness: state.brightness };
+      }
+
+      // Add color if RGB string is provided
+      if (state.rgb) {
+        // Convert hex color to xy
+        const hex = state.rgb.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16) / 255;
+        const g = parseInt(hex.substring(2, 4), 16) / 255;
+        const b = parseInt(hex.substring(4, 6), 16) / 255;
+
+        // Convert RGB to XY color space
+        const X = r * 0.664511 + g * 0.154324 + b * 0.162028;
+        const Y = r * 0.283881 + g * 0.668433 + b * 0.047685;
+        const Z = r * 0.000088 + g * 0.072310 + b * 0.986039;
+
+        const sum = X + Y + Z;
+        const x = sum > 0 ? X / sum : 0.33;
+        const y = sum > 0 ? Y / sum : 0.33;
+
+        payload.color = {
+          xy: { x, y },
+          mode: 'xy'
+        };
+      }
+
+      console.log(`Setting light ${lightId} with payload:`, payload);
+
+      return axios.put(url, payload, {
+        headers: { 'hue-application-key': currentHueUsername },
+        httpsAgent
+      });
+    });
+
+    await Promise.all(promises);
+    return { success: true };
+  } catch (error) {
+    console.error('Error setting lights:', error);
+    throw error;
+  }
+});
+
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
   sourceMapSupport.install();
