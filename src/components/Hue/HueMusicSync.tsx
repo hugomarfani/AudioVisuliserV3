@@ -499,7 +499,7 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
         console.log('🥁 BEAT DETECTED! Energy:', energy);
 
         // On beat detection, immediately flash the lights
-        if (true) {
+        if (connected || hueConnected) {
           // Generate vibrant color for beat flash
           const beatColor = generateBeatColor(dataArray);
           // Send direct command for immediate response
@@ -510,7 +510,7 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
       }
     }
 
-    if (true) {
+    if (connected) {
       // Continue regular light updates
       updateLights(dataArray, isBeat);
     }
