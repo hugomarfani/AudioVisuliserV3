@@ -62,6 +62,9 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
   // Use a state for config so that dependency changes trigger refetch
   const [config, setConfig] = useState(HueService.getConfig());
 
+  // Add state for API stats
+  const [apiStats, setApiStats] = useState<any>(null);
+
   useEffect(() => {
     setConfig(HueService.getConfig());
   }, []);
@@ -340,6 +343,24 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     // Update the ref
     prevVisibleRef.current = isVisible;
   }, [isVisible, isPlaying]);
+
+  // Add a function to fetch API stats periodically
+  useEffect(() => {
+    if (enabled && connected) {
+      const statsInterval = setInterval(() => {
+        const stats = HueService.getApiStats();
+        setApiStats(stats);
+
+        // Auto emergency clear if queues are too large
+        if (stats.queueSizes.regular > 100 || stats.queueSizes.entertainment > 100) {
+          console.warn("Queue sizes extremely large, triggering emergency clear");
+          handleEmergencyClear();
+        }
+      }, 2000);
+
+      return () => clearInterval(statsInterval);
+    }
+  }, [enabled, connected]);
 
   // Cleanup function
   const cleanup = useCallback(() => {
@@ -869,6 +890,19 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
           <li>Lights: {selectedLights.join(', ') || 'None'}</li>
           <li>Last Command: {lastLightCommand || 'None'}</li>
         </Box>
+
+        {/* New API stats section */}
+        {apiStats && (
+          <Box sx={{ mt: 1, borderTop: '1px dashed #ccc', pt: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: '#1565C0' }}>API Usage Stats:</Typography>
+            <Box component="ul" sx={{ m: 0, pl: 2 }}>
+              <li>Entertainment API: {apiStats.entertainment} calls ({apiStats.errors.entertainment} errors)</li>
+              <li>Regular API: {apiStats.regular} calls ({apiStats.errors.regular} errors)</li>
+              <li>Queue sizes: Entertainment: {apiStats.queueSizes.entertainment}, Regular: {apiStats.queueSizes.regular}</li>
+              <li>Uptime: {Math.floor(apiStats.uptime / 60)}m {apiStats.uptime % 60}s</li>
+            </Box>
+          </Box>
+        )}
       </Box>
     );
   };
@@ -887,11 +921,27 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     await HueAnimations.createColorCycleAnimation(1500, 5);
   };
 
-  // Add new reset handler
+  // Add new reset handler with improved feedback
   const handleReset = () => {
     HueService.resetSync();
-    setLastLightCommand("Sync reset");
-    console.log("Hue sync has been reset.");
+    setApiStats(HueService.getApiStats(true)); // Reset stats too
+    setLastLightCommand("Sync reset - all queues cleared");
+    console.log("Hue sync has been reset completely.");
+  };
+
+  // Add new function for emergency clear button
+  const handleEmergencyReset = () => {
+    handleEmergencyClear();
+    // Wait a bit then reset stats
+    setTimeout(() => {
+      setApiStats(HueService.getApiStats(true));
+    }, 500);
+  };
+
+  // Add function to trigger emergency queue clearing
+  const handleEmergencyClear = () => {
+    HueService.emergencyClearQueues();
+    setLastLightCommand("Emergency queue clear executed");
   };
 
   return (
@@ -1116,7 +1166,7 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
             Selected Lights: {selectedLights.length || "(Detecting...)"}
           </Typography>
 
-          {/* Updated button row with multiple animation options - remove light count slider */}
+          {/* Updated button row with emergency clear option */}
           <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
             <Button
               onClick={flashLights}
@@ -1141,10 +1191,22 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
               Color Cycle
             </Button>
 
-            {/* NEW: Reset Sync button */}
+            {/* Reset Sync button */}
             <Button onClick={handleReset} variant="outlined" color="error">
               Reset Sync
             </Button>
+
+            {/* New Emergency Clear button - only show if queues > 10 */}
+            {apiStats && (apiStats.queueSizes.entertainment > 10 || apiStats.queueSizes.regular > 10) && (
+              <Button
+                onClick={handleEmergencyReset}
+                variant="contained"
+                color="error"
+                sx={{ fontWeight: 'bold' }}
+              >
+                EMERGENCY CLEAR
+              </Button>
+            )}
           </Box>
 
           {lastFlashTime && (

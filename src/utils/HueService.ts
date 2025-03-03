@@ -48,6 +48,16 @@ class HueService {
   private processingRegularApiCommands: boolean = false;
   private lightStates: Map<string, any> = new Map(); // Track light states
 
+  // Add monitoring properties
+  private entertainmentApiCount: number = 0;
+  private regularApiCount: number = 0;
+  private entertainmentApiErrors: number = 0;
+  private regularApiErrors: number = 0;
+  private lastMetricsReset: number = Date.now();
+  private isEmergencyClearing: boolean = false;
+  private lastPerformanceLog: number = 0;
+  private performanceLogInterval: number = 30000; // 30 seconds between performance logs
+
   constructor() {
     // Try to load saved config
     this.loadConfig();
@@ -706,8 +716,13 @@ class HueService {
     }
   }
 
-  // COMPLETELY REWRITTEN to guarantee beat commands are processed
+  // COMPLETELY REWRITTEN to guarantee beat commands are processed and FIX DUAL-SENDING
   async sendColorTransition(rgb: [number, number, number], transitionTime: number = 200, forceSend: boolean = false): Promise<void> {
+    // Check if we're in emergency clearing mode
+    if (this.isEmergencyClearing) {
+      return; // Drop all commands during emergency clearing
+    }
+
     // Always prioritize beat commands (forceSend=true)
     if (forceSend) {
       this.beatCommandCounter++;
@@ -731,17 +746,21 @@ class HueService {
           console.log(`🔴 Sending URGENT beat flash via Entertainment API - RGB=${dramaticColor.map(v => v.toFixed(2)).join(',')}`);
 
           // Send the command right away, no queueing
-          await this.bridge.transition(indicesForCommand, dramaticColor, fastTransitionTime)
-            .catch(err => console.error('Error in direct beat transition:', err));
+          await this.bridge.transition(indicesForCommand, dramaticColor, fastTransitionTime);
 
-          // For beats, also try regular API for backup
-          this.sendRegularAPICommandForBeats(dramaticColor).catch(console.error);
-
+          // FIX: Don't send via regular API if entertainment API succeeded!
+          this.entertainmentApiCount++;
           this.entertainmentAPIWorking = true;
-          return;
+
+          // Log performance stats periodically
+          this.logPerformanceMetrics();
+
+          return; // Exit early - we're done!
         } catch (err) {
           console.error('❌ Error sending beat via Entertainment API:', err);
-          // Fallback to regular API
+          this.entertainmentApiErrors++;
+
+          // Only fallback to regular API on failure
           await this.sendRegularAPICommandForBeats(dramaticColor);
           this.entertainmentAPIWorking = false;
         }
@@ -760,9 +779,11 @@ class HueService {
   // New dedicated method just for beat flashes via regular API - enhanced for more dramatic effects
   private async sendRegularAPICommandForBeats(rgb: [number, number, number]): Promise<void> {
     try {
+      this.regularApiCount++;
+
       // If we're shutting down, don't send any more commands
-      if (this.isShuttingDown) {
-        console.log('⚠️ Shutting down - skipping beat command');
+      if (this.isShuttingDown || this.isEmergencyClearing) {
+        console.log('⚠️ Shutting down or emergency clearing - skipping beat command');
         return;
       }
 
@@ -833,6 +854,7 @@ class HueService {
       // Start processing the queue if not already processing
       this.processRegularApiQueue();
     } catch (error) {
+      this.regularApiErrors++;
       console.error('❌ ERROR setting up beat commands via regular API:', error);
     }
   }
@@ -859,7 +881,15 @@ class HueService {
   // Process regular API commands sequentially with rate limiting
   private async processRegularApiQueue(): Promise<void> {
     // Already processing or queue is empty or shutting down
-    if (this.processingRegularApiCommands || this.pendingRegularApiCommands.length === 0 || this.isShuttingDown) {
+    if (this.processingRegularApiCommands || this.pendingRegularApiCommands.length === 0 ||
+        this.isShuttingDown || this.isEmergencyClearing) {
+      return;
+    }
+
+    // Emergency check: If queue gets too large, clear it
+    if (this.pendingRegularApiCommands.length > 150) {
+      console.warn(`⚠️ Regular API queue too large (${this.pendingRegularApiCommands.length}), emergency clearing!`);
+      this.emergencyClearQueues();
       return;
     }
 
@@ -887,9 +917,10 @@ class HueService {
           ...command.state
         });
 
-        // Update last command time
+        // Update last command time and increment counter
         this.lastApiCommandTime = Date.now();
       } catch (error) {
+        this.regularApiErrors++;
         // If we get a 429, wait longer before continuing
         if (error.toString().includes('429')) {
           console.warn(`⚠️ Rate limit hit (429) - pausing API commands for 1 second`);
@@ -1236,6 +1267,16 @@ class HueService {
     this.lastApiCommandTime = 0;
     this.beatCommandCounter = 0;
     this.lastBeatTime = 0;
+
+    // Reset metrics counters as well
+    this.entertainmentApiCount = 0;
+    this.regularApiCount = 0;
+    this.entertainmentApiErrors = 0;
+    this.regularApiErrors = 0;
+    this.lastMetricsReset = Date.now();
+    this.lastPerformanceLog = 0;
+
+    console.log('✅ HueService reset complete');
   }
 
   // ADD a new public testFlash method with dramatic animation
@@ -1394,6 +1435,99 @@ class HueService {
       return Array.from({ length: this.cachedLightIds.length }, (_, i) => i);
     } else {
       return [0, 1, 2]; // Default to first three indices
+    }
+  }
+
+  // Queue color transitions with rate limiting
+  private queueColorTransition(rgb: [number, number, number], transitionTime: number, forceSend: boolean): void {
+    // Skip if emergency clearing
+    if (this.isEmergencyClearing) return;
+
+    // Emergency check: If queue gets too large, clear it
+    if (this.requestQueue.length > 150) {
+      console.warn(`⚠️ Entertainment API queue too large (${this.requestQueue.length}), emergency clearing!`);
+      this.emergencyClearQueues();
+      return;
+    }
+
+    // Add to queue
+    this.requestQueue.push({ rgb, transitionTime, forceSend });
+
+    // If not already processing, start
+    if (!this.processingQueue) {
+      this.processQueue();
+    }
+  }
+
+  // Add an emergency queue clearing mechanism
+  public emergencyClearQueues(): void {
+    // Store queue sizes for logging
+    const regularQueueSize = this.pendingRegularApiCommands.length;
+    const requestQueueSize = this.requestQueue.length;
+
+    // Clear all queues immediately
+    this.requestQueue = [];
+    this.pendingRegularApiCommands = [];
+    this.processingQueue = false;
+    this.processingRegularApiCommands = false;
+
+    // Block new commands temporarily
+    this.isEmergencyClearing = true;
+    setTimeout(() => {
+      this.isEmergencyClearing = false;
+      console.log('✅ Emergency clearing complete, accepting new commands');
+    }, 1000);
+
+    console.log(`⚠️ EMERGENCY QUEUE CLEAR - Discarded ${regularQueueSize} regular and ${requestQueueSize} entertainment commands`);
+  }
+
+  // Add diagnostic metrics reporting
+  public getApiStats(reset: boolean = false): {
+    entertainment: number,
+    regular: number,
+    errors: { entertainment: number, regular: number },
+    queueSizes: { regular: number, entertainment: number },
+    uptime: number // seconds since last reset
+  } {
+    const now = Date.now();
+    const stats = {
+      entertainment: this.entertainmentApiCount,
+      regular: this.regularApiCount,
+      errors: {
+        entertainment: this.entertainmentApiErrors,
+        regular: this.regularApiErrors
+      },
+      queueSizes: {
+        regular: this.pendingRegularApiCommands.length,
+        entertainment: this.requestQueue.length
+      },
+      uptime: Math.round((now - this.lastMetricsReset) / 1000)
+    };
+
+    if (reset) {
+      this.entertainmentApiCount = 0;
+      this.regularApiCount = 0;
+      this.entertainmentApiErrors = 0;
+      this.regularApiErrors = 0;
+      this.lastMetricsReset = now;
+    }
+
+    return stats;
+  }
+
+  // Log performance metrics periodically
+  private logPerformanceMetrics(): void {
+    const now = Date.now();
+    if (now - this.lastPerformanceLog > this.performanceLogInterval) {
+      this.lastPerformanceLog = now;
+      const stats = this.getApiStats();
+      console.log('📊 Hue API Performance Metrics:', {
+        entertainmentCalls: stats.entertainment,
+        regularCalls: stats.regular,
+        errors: stats.errors,
+        queueSizes: stats.queueSizes,
+        uptime: `${Math.floor(stats.uptime / 60)}m ${stats.uptime % 60}s`
+      });
     }
   }
 
