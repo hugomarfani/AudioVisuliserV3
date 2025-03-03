@@ -7,7 +7,11 @@ interface LibraryProps {
 }
 
 const Library: React.FC<LibraryProps> = ({ onClose }) => {
-  const handleAddSong = (data: { url: string; prompt: string; moods: string[] }) => {
+  const handleAddSong = (data: {
+    url: string;
+    prompt: string;
+    moods: string[];
+  }) => {
     console.log('Submitted:', data);
   };
 
@@ -52,7 +56,7 @@ const Library: React.FC<LibraryProps> = ({ onClose }) => {
         >
           &times;
         </button>
-        <h2 style={{ marginBottom: '1rem' }}>Library</h2>
+        <h2 style={{ marginBottom: '1rem' }}>Search for New Song</h2>
         <AddSongForm onSubmit={handleAddSong} />
       </div>
     </div>

@@ -88,7 +88,7 @@ const AddSongForm: React.FC<AddSongFormProps> = ({ onSubmit }) => {
         required
       />
 
-      <select
+      {/* <select
         value={selectedPrompt}
         onChange={(e) => setSelectedPrompt(e.target.value)}
         style={{
@@ -106,7 +106,7 @@ const AddSongForm: React.FC<AddSongFormProps> = ({ onSubmit }) => {
             {prompt.label}
           </option>
         ))}
-      </select>
+      </select> */}
 
       <div>
         <p style={{ marginBottom: '0.5rem', color: colors.grey2 }}>

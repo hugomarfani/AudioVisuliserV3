@@ -5,7 +5,7 @@ import { SongModel } from '../../database/models/Song'; // Import Song type
 import { useSongs } from '../../hooks/useSongs';
 import colors from '../../theme/colors';
 import axios from 'axios';
-import { FaMusic, FaDatabase, FaSync } from 'react-icons/fa'; // Import music notes icon
+import { FaMusic, FaDatabase, FaSync, FaChevronLeft, FaChevronRight } from 'react-icons/fa'; // Import music notes icon
 import Database from '../Database/Database'; // Import Database component
 import Library from '../Library/Library'; // Import Library component
 import SongDetails from '../SongDetails/SongDetails'; // Import SongDetails component
@@ -37,6 +37,8 @@ const SongSelector: React.FC<SongSelectorProps> = ({
   const [isSongDetailsOpen, setIsSongDetailsOpen] = useState(false); // State to manage song details popup
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null); // State to store selected song ID
   const { songs, loading, error, refetch } = useSongs();
+  const [currentPage, setCurrentPage] = useState(1);
+  const songsPerPage = 8;
 
   const toggleFilter = (color: 'Blue' | 'Green' | 'Yellow' | 'Red') => {
     setSelectedFilters((prevFilters) => {
@@ -100,6 +102,29 @@ const SongSelector: React.FC<SongSelectorProps> = ({
     }
   };
 
+  // Calculate pagination values
+  const indexOfLastSong = currentPage * songsPerPage;
+  const indexOfFirstSong = indexOfLastSong - songsPerPage;
+  const currentSongs = filteredSongs.slice(indexOfFirstSong, indexOfLastSong);
+  const totalPages = Math.ceil(filteredSongs.length / songsPerPage);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  };
+
+  // Reset to first page when filters or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedFilters, searchTerm]);
+
   return (
     <div
       style={{
@@ -112,7 +137,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
         position: 'relative', // Add position relative for absolute positioning of the button
       }}
     >
-      {/* Database Button */}
+      {/* Database Button
       <button
         style={{
           position: 'absolute',
@@ -134,11 +159,10 @@ const SongSelector: React.FC<SongSelectorProps> = ({
         <span style={{ marginLeft: '0.5rem' }}>Database</span>
       </button>
       {/* Database Popup */}
-      {isDatabaseOpen && (
+      {/* {isDatabaseOpen && (
         <Database onClose={() => setIsDatabaseOpen(false)} />
-      )}{' '}
-      {/* Render Database component when isDatabaseOpen
-
+      )}{' '} */}
+      {/* Render Database component when isDatabaseOpen */}
       {/* Library Button */}
       <button
         style={{
@@ -158,7 +182,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
         onClick={() => setIsLibraryOpen(true)} // Open library popup on click
       >
         <FaMusic />
-        <span style={{ marginLeft: '0.5rem' }}>Library</span>
+        <span style={{ marginLeft: '0.5rem' }}>New Song</span>
       </button>
       {/* Library Popup */}
       {isLibraryOpen && (
@@ -171,7 +195,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
       )}{' '}
       {/* Render Library component when isLibraryOpen is true */}
       {/* Reload Button */}
-      <button
+      {/* <button
         style={{
           position: 'absolute',
           top: '1rem',
@@ -190,7 +214,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
       >
         <FaSync />
         <span style={{ marginLeft: '0.5rem' }}>Reload</span>
-      </button>
+      </button> */}
       {/* Header with Search */}
       <div
         style={{
@@ -249,10 +273,11 @@ const SongSelector: React.FC<SongSelectorProps> = ({
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
           gap: '1rem',
+          minHeight: '600px', // Fixed height to prevent layout shift
         }}
       >
-        {filteredSongs.length > 0 ? (
-          filteredSongs.map((song) => (
+        {currentSongs.length > 0 ? (
+          currentSongs.map((song) => (
             <SongCard
               useShader = {useShader}
               key={song.dataValues.id}
@@ -277,6 +302,58 @@ const SongSelector: React.FC<SongSelectorProps> = ({
           </div>
         )}
       </div>
+      {/* Pagination Controls */}
+      {filteredSongs.length > songsPerPage && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginTop: '1rem',
+          gap: '1rem',
+        }}>
+          <button
+            onClick={handlePrevPage}
+            disabled={currentPage === 1}
+            style={{
+              backgroundColor: currentPage === 1 ? colors.grey5 : colors.grey2,
+              color: currentPage === 1 ? colors.grey3 : colors.white,
+              border: 'none',
+              borderRadius: '50%',
+              width: '36px',
+              height: '36px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: currentPage === 1 ? 'default' : 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <FaChevronLeft />
+          </button>
+          <span style={{ color: colors.grey2 }}>
+            {currentPage} / {totalPages}
+          </span>
+          <button
+            onClick={handleNextPage}
+            disabled={currentPage === totalPages}
+            style={{
+              backgroundColor: currentPage === totalPages ? colors.grey5 : colors.grey2,
+              color: currentPage === totalPages ? colors.grey3 : colors.white,
+              border: 'none',
+              borderRadius: '50%',
+              width: '36px',
+              height: '36px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: currentPage === totalPages ? 'default' : 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <FaChevronRight />
+          </button>
+        </div>
+      )}
       {/* Song Details Popup */}
       {isSongDetailsOpen && selectedSongId && (
         <SongDetails

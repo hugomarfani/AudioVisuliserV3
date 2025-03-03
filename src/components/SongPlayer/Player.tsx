@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, CSSProperties } from 'react';
+import React, { useState, useRef, useEffect, CSSProperties, forwardRef, useImperativeHandle } from 'react';
 import { AiOutlineForward, AiOutlineBackward } from 'react-icons/ai';
 import { FaPlay, FaPause } from 'react-icons/fa';
 
@@ -9,14 +9,23 @@ interface PlayerProps {
     albumArt: string;
     audioSrc: string;
   };
+  autoPlay?: boolean;
+  onTimeUpdate?: (currentTime: number, duration: number) => void;
 }
 
-const Player: React.FC<PlayerProps> = ({ track }) => {
+const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUpdate }, ref) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [hoverProgress, setHoverProgress] = useState<number | null>(null);
   const [rotation, setRotation] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    play: () => audioRef.current?.play(),
+    pause: () => audioRef.current?.pause(),
+    getCurrentTime: () => audioRef.current?.currentTime || 0,
+    getDuration: () => audioRef.current?.duration || 0,
+  }));
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -26,6 +35,8 @@ const Player: React.FC<PlayerProps> = ({ track }) => {
       // Avoid NaN by using "|| 0"
       const currentProgress = (audio.currentTime / audio.duration) * 100 || 0;
       setProgress(currentProgress);
+      console.log('Audio progress:', currentProgress);
+      onTimeUpdate?.(audio.currentTime, audio.duration);
     };
 
     const handleError = (e: Event) => {
@@ -36,11 +47,20 @@ const Player: React.FC<PlayerProps> = ({ track }) => {
     audio.addEventListener('timeupdate', updateProgress);
     audio.addEventListener('error', handleError);
 
+    // Auto-play when track changes
+    if (autoPlay && track.audioSrc) {
+      audio.play().catch(error => {
+        console.error('Error auto-playing audio:', error);
+        setIsPlaying(false);
+      });
+      setIsPlaying(true); // Set playing state to true when auto-playing
+    }
+
     return () => {
       audio.removeEventListener('timeupdate', updateProgress);
       audio.removeEventListener('error', handleError);
     };
-  }, []);
+  }, [track.audioSrc, autoPlay, onTimeUpdate]);
 
   useEffect(() => {
     let animationFrame: number;
@@ -57,7 +77,10 @@ const Player: React.FC<PlayerProps> = ({ track }) => {
   }, [isPlaying]);
 
   const togglePlayPause = () => {
-    if (!audioRef.current) return;
+    if (!audioRef.current || !track.audioSrc) return;
+    
+    console.log('Toggle play/pause, current state:', isPlaying);
+    
     if (isPlaying) {
       audioRef.current.pause();
     } else {
@@ -232,7 +255,7 @@ const Player: React.FC<PlayerProps> = ({ track }) => {
       </div>
     </div>
   );
-};
+});
 
 const iconButtonStyle: CSSProperties = {
   background: 'none',

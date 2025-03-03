@@ -44,7 +44,7 @@ function SongCard({
     };
     console.log('Navigating to particles with data:', songWithAudio);
     navigate(`/particles/${encodeURIComponent(uri)}`, {
-      state: { songDetails: songWithAudio }
+      state: { songDetails: songWithAudio },
     });
   };
 
@@ -58,7 +58,7 @@ function SongCard({
     };
     console.log('Navigating to aiden with data:', songWithAudio);
     navigate(`/aiden/${encodeURIComponent(uri)}`, {
-      state: { songDetails: songWithAudio }
+      state: { songDetails: songWithAudio },
     });
   };
 
@@ -150,7 +150,7 @@ function SongCard({
         style={{
           position: 'absolute',
           top: '0.5rem',
-          right: '0.5rem',
+          right: '9.5rem',
           backgroundColor: 'transparent',
           border: 'none',
           cursor: 'pointer',

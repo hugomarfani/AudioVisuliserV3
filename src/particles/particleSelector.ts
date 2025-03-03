@@ -1,29 +1,74 @@
 import { particlePhysics, ParticlePhysics } from './particlePhysics';
 
 export class ParticleSelector {
-    private static ParticleMap: Record<string, string[]> = {
-        star: ['star'],
-        bubble: ['bubble'],
-        musicNote: ['musicNote'],
-        heart: ['heart'],
-        snowflake: ['snowflake'],
-        leaves: ['leaves'],
-        butterfly: ['butterfly'],
-        confetti: ['confetti'],
-        raindrop: ['raindrop'],
-        firefly: ['firefly'],
-        balloon: ['balloon'],
-        flower: ['flower'],
-        firework: ['firework'],
-    };
+    private static validParticles = [
+        'star',
+        'bubble',
+        'musicNote',
+        'heart',
+        'snowflake',
+        'snowflakes', // Add common variants
+        'leaves',
+        'butterfly',
+        'confetti',
+        'raindrop',
+        'firefly',
+        'balloon',
+        'flower',
+        'firework',
+        'crown',
+        'animal',
+    ];
 
-    public static getParticlesForMood(mood: string): string[] {
-        const normalizedMood = mood.toLowerCase();
-        return this.ParticleMap[normalizedMood] || ['star', 'bubble', 'musicNote']; // default particles
+    private static normalizeParticleType(type: string): string {
+        // Handle common variations and typos
+        const normalized = type.toLowerCase().trim();
+        const particleMap: { [key: string]: string } = {
+            'snowfaleks': 'snowflake',
+            'snowflakes': 'snowflake',
+            'musicnote': 'musicNote',
+            'music': 'musicNote',
+            'note': 'musicNote',
+            'leaf': 'leaves',
+            // Add more mappings as needed
+        };
+
+        return particleMap[normalized] || normalized;
     }
 
-    public static getRandomParticleType(mood: string): string {
-        const availableTypes = this.getParticlesForMood(mood);
-        return availableTypes[Math.floor(Math.random() * availableTypes.length)];
+    public static validateParticleType(type: string): string {
+        const normalized = this.normalizeParticleType(type);
+        console.log(`Normalizing particle type: ${type} -> ${normalized}`);
+        
+        if (this.validParticles.includes(normalized)) {
+            return normalized;
+        }
+        
+        // If not found, try to find closest match
+        const closest = this.validParticles.find(p => p.includes(normalized) || normalized.includes(p));
+        if (closest) {
+            console.log(`Found closest match for ${normalized}: ${closest}`);
+            return closest;
+        }
+        
+        console.log(`No valid particle type found for: ${type}, using default`);
+        return 'musicNote';
+    }
+
+    public static getRandomParticleFromArray(particles: string[]): string {
+        if (!particles || particles.length === 0) {
+            return 'musicNote';
+        }
+        
+        // Get a random valid particle from the array
+        const validParticles = particles
+            .map(p => this.validateParticleType(p))
+            .filter(p => this.validParticles.includes(p));
+
+        if (validParticles.length === 0) {
+            return 'musicNote';
+        }
+
+        return validParticles[Math.floor(Math.random() * validParticles.length)];
     }
 }

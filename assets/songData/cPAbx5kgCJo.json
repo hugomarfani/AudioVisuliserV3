@@ -16,8 +16,8 @@
   ],
   "createdAt": "2025-02-23T16:48:04.802Z",
   "id": "cPAbx5kgCJo",
-  "images": [],
-  "jacket": "icon.png",
+  "images": ["images/How Far I'll Go/moana.png", "images/How Far I'll Go/moana2.png"],
+  "jacket": "images/How Far I'll Go/moana.png",
   "moods": [],
   "object_prompts": [
     "\n\n* **Song Title:** \"Bohemian Rhapsody\" by Queen\n* **Visual Style:** Art Deco, vibrant colors, geometric shapes, stylized figures\n* **Scene:** A grand opera house, red velvet curtains, ornate chandeliers, a spotlight illuminating the stage\n* **Characters:** Freddie Mercury, Brian May, John Deacon, Roger Taylor, all in flamboyant Art Deco costumes\n* **Action:** Performing the song with dramatic expressions and gestures, Freddie Mercury in a powerful pose, spotlight shining on him\n* **Mood:** Theatrical, dramatic, energetic, powerful\n\nBohemian Rhapsody, Art Deco, vibrant colors, geometric shapes, stylized figures, grand opera house, red velvet curtains, ornate chandeliers, a spotlight illuminating the stage, Freddie Mercury, Brian May, John Deacon, Roger Taylor, flamboyant Art Deco costumes, performing the song with dramatic expressions and gestures, Freddie Mercury in a powerful pose, spotlight shining on him, theatrical, dramatic, energetic, powerful \n\n\n",
@@ -25,7 +25,7 @@
     "\n\n* **Song Title:** \"The Sound of Silence\" by Simon & Garfunkel\n* **Mood:** melancholic, introspective, haunting\n* **Setting:** a foggy, deserted city street at night, streetlights casting long, distorted shadows\n* **Characters:** a lone figure in a long coat, head bowed, walking away from the viewer\n* **Color Palette:** muted tones of blue, gray, and purple, with a hint of orange from the streetlights\n* **Style:** cinematic, film noir, with a touch of surrealism\n\n\nThe Sound of Silence, melancholic, introspective, haunting, a foggy, deserted city street at night, streetlights casting long, distorted shadows, a lone figure in a long coat, head bowed, walking away from the viewer, muted tones of blue, gray, and purple, with a hint of orange from the streetlights, cinematic, film noir, with a touch of surrealism \n"
   ],
   "objects": ["ter", "nd", "land"],
-  "particles": [],
+  "particles": ["raindrops"],
   "status": "Green",
   "title": "Auli'i Cravalho - How Far I'll Go (from Moana/Official Video)",
   "updatedAt": "2025-02-23T16:48:04.802Z",
