@@ -71,13 +71,14 @@ const downloadYoutubeAudio = async (url) => {
 
     // Convert to MP3
     await new Promise((resolve, reject) => {
-      ffmpeg(outputFile)
-        .toFormat('mp3')
-        .on('error', (err) => {
-          reject(new Error(`FFmpeg conversion error: ${err.message}`));
-        })
-        .on('end', resolve)
-        .save(mp3OutputFile);
+      ffmpeg(tempFile)
+      .audioBitrate('320k')
+      .toFormat('mp3')
+      .on('error', (err) => {
+        reject(new Error(`FFmpeg conversion error: ${err.message}`));
+      })
+      .on('end', resolve)
+      .save(mp3OutputFile);
     });
 
     // Cleanup temp file
