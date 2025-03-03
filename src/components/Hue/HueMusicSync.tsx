@@ -789,6 +789,133 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     );
   };
 
+  // Add these test functions
+  const testEntertainmentAPI = async () => {
+    try {
+      // First verify connection
+      if (!connected) {
+        console.log("Not connected. Attempting to connect to Hue...");
+        await connectToHue();
+      }
+
+      if (!connected) {
+        setError("Could not connect to Hue bridge");
+        return;
+      }
+
+      console.log("🧪 TESTING ENTERTAINMENT API");
+
+      // Test sequence to flash several colors via entertainment API
+      const colors: [number, number, number][] = [
+        [1, 0, 0], // Red
+        [0, 1, 0], // Green
+        [0, 0, 1], // Blue
+        [1, 1, 0], // Yellow
+        [1, 0, 1], // Magenta
+      ];
+
+      // Using direct test function in HueService
+      const testResult = await HueService.testTransition();
+
+      if (testResult) {
+        setLastLightCommand("Entertainment API test successful!");
+
+        // Now send a sequence of colors
+        for (const color of colors) {
+          await HueService.sendColorTransition(color, 0, true); // Use forceSend=true for immediate effect
+          await new Promise(resolve => setTimeout(resolve, 300)); // 300ms between colors
+        }
+      } else {
+        setLastLightCommand("Entertainment API test failed - check console");
+        setError("Entertainment API test failed. See debug console for details.");
+      }
+    } catch (error) {
+      console.error("Test error:", error);
+      setError(`Test error: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const verifyAndFixEntertainmentSetup = async () => {
+    try {
+      setError(null);
+      setLastLightCommand("Verifying entertainment setup...");
+
+      // First, check if we're connected
+      if (!connected) {
+        await connectToHue();
+      }
+
+      if (!connected) {
+        setError("Could not connect to Hue bridge");
+        return;
+      }
+
+      // Run the verification function
+      const isValid = await HueService.verifyEntertainmentSetup();
+
+      if (isValid) {
+        setLastLightCommand("Entertainment setup is valid! Running color cycle test.");
+        // Let's also run the test color cycle again for good measure
+        await HueService.testColorCycle();
+      } else {
+        setLastLightCommand("Entertainment setup has issues. See console log for details.");
+        setError("Entertainment setup verification failed. Check the console for diagnostic information.");
+      }
+    } catch (error) {
+      console.error("Verification error:", error);
+      setError(`Verification error: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const testDirectImplementation = async () => {
+    try {
+      setError(null);
+      setLastLightCommand("Testing direct DTLS implementation...");
+
+      // First, ensure we have a config
+      if (!HueService.hasValidConfig()) {
+        setError("No Hue bridge configuration found. Please go to Settings to set up your Hue Bridge.");
+        return;
+      }
+
+      // Run the test implementation
+      const result = await HueService.testDirectImplementation();
+
+      if (result) {
+        setLastLightCommand("Direct DTLS implementation test successful! Check the lights for the test color sequence.");
+      } else {
+        setLastLightCommand("Direct DTLS implementation test failed. See console for details.");
+        setError("Direct DTLS implementation test failed. Check the console for diagnostic information.");
+      }
+    } catch (error) {
+      console.error("Direct implementation test error:", error);
+      setError(`Test error: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const toggleImplementation = async () => {
+    try {
+      setUseDirectDTLS(!useDirectDTLS);
+      setLastLightCommand(`Switching to ${!useDirectDTLS ? 'Direct DTLS' : 'Phea Library'} implementation`);
+
+      // Disconnect current implementation first
+      if (connected) {
+        await disconnectFromHue();
+      }
+
+      // Set which implementation to use
+      HueService.setUseDirectImplementation(!useDirectDTLS);
+
+      // Try to reconnect
+      if (enabled) {
+        await connectToHue();
+      }
+    } catch (error) {
+      console.error("Error toggling implementation:", error);
+      setError(`Toggle error: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
   return (
     <Paper
       sx={{
@@ -1010,14 +1137,40 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
           <Typography sx={{ color: '#555555' }}>
             Selected Lights: {selectedLights.length || "(Detecting...)"}
           </Typography>
-          <Button
-            sx={{ mt: 2 }}
-            onClick={flashLights}
-            color="primary"
-            variant="contained"
-          >
-            Flash Lights Manually
-          </Button>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
+            <Button
+              onClick={flashLights}
+              color="primary"
+              variant="contained"
+            >
+              Flash Lights Manually
+            </Button>
+            <Button
+              onClick={testEntertainmentAPI}
+              color="secondary"
+              variant="contained"
+              disabled={!HueService.hasValidConfig()}
+            >
+              Test Entertainment API
+            </Button>
+            <Button
+              onClick={verifyAndFixEntertainmentSetup}
+              color="warning"
+              variant="contained"
+              disabled={!HueService.hasValidConfig()}
+            >
+              Verify & Fix Setup
+            </Button>
+            <Button
+              onClick={testDirectImplementation}
+              color="success"
+              variant="contained"
+              disabled={!HueService.hasValidConfig()}
+              sx={{ mt: 1 }}
+            >
+              Test Direct DTLS Implementation
+            </Button>
+          </Box>
         </Box>
       ) : (
         <Typography sx={{ color: '#555555' }}>
@@ -1034,6 +1187,18 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
           />
         }
         label="Enable Debug Light Flashing"
+        sx={{ mb: 1, display: 'block' }}
+      />
+
+      <FormControlLabel
+        control={
+          <Switch
+            checked={useDirectDTLS}
+            onChange={toggleImplementation}
+            color="secondary"
+          />
+        }
+        label="Use Direct DTLS Implementation"
         sx={{ mb: 1, display: 'block' }}
       />
     </Paper>
