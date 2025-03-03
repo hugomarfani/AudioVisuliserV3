@@ -3,6 +3,7 @@ import { FaInfoCircle } from 'react-icons/fa';
 import colors from '../../theme/colors';
 import { SongModel } from '../../database/models/Song';
 import { useNavigate } from 'react-router-dom';
+import { encode } from 'node:punycode';
 
 type SongCardProps = {
   uri: string;
@@ -42,8 +43,8 @@ function SongCard({
       audioSrc: songDetails.audioSrc || '',
     };
     console.log('Navigating to particles with data:', songWithAudio);
-    navigate(`/particles/${encodeURIComponent(uri)}`, { 
-      state: { songDetails: songWithAudio } 
+    navigate(`/particles/${encodeURIComponent(uri)}`, {
+      state: { songDetails: songWithAudio }
     });
   };
 
@@ -56,8 +57,8 @@ function SongCard({
       audioSrc: songDetails.audioSrc || '',
     };
     console.log('Navigating to aiden with data:', songWithAudio);
-    navigate(`/aiden/${encodeURIComponent(uri)}`, { 
-      state: { songDetails: songWithAudio } 
+    navigate(`/aiden/${encodeURIComponent(uri)}`, {
+      state: { songDetails: songWithAudio }
     });
   };
 
@@ -201,7 +202,7 @@ function SongCard({
           }}
           onClick={handleAidenClick}
         >
-          Aiden
+          Shader
         </button>
       </div>
     </div>

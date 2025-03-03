@@ -3,27 +3,23 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import * as THREE from 'three';
 
 import texture from './Assets/bg.jpg';
-import t1 from './Assets/Test.png'
+import t1 from './Assets/texture.png'
 import { lerp } from 'three/src/math/MathUtils';
-import frozenLetItGo from '../../assets/audio/frozen_let_it_go.mp3'
-import YukiGuni from '../../assets/audio/Yorushika.mp3'
-import LK from '../../assets/audio/25QyCxVkXwQ.wav'
+
+import LIG from '../../assets/audio/frozen_let_it_go.wav'
+
 import { AiOutlineForward, AiOutlineBackward } from 'react-icons/ai';
 import { FaPlay, FaPause } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 
 const songList =
   [
-    { "title": "Let it go",
-      "artist": "Idina Menzel",
-      "albumArt": "https://cdn-images.dzcdn.net/images/cover/f669aa7623ad8af5fbeb5a196346013a/500x500.jpg",
-      "path": "../../assets/audio/frozen_let_it_go.mp3"
+    { title: "Let it go",
+      artist: "Idina Menzel",
+      albumArt: "https://cdn-images.dzcdn.net/images/cover/f669aa7623ad8af5fbeb5a196346013a/500x500.jpg",
+      path: LIG,
+      background: texture
     },
-    {
-      "title": "The Lion King - Can You Feel The Love Tonight",
-      "artist": "Elton John",
-      "albumArt": "https://github.com/hugomarfani/AudioVisuliserV3/blob/Bug-Fix/assets/images/theLionKing.png",
-      "path": "../../assets/audio/25QyCxVkXwQ.wav"
-    }
   ]
 
 const loadImage = path => {
@@ -40,11 +36,13 @@ class ShaderVisuals extends Component {
   constructor(props) {
     super(props);
     this.requestID = null;
-    this.track = songList[1];
+    this.track = songList[0];
     console.log(this.track)
     this.mountRef = React.createRef();
     this.audio = null;
     this.clock = new THREE.Clock();
+
+    console.log(location.state?.songDetails)
 
     this.state = {
       isPlaying: false,
@@ -59,6 +57,11 @@ class ShaderVisuals extends Component {
     this.handleProgressMouseMove = this.handleProgressMouseMove.bind(this);
     this.handleProgressClick = this.handleProgressClick.bind(this);
     this.handleProgressMouseLeave = this.handleProgressMouseLeave.bind(this);
+    this.handleBack = this.handleBack.bind(this)
+  }
+
+  handleBack() {
+    // setTimeout(() => this.state.navigate('/'), 300);
   }
 
   handleProgressMouseLeave() {
@@ -139,7 +142,7 @@ class ShaderVisuals extends Component {
 
     // Load background texture
     const loader = new THREE.TextureLoader();
-    loader.load(texture, texture => {
+    loader.load((this.track.background), texture => {
       this.scene.background = texture;
     });
 
@@ -170,7 +173,7 @@ class ShaderVisuals extends Component {
       this.setupResize();
       this.animate(); // Start the animation loop
     });
-    // console.log("test")
+    console.log(this.renderer)
   }
 
   async getPixelDataFromImage(url) {
@@ -363,7 +366,7 @@ class ShaderVisuals extends Component {
 
     const sound = new THREE.Audio(listeners);
     const audioLoader = new THREE.AudioLoader();
-    audioLoader.load(this.track.path, buffer => {
+    audioLoader.load('../../assets/audio/frozen_let_it_go.wav', buffer => {
       sound.setBuffer(buffer);
       sound.setLoop(false);
       sound.setVolume(0.5);
@@ -483,12 +486,12 @@ class ShaderVisuals extends Component {
     this.updateRotation();
     if(this.audio && this.audio.isPlaying){
       this.updateProgress();
-      // console.log(this.state.progress)
       // console.log(this.clickProgress, this.audio.buffer.duration, this.audio.offset);
     };
   };
 
   componentWillUnmount() {
+    console.log("unmount")
     // Cancel the animation frame if it's running
     cancelAnimationFrame(this.requestID);
     // Remove Three.js canvas
@@ -506,159 +509,175 @@ class ShaderVisuals extends Component {
   render() {
     return (
       <>
-        <div
-          ref={this.mountRef}
-          style={{
-            width: '100%',
-            height: '100vh',
-            overflow: 'hidden',
-            margin: 0,
-            padding: 0
-          }}
-        />
+      {/* BACK BUTTON */}
+      <Link to="/"
+        style={{
+          position: 'fixed',
+          top: '20px',
+          left: '20px',
+          zIndex: 999,
+          padding: '8px 18px',
+          borderRadius: '8px',
+          border: 'none',
+          cursor: 'pointer',
+          backgroundColor: '#fff',
+          boxShadow: '0 2px 5px rgba(0, 0, 0, 0.2)',
+          color: 'black'
+        }}>
+          Back
+      </Link>
 
-        <div
+      {/* MAIN CONTENT */}
+      <div
+        ref={this.mountRef}
+        style={{
+          width: '100%',
+          height: '100vh',
+          overflow: 'hidden',
+          margin: 0,
+          padding: 0
+        }}
+      />
+
+      <div
         style={{
           position: 'fixed',
           bottom: 0,
           left: 0,
           width: '100%',
           display: 'flex',
-
-          // The height will shrink as the viewport shrinks:
           maxHeight: '15vh',  // max is 15% of the viewport height
-          minHeight: '50px',  // but never go below 50px
-
+          minHeight: '50px',  // never go below 50px
           justifyContent: 'center',
           padding: '10px',
           transition: 'all 0.3s ease-in-out',
           zIndex: 2
         }}
+      >
+        {/* ------- Player Controller -------- */}
+        <div
+          style={{
+            minHeight: '10vh',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: '2rem 0',
+          }}
         >
-          {/* ------- Player Controller -------- */}
+          {/* Pill-shaped player container */}
           <div
             style={{
-              minHeight: '10vh',
               display: 'flex',
-              justifyContent: 'center',
               alignItems: 'center',
-              padding: '2rem 0',
+              background: '#fff',
+              borderRadius: '999px',
+              width: '650px',
+              height: '100px',
+              boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+              position: 'relative',
+              overflow: 'hidden',
+              padding: '0 1.5rem',
+              paddingLeft: '100px', // add padding to the left to accommodate album art
             }}
           >
-            {/* Pill-shaped player container */}
+            {/* Album art */}
             <div
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                background: '#fff',
-                borderRadius: '999px',
-                width: '650px',
-                height: '100px',
-                boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
-                position: 'relative',
+                width: '80px',
+                height: '80px',
+                borderRadius: '50%',
                 overflow: 'hidden',
-                padding: '0 1.5rem',
-                paddingLeft: '100px', // add padding to the left to accommodate album art
+                marginRight: '1rem',
+                position: 'absolute',
+                top: '10px',
+                left: '10px',
+                transform: `rotate(${this.state.rotation}deg)`,
+                transition: this.isPlaying ? 'none' : 'transform 0.1s linear',
               }}
             >
-              {/* Album art */}
-              <div
-                style={{
-                  width: '80px', // increased width
-                  height: '80px', // increased height
-                  borderRadius: '50%',
-                  overflow: 'hidden',
-                  marginRight: '1rem',
-                  position: 'absolute', // position absolute to fill the corner
-                  top: '10px', // adjust top position
-                  left: '10px', // adjust left position
-                  transform: `rotate(${this.state.rotation}deg)`,
-                  transition: this.isPlaying ? 'none' : 'transform 0.1s linear',
-                }}
-              >
-                <img
-                  src={this.track.albumArt}
-                  alt={this.track.title}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
+              <img
+                src={this.track.albumArt}
+                alt={this.track.title}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
+
+            {/* Track info and progress bar side by side */}
+            <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+              {/* Title + Artist */}
+              <div style={{ marginBottom: '0.5rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 'bold' }}>
+                  {this.track.title}
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.875rem', color: '#555' }}>
+                  {this.track.artist}
+                </p>
               </div>
 
-              {/* Track info and progress bar side by side */}
-              <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-                {/* Title + Artist (top) */}
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 'bold' }}>
-                    {this.track.title}
-                  </h3>
-                  <p style={{ margin: 0, fontSize: '0.875rem', color: '#555' }}>
-                    {this.track.artist}
-                  </p>
-                </div>
-
-                {/* Progress bar (bottom) */}
+              {/* Progress bar */}
+              <div
+                style={{
+                  height: '8px',
+                  borderRadius: '4px',
+                  background: '#e0e0e0',
+                  position: 'relative',
+                  cursor: 'pointer',
+                }}
+                onClick={this.handleProgressClick}
+                onMouseMove={this.handleProgressMouseMove}
+                onMouseLeave={this.handleProgressMouseLeave}
+              >
                 <div
                   style={{
-                    height: '8px',
+                    height: '100%',
+                    width: `${this.state.progress}%`,
+                    background: '#000',
                     borderRadius: '4px',
-                    background: '#e0e0e0',
-                    position: 'relative',
-                    cursor: 'pointer', // add cursor pointer to indicate interactivity
+                    transition: 'width 0.1s linear',
                   }}
-                  onClick={this.handleProgressClick} // add onClick event
-                  onMouseMove={this.handleProgressMouseMove} // add onMouseMove event
-                  onMouseLeave={this.handleProgressMouseLeave} // add onMouseLeave event
-                >
+                />
+                {this.state.hoverProgress !== null && (
                   <div
                     style={{
                       height: '100%',
-                      width: `${this.state.progress}%`,
-                      background: '#000', // pick any colour you like
+                      width: `${this.state.hoverProgress}%`,
+                      background: 'rgba(85, 85, 85, 0.3)',
                       borderRadius: '4px',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      pointerEvents: 'none',
                       transition: 'width 0.1s linear',
                     }}
                   />
-                  {this.state.hoverProgress !== null && (
-                    <div
-                      style={{
-                        height: '100%',
-                        width: `${this.state.hoverProgress}%`,
-                        background: 'rgba(85, 85, 85, 0.3)', // ghost bar color
-                        borderRadius: '4px',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        pointerEvents: 'none', // make sure it doesn't interfere with clicks
-                        transition: 'width 0.1s linear',
-                      }}
-                    />
-                  )}
-                </div>
+                )}
               </div>
+            </div>
 
-              {/* Playback controls */}
-              <div
-                style={{
-                  marginLeft: 'auto',
-                  display: 'flex',
-                  alignItems: 'center',
-                  marginRight: '0.5rem',
-                }}
-              >
-                <button  style={iconButtonStyle}>
-                  <AiOutlineBackward />
-                </button>
-                <button onClick={this.togglePlayPause} style={iconButtonStyle}>
-                  {this.state.isPlaying ? <FaPause /> : <FaPlay />}
-                </button>
-                <button style={iconButtonStyle}>
-                  <AiOutlineForward />
-                </button>
-                <button style={iconButtonStyle}>Options</button>
-              </div>
+            {/* Playback controls */}
+            <div
+              style={{
+                marginLeft: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                marginRight: '0.5rem',
+              }}
+            >
+              <button style={iconButtonStyle}>
+                <AiOutlineBackward />
+              </button>
+              <button onClick={this.togglePlayPause} style={iconButtonStyle}>
+                {this.state.isPlaying ? <FaPause /> : <FaPlay />}
+              </button>
+              <button style={iconButtonStyle}>
+                <AiOutlineForward />
+              </button>
+              <button style={iconButtonStyle}>Options</button>
             </div>
           </div>
         </div>
-        </>
+      </div>
+    </>
     );
   }
 }

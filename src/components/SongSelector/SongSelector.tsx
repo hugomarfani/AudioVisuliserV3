@@ -13,6 +13,7 @@ import SongDetails from '../SongDetails/SongDetails'; // Import SongDetails comp
 interface SongSelectorProps {
   onTrackSelect: (uri: string) => void;
   accessToken: string;
+  useShader: boolean;
 }
 
 interface Device {
@@ -21,6 +22,7 @@ interface Device {
 }
 
 const SongSelector: React.FC<SongSelectorProps> = ({
+  useShader,
   onTrackSelect,
   accessToken,
 }) => {
@@ -252,6 +254,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
         {filteredSongs.length > 0 ? (
           filteredSongs.map((song) => (
             <SongCard
+              useShader = {useShader}
               key={song.dataValues.id}
               uri={song.dataValues.id}
               songDetails={song.dataValues}
