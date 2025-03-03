@@ -46,6 +46,7 @@ const downloadYoutubeAudio = async (url) => {
   // const timestamp = new Date().getTime();
   const tempFile = path.join(downloadsPath, `temp_${videoId}.m4a`);
   const outputFile = path.join(downloadsPath, `${videoId}.wav`);
+  const mp3OutputFile = path.join(downloadsPath, `${videoId}.mp3`);
 
   try {
     // Download audio
@@ -66,6 +67,17 @@ const downloadYoutubeAudio = async (url) => {
         })
         .on('end', resolve)
         .save(outputFile);
+    });
+
+    // Convert to MP3
+    await new Promise((resolve, reject) => {
+      ffmpeg(outputFile)
+        .toFormat('mp3')
+        .on('error', (err) => {
+          reject(new Error(`FFmpeg conversion error: ${err.message}`));
+        })
+        .on('end', resolve)
+        .save(mp3OutputFile);
     });
 
     // Cleanup temp file

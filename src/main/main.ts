@@ -136,7 +136,7 @@ ipcMain.handle('download-wav', async (_, url) => {
       id: id,
       title: title,
       uploader: artist,
-      audioPath: 'audio/' + id + '.wav',
+      audioPath: 'audio/' + id + '.mp3',
       jacket: 'icon.png',
       images: [],
       moods: [],
