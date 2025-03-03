@@ -28,7 +28,7 @@
     "\n\n* **Song Title:** \"Bohemian Rhapsody\" by Queen\n* **Visual Style:** Art Deco, vibrant colors, geometric shapes\n* **Scene:** A grand opera house, red velvet curtains, ornate chandeliers, a spotlight illuminating a single figure on stage\n* **Figure:** Freddie Mercury, wearing a white sequined suit, microphone in hand, singing with passion and intensity\n* **Atmosphere:** Dramatic, theatrical, magical, otherworldly\n\nBohemian Rhapsody, Art Deco, vibrant colors, geometric shapes, grand opera house, red velvet curtains, ornate chandeliers, a spotlight illuminating a single figure on stage, Freddie Mercury, wearing a white sequined suit, microphone in hand, singing with passion and intensity, dramatic, theatrical, magical, otherworldly \n\n\n"
   ],
   "objects": ["twilight$", "king$", "history$"],
-  "particles": [],
+  "particles": ["hearts"],
   "status": "Yellow",
   "title": "The Lion King - Can You Feel The Love Tonight",
   "updatedAt": "2025-02-24T17:28:03.087Z",

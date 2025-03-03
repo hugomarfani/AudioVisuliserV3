@@ -35,7 +35,7 @@
     "\n\n* **Song Title:** \"The Sound of Silence\" by Simon & Garfunkel\n* **Style:** Surreal, dreamlike, psychedelic\n* **Color Palette:** Muted tones, dusty blues, faded oranges, hints of purple\n* **Composition:** Two figures, silhouetted against a swirling, abstract background, holding hands\n* **Mood:** Melancholy, introspective, yearning\n* **Details:** One figure wears a long, flowing robe, the other a simple, worn jacket. The background features swirling patterns reminiscent of smoke or clouds, with faint, glowing orbs scattered throughout.\n\n\nThe Sound of Silence, surreal, dreamlike, psychedelic, muted tones, dusty blues, faded oranges, hints of purple, two figures, silhouetted against a swirling, abstract background, holding hands, melancholy, introspective, yearning, one figure wears a long, flowing robe, the other a simple, worn jacket, the background features swirling patterns reminiscent of smoke or clouds, with faint, glowing orbs scattered throughout. \n"
   ],
   "objects": ["Frozen fractals$", "Storm$", "Kingdom$"],
-  "particles": [],
+  "particles": ["snowflakes"],
   "status": "Red",
   "title": "FROZEN | Let It Go Sing-along | Official Disney UK",
   "updatedAt": "2025-02-24T17:17:00.569Z",

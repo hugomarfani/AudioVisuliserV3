@@ -31,7 +31,7 @@
     "\n\n* **Song Title:** \"The Sound of Silence\" by Simon & Garfunkel\n* **Mood:** melancholic, introspective, haunting\n* **Setting:** a foggy, deserted city street at night, streetlights casting long, distorted shadows\n* **Characters:** a lone figure in a long coat, walking away from the viewer, head bowed\n* **Color Palette:** muted tones of blue, gray, and purple, with a hint of orange from the streetlights\n* **Style:** cinematic, film noir, with a focus on atmosphere and mood\n\nThe Sound of Silence, melancholic, introspective, haunting, a foggy, deserted city street at night, streetlights casting long, distorted shadows, a lone figure in a long coat, walking away from the viewer, head bowed, muted tones of blue, gray, and purple, with a hint of orange from the streetlights, cinematic, film noir, with a focus on atmosphere and mood \n\n\n"
   ],
   "objects": ["board$", "heart$", "sea$"],
-  "particles": [],
+  "particles": ["crowns"],
   "status": "Green",
   "title": "I Just Can't Wait to Be King (from The Lion King)",
   "updatedAt": "2025-02-24T17:26:31.827Z",

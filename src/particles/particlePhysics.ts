@@ -5,6 +5,13 @@ import musicNote2 from '../../assets/particles/musicNotes/musicNote2.png';
 import bubble1 from '../../assets/particles/bubbles/bubbles1.png';
 import star1 from '../../assets/particles/stars/star1.png';
 import star2 from '../../assets/particles/stars/star2.png';
+import crown1 from '../../assets/particles/crowns/crown1.png';
+import animal1 from '../../assets/particles/animals/animal1.png';
+import animal2 from '../../assets/particles/animals/animal2.png';
+import animal3 from '../../assets/particles/animals/animal3.png';
+import animal4 from '../../assets/particles/animals/animal4.png';
+import animal5 from '../../assets/particles/animals/animal5.png';
+import animal6 from '../../assets/particles/animals/animal6.png';
 
 
 export interface ParticlePhysics {
@@ -130,7 +137,28 @@ export const particlePhysics: Record<string, ParticlePhysics> = {
     glow: true,
     images: [defaultParticle], // Replace with actual firework images
     moods: ['celebratory', 'festive', 'energetic']
+  },
+  crown: {
+    name: "crown",
+    weight: 0.5,
+    gravity: 0.1,
+    bounce: 0.4,
+    airResistance: 0.02,
+    lifespan: 5000,
+    images: [crown1],
+    moods: ['royal', 'festive', 'celebratory']
+  },
+  animal: {
+    name: "animal",
+    weight: 1.0,
+    gravity: 0.15,
+    bounce: 0.6,
+    airResistance: 0.01,
+    lifespan: 5000,
+    images: [animal1, animal2, animal3, animal4, animal5, animal6],
+    moods: ['happy', 'energetic']
   }
+  
 };
 
 // Function to get a random image for a given particle type
@@ -143,15 +171,17 @@ export const getRandomParticleImage = async (type: string): Promise<string> => {
         star: { dir: 'stars', count: 2 },
         bubble: { dir: 'bubbles', count: 1 },
         snowflake: { dir: 'snowflakes', count: 1 },
-        heart: { dir: 'hearts', count: 1 },
+        heart: { dir: 'hearts', count: 2},
         leaves: { dir: 'leaves', count: 1 },
         butterfly: { dir: 'butterflies', count: 1 },
         confetti: { dir: 'confetti', count: 1 },
         raindrop: { dir: 'raindrops', count: 1 },
         firefly: { dir: 'fireflies', count: 1 },
-        balloon: { dir: 'balloons', count: 1 },
+        balloon: { dir: 'balloons', count: 2},
         flower: { dir: 'flowers', count: 1 },
         firework: { dir: 'fireworks', count: 1 },
+        crown: { dir: 'crowns', count: 1 },
+        animal: { dir: 'animals', count: 6 }
     };
 
     const config = particleConfig[type] || particleConfig.musicNote;
@@ -160,7 +190,7 @@ export const getRandomParticleImage = async (type: string): Promise<string> => {
     const imageNumber = Math.floor(Math.random() * config.count) + 1;
     
     // Construct the relative path
-    const imageName = `${type}${imageNumber}.png`;
+    const imageName = type === 'bubble' ? 'bubbles1.png' : `${type}${imageNumber}.png`;
     const relativePath = `particles/${config.dir}/${imageName}`;
     
     try {

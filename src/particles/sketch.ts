@@ -41,7 +41,7 @@ const sketch = (p: p5) => {
     // Add window resize handler
     window.addEventListener('resize', () => {
       p.resizeCanvas(window.innerWidth, window.innerHeight);
-    });
+    }); 
   };
 
   p.draw = () => {

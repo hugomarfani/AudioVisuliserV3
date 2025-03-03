@@ -98,9 +98,18 @@ class Particle {
   }
 
   isDead() {
-    // Remove particles when they go off screen vertically or expire
-    return this.lifespan <= 0 || 
-           this.pos.y > this.p.height + 30; // +30 to account for particle size
+    const physics = particlePhysics[this.type] || particlePhysics["musicNote"];
+    
+    // Check if particle has expired based on lifespan
+    if (this.lifespan <= 0) return true;
+    
+    // For particles with negative gravity (like balloons), check top of screen
+    if (physics.gravity < 0) {
+      return this.pos.y < -30; // -30 to account for particle size
+    }
+    
+    // For regular particles, check bottom of screen
+    return this.pos.y > this.p.height + 30;
   }
 
   handleMouseCollision(mouseX: number, mouseY: number, mouseVelX: number, mouseVelY: number) {
