@@ -45,7 +45,7 @@ class ShaderVisuals extends Component {
     console.log(location.state?.songDetails)
 
     this.state = {
-      isPlaying: false,
+      isPlaying: true,
       rotation: 0,
       progress: 0,
       hoverProgress: 0,
@@ -370,6 +370,7 @@ class ShaderVisuals extends Component {
       sound.setBuffer(buffer);
       sound.setLoop(false);
       sound.setVolume(0.5);
+      sound.play()
       this.audio = sound;
     });
     this.analyser = new THREE.AudioAnalyser(sound, 32);
@@ -523,7 +524,12 @@ class ShaderVisuals extends Component {
           backgroundColor: '#fff',
           boxShadow: '0 2px 5px rgba(0, 0, 0, 0.2)',
           color: 'black'
-        }}>
+        }}
+        onClick={() => {
+          this.audio.stop();
+          this.audio = null}
+          }>
+
           Back
       </Link>
 
