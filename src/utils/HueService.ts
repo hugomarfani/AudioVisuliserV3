@@ -740,22 +740,60 @@ class HueService {
       // For beats, bypass the queue and send immediately
       if (this.isConnected && this.useEntertainmentMode && this.bridge) {
         try {
+          // NEW: Enhanced direct communication approach
           const fastTransitionTime = 0;
-          let indicesForCommand: number[] = this.getIndicesForCommand();
+          const indicesForCommand = this.getIndicesForCommand();
 
           console.log(`🔴 Sending URGENT beat flash via Entertainment API - RGB=${dramaticColor.map(v => v.toFixed(2)).join(',')}`);
 
-          // Send the command right away, no queueing
-          await this.bridge.transition(indicesForCommand, dramaticColor, fastTransitionTime);
+          // Try multiple methods to ensure command gets through
+          let success = false;
 
-          // FIX: Don't send via regular API if entertainment API succeeded!
-          this.entertainmentApiCount++;
-          this.entertainmentAPIWorking = true;
+          // First try standard transition method
+          if (typeof this.bridge.transition === 'function') {
+            try {
+              await this.bridge.transition(indicesForCommand, dramaticColor, fastTransitionTime);
+              success = true;
+            } catch (err) {
+              console.warn('Standard transition failed:', err);
+            }
+          }
 
-          // Log performance stats periodically
-          this.logPerformanceMetrics();
+          // If standard approach failed, try direct channel RGB update
+          if (!success && typeof this.bridge.setChannelRGB === 'function') {
+            try {
+              console.log('Falling back to direct setChannelRGB');
+              for (const idx of indicesForCommand) {
+                this.bridge.setChannelRGB(idx, dramaticColor[0], dramaticColor[1], dramaticColor[2]);
+              }
+              success = true;
+            } catch (err) {
+              console.warn('setChannelRGB failed:', err);
+            }
+          }
 
-          return; // Exit early - we're done!
+          // If both methods failed, try updateLightState if available
+          if (!success && typeof this.bridge.updateLightState === 'function') {
+            try {
+              console.log('Falling back to updateLightState');
+              for (const idx of indicesForCommand) {
+                this.bridge.updateLightState(idx, dramaticColor);
+              }
+              success = true;
+            } catch (err) {
+              console.warn('updateLightState failed:', err);
+            }
+          }
+
+          if (success) {
+            // Track success and don't fall back to regular API
+            this.entertainmentApiCount++;
+            this.entertainmentAPIWorking = true;
+            this.logPerformanceMetrics();
+            return; // Exit early - we're done!
+          } else {
+            throw new Error('All entertainment API methods failed');
+          }
         } catch (err) {
           console.error('❌ Error sending beat via Entertainment API:', err);
           this.entertainmentApiErrors++;

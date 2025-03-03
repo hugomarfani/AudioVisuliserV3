@@ -19,6 +19,7 @@ import { useHue } from '../../context/HueContext';
 import HueMusicVisualizer from './HueMusicVisualizer';
 import './HueMusicVisualStyles.css';
 import HueAnimations from '../../utils/HueAnimations';
+import { testEntertainmentConnection, runColorSequence } from '../../utils/HueDirectTest';
 
 interface HueMusicSyncProps {
   audioRef?: React.RefObject<HTMLAudioElement>;
@@ -64,6 +65,10 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
 
   // Add state for API stats
   const [apiStats, setApiStats] = useState<any>(null);
+
+  // Add state for test results
+  const [testResult, setTestResult] = useState<string | null>(null);
+  const [testingConnection, setTestingConnection] = useState(false);
 
   useEffect(() => {
     setConfig(HueService.getConfig());
@@ -944,6 +949,86 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     setLastLightCommand("Emergency queue clear executed");
   };
 
+  // Add a direct test function
+  const handleTestConnection = async () => {
+    setTestingConnection(true);
+    setTestResult("Testing Entertainment API connection...");
+    try {
+      const result = await testEntertainmentConnection();
+      if (result.success) {
+        setTestResult(`✅ Entertainment API connection successful! ${JSON.stringify(result.details)}`);
+      } else {
+        setTestResult(`❌ Entertainment API test failed: ${result.error}`);
+      }
+    } catch (error) {
+      setTestResult(`❌ Error during test: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+  // Add a color sequence test
+  const handleRunColorSequence = async () => {
+    setTestingConnection(true);
+    setTestResult("Running color sequence test...");
+    try {
+      const success = await runColorSequence();
+      setTestResult(success ?
+        "✅ Color sequence completed successfully!" :
+        "❌ Color sequence test failed");
+    } catch (error) {
+      setTestResult(`❌ Error during color sequence: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+  // Add the test section to the UI, right before the renderDebugInfo
+  const renderTestPanel = () => {
+    if (!enabled) return null;
+
+    return (
+      <Box sx={{ mt: 2, p: 2, borderRadius: 1, bgcolor: '#fff3cd', fontSize: '0.75rem' }}>
+        <Typography variant="subtitle2" sx={{ color: '#856404', mb: 1 }}>Entertainment API Tests:</Typography>
+        <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+          <Button
+            variant="contained"
+            size="small"
+            onClick={handleTestConnection}
+            disabled={testingConnection}
+            sx={{ fontSize: '0.7rem' }}
+          >
+            Test Connection
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleRunColorSequence}
+            disabled={testingConnection}
+            sx={{ fontSize: '0.7rem' }}
+          >
+            Run Color Sequence
+          </Button>
+        </Box>
+        {testingConnection && <CircularProgress size={16} sx={{ mr: 1 }} />}
+        {testResult && (
+          <Typography
+            variant="body2"
+            sx={{
+              whiteSpace: 'pre-wrap',
+              fontSize: '0.7rem',
+              maxHeight: '100px',
+              overflowY: 'auto',
+              mt: 1
+            }}
+          >
+            {testResult}
+          </Typography>
+        )}
+      </Box>
+    );
+  };
+
   return (
     <Paper
       sx={{
@@ -1151,6 +1236,9 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
           </Alert>
         </Box>
       )}
+
+      {/* Add the test panel before debug info */}
+      {renderTestPanel()}
 
       {/* Add debug info component before the divider */}
       {renderDebugInfo()}
