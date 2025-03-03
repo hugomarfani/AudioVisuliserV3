@@ -18,8 +18,6 @@ import {
 import { useHue } from '../../context/HueContext';
 import HueMusicVisualizer from './HueMusicVisualizer';
 import './HueMusicVisualStyles.css';
-import HueAnimations from '../../utils/HueAnimations';
-import { testEntertainmentConnection, runColorSequence } from '../../utils/HueDirectTest';
 
 interface HueMusicSyncProps {
   audioRef?: React.RefObject<HTMLAudioElement>;
@@ -56,19 +54,8 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
   // Add debug state to show more info
   const [lastLightCommand, setLastLightCommand] = useState<string>("");
 
-  // Add new state variables for additional debug options
-  const [lastFlashTime, setLastFlashTime] = useState<string>('');
-  const [flashColor, setFlashColor] = useState<[number, number, number]>([1, 0, 0]); // Default red
-
   // Use a state for config so that dependency changes trigger refetch
   const [config, setConfig] = useState(HueService.getConfig());
-
-  // Add state for API stats
-  const [apiStats, setApiStats] = useState<any>(null);
-
-  // Add state for test results
-  const [testResult, setTestResult] = useState<string | null>(null);
-  const [testingConnection, setTestingConnection] = useState(false);
 
   useEffect(() => {
     setConfig(HueService.getConfig());
@@ -349,24 +336,6 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     prevVisibleRef.current = isVisible;
   }, [isVisible, isPlaying]);
 
-  // Add a function to fetch API stats periodically
-  useEffect(() => {
-    if (enabled && connected) {
-      const statsInterval = setInterval(() => {
-        const stats = HueService.getApiStats();
-        setApiStats(stats);
-
-        // Auto emergency clear if queues are too large
-        if (stats.queueSizes.regular > 100 || stats.queueSizes.entertainment > 100) {
-          console.warn("Queue sizes extremely large, triggering emergency clear");
-          handleEmergencyClear();
-        }
-      }, 2000);
-
-      return () => clearInterval(statsInterval);
-    }
-  }, [enabled, connected]);
-
   // Cleanup function
   const cleanup = useCallback(() => {
     // Cancel animation frame
@@ -401,11 +370,10 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
       audioContextRef.current = null;
     }
 
-    // Disconnect from Hue if necessary - now this handles cleaning up properly
+    // Disconnect from Hue if necessary
     if (connected) {
       HueService.stopEntertainmentMode().catch(console.error);
       setConnected(false);
-      setBeatDetected(false);
     }
   }, [connected]);
 
@@ -518,26 +486,12 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     }
   };
 
-  // Disconnect from Hue with improved cleanup
+  // Disconnect from Hue
   const disconnectFromHue = async () => {
     try {
-      console.log('🛑 Disconnecting from Hue...');
-
-      // Cancel animation frame first
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-
-      // Stop all Hue operations
       await HueService.stopEntertainmentMode();
-
       setConnected(false);
-      setBeatDetected(false);
-      console.log('Disconnected from Hue bridge and cleaned up');
-
-      // Send a clear notification to the UI
-      setLastLightCommand('Lights dimmed and sync stopped');
+      console.log('Disconnected from Hue bridge');
     } catch (error) {
       console.error('Error disconnecting from Hue:', error);
     }
@@ -554,36 +508,26 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     const dataArray = dataArrayRef.current;
     analyser.getByteFrequencyData(dataArray);
 
-    // IMPROVED: Make beat detection more sensitive by lowering the threshold
-    const beatThreshold = 1.25 - (sensitivity / 10); // More sensitive calculation
+    const beatThreshold = 1.35 - (sensitivity - 5) * 0.05;
     const isBeat = detectBeat(dataArray, beatThreshold);
 
     // Check if beat state changed
     if (isBeat !== beatDetected) {
       setBeatDetected(isBeat);
 
-      // If new beat detected, send to lights immediately with enhanced animation!
+      // If new beat detected, send to lights immediately!
       if (isBeat) {
         const energy = calculateBassEnergy(dataArray);
-        console.log(`🥁 BEAT DETECTED! Energy: ${energy.toFixed(2)}`);
+        console.log('🥁 BEAT DETECTED! Energy:', energy);
 
-        // On beat detection, immediately flash the lights with animation
+        // On beat detection, immediately flash the lights
         if (connected || hueConnected) {
           // Generate vibrant color for beat flash
           const beatColor = generateBeatColor(dataArray);
-
-          // ENHANCED: Make colors super vibrant
-          const superBoostedColor: [number, number, number] = [
-            Math.min(1, beatColor[0] * 2.0), // Double the intensity
-            Math.min(1, beatColor[1] * 2.0),
-            Math.min(1, beatColor[2] * 2.0)
-          ];
-
-          // Use the animation utility for beats
-          HueAnimations.createBeatAnimation(superBoostedColor, energy / 100);
-
-          setLastLightCommand(`Super Flash: ${superBoostedColor.map(v => v.toFixed(2)).join(', ')}`);
-          setLastFlashTime(new Date().toLocaleTimeString());
+          // Send direct command for immediate response
+          console.log('🔴 BEAT DETECTED - Sending immediate flash command');
+          HueService.sendColorTransition(beatColor, 0, true);
+          setLastLightCommand(`Beat Flash: ${beatColor.map(v => v.toFixed(2)).join(', ')}`);
         }
       }
     }
@@ -596,25 +540,24 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     animationFrameRef.current = requestAnimationFrame(updateVisualization);
   };
 
-  // Add this improved helper function to generate super vibrant colors for beats
-  // UPDATED to create more dramatic color contrasts
+  // Add this new helper function to generate vibrant colors for beats
   const generateBeatColor = (dataArray: Uint8Array): [number, number, number] => {
     const { bass, mid, treble } = calculateFrequencyBands(dataArray);
 
-    // Determine dominant frequency range - ENHANCED for much more vibrant colors with higher contrast
+    // Determine dominant frequency range
     if (bass > mid && bass > treble) {
-      // Bass-heavy beat - intense red with almost no other components
-      return [1, Math.random() * 0.15, 0]; // Pure intense red
+      // Bass-heavy beat - use red/orange
+      return [1, 0.3 + Math.random() * 0.3, 0];
     } else if (mid > treble) {
-      // Mid-heavy beat - pure green/cyan with minimal red
-      return [0, 1, 0.8 + Math.random() * 0.2]; // Bright green/cyan
+      // Mid-heavy beat - use green/cyan
+      return [0, 0.8 + Math.random() * 0.2, 0.5 + Math.random() * 0.5];
     } else {
-      // Treble-heavy beat - intense purple/blue with no green
-      return [0.8 + Math.random() * 0.2, 0, 1]; // Vibrant purple/blue
+      // Treble-heavy beat - use blue/purple
+      return [0.5 + Math.random() * 0.5, 0, 1];
     }
   };
 
-  // Update the updateLights function for more dramatic contrast between beats and non-beats
+  // Update the updateLights function to make beat handling more aggressive
   const updateLights = (dataArray: Uint8Array, isBeat: boolean) => {
     const bufferLength = dataArray.length;
 
@@ -622,22 +565,22 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     let rgb: [number, number, number] = [0, 0, 0];
     let transitionTime = 100; // ms
 
-    // If a beat is detected, create a MUCH more dramatic effect
+    // If a beat is detected, create a more dramatic effect
     if (isBeat) {
       // Log prominently
-      console.log('🎵 STRONG BEAT → DRAMATIC FLASH MODE');
+      console.log('🎵 STRONG BEAT → FLASH MODE');
 
-      // For beats, use extremely vivid colors with max saturation
+      // For beats, use much more vivid colors
       switch (colorMode) {
         case 'spectrum': {
-          // On beat, use ULTRA vibrant version of spectrum colors
+          // On beat, use more vibrant version of spectrum colors
           const { bass, mid, treble } = calculateFrequencyBands(dataArray);
-          const sensitivityFactor = (sensitivity / 5) * 4.0; // Even higher boost for beats
+          const sensitivityFactor = (sensitivity / 5) * 2.0; // Higher boost for beats
 
-          // Max out the colors for extreme saturation
-          const r = Math.min(1, mapRange(bass * sensitivityFactor, 0, 255, 0.3, 1) * 2.5);
-          const g = Math.min(1, mapRange(mid * sensitivityFactor, 0, 255, 0.3, 1) * 2.5);
-          const b = Math.min(1, mapRange(treble * sensitivityFactor, 0, 255, 0.3, 1) * 2.5);
+          // Use more saturated colors for beats
+          const r = Math.min(1, mapRange(bass * sensitivityFactor, 0, 255, 0.2, 1) * 1.5);
+          const g = Math.min(1, mapRange(mid * sensitivityFactor, 0, 255, 0.2, 1) * 1.5);
+          const b = Math.min(1, mapRange(treble * sensitivityFactor, 0, 255, 0.2, 1) * 1.5);
 
           rgb = [r, g, b];
           break;
@@ -645,67 +588,57 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
 
         case 'intensity':
         case 'pulse': {
-          // For both these modes on a beat, use a SUPER bright flash
+          // For both these modes on a beat, use a very bright flash
           const volumeLevel = averageFrequency(dataArray, 0, bufferLength);
           const hue = mapRange(volumeLevel, 0, 255, 0, 360);
-          // Max saturation and brightness - completely saturated
-          rgb = hsvToRgb(hue / 360, 1, 1);
+          rgb = hsvToRgb(hue / 360, 1, 1); // Full saturation and brightness
           break;
         }
       }
 
-      // NEW: Add more randomization for even more dramatic variation
+      // NEW: Add subtle variation to prevent command filtering
       rgb = [
-        Math.min(1, rgb[0] + (Math.random() * 0.2)),
-        Math.min(1, rgb[1] + (Math.random() * 0.2)),
-        Math.min(1, rgb[2] + (Math.random() * 0.2))
+        Math.min(1, rgb[0] + (Math.random() * 0.05)),
+        Math.min(1, rgb[1] + (Math.random() * 0.05)),
+        Math.min(1, rgb[2] + (Math.random() * 0.05))
       ] as [number, number, number];
 
-      // Use INSTANT transitions for beats
-      transitionTime = 0; // Immediate for maximum impact
+      // Use VERY fast transitions for beats
+      transitionTime = 20; // Much faster than before
     } else {
-      // Between beats - MAKE MUCH DIMMER for extreme contrast
+      // Between beats logic stays the same...
       switch (colorMode) {
         case 'spectrum': {
           const { bass, mid, treble } = calculateFrequencyBands(dataArray);
           const sensitivityFactor = sensitivity / 5;
-
-          // Get normal color values but make them MUCH dimmer
-          const r = mapRange(bass * sensitivityFactor, 0, 255, 0.02, 0.2); // Much lower range
-          const g = mapRange(mid * sensitivityFactor, 0, 255, 0.02, 0.2);  // Much lower range
-          const b = mapRange(treble * sensitivityFactor, 0, 255, 0.02, 0.2); // Much lower range
-
-          // Make them extremely dim between beats for more contrast - almost off
+          const r = mapRange(bass * sensitivityFactor, 0, 255, 0.05, 0.8);
+          const g = mapRange(mid * sensitivityFactor, 0, 255, 0.05, 0.8);
+          const b = mapRange(treble * sensitivityFactor, 0, 255, 0.05, 0.8);
           const overallLevel = (bass + mid + treble) / 3;
-          const brightness = overallLevel < 40 ? 0.05 : 0.15; // Much dimmer
-
+          const brightness = overallLevel < 20 ? 0.1 : 0.7;
           rgb = [Math.min(1, r * brightness), Math.min(1, g * brightness), Math.min(1, b * brightness)];
-          transitionTime = 400; // Slower transition to dimness
+          transitionTime = 300;
           break;
         }
-
+        // Other cases remain unchanged...
         case 'intensity': {
           const volumeLevel = averageFrequency(dataArray, 0, bufferLength);
           const scaledVolume = volumeLevel * (sensitivity / 5);
-          const intensity = mapRange(scaledVolume, 0, 255, 0, 0.3); // Reduced maximum intensity
+          const intensity = mapRange(scaledVolume, 0, 255, 0, 0.7);
           const hue = mapRange(intensity, 0, 1, 30, 260);
-          const sat = mapRange(intensity, 0, 1, 0.2, 0.6);
-          const val = mapRange(intensity, 0, 1, 0.02, 0.2); // Much lower brightness
+          const sat = mapRange(intensity, 0, 1, 0.3, 0.8);
+          const val = mapRange(intensity, 0, 1, 0.05, 0.7);
           rgb = hsvToRgb(hue / 360, sat, val);
           transitionTime = 400;
           break;
         }
-
         case 'pulse': {
           const { bass, mid, treble } = calculateFrequencyBands(dataArray);
           const sensitivityFactor = sensitivity / 10;
           const baseLevel = Math.max(bass, mid, treble) * sensitivityFactor;
-          // Make it much dimmer between pulses
-          const dimBrightness = mapRange(baseLevel, 0, 255, 0.02, 0.1); // Much lower brightness
-
+          const dimBrightness = mapRange(baseLevel, 0, 255, 0.05, 0.2);
           if (baseLevel < 30) {
-            // Almost off when quiet
-            rgb = [0.02, 0.02, 0.02]; // Nearly off
+            rgb = [dimBrightness, dimBrightness, dimBrightness];
           } else {
             const hue = mid > bass ? 240 : 40;
             rgb = hsvToRgb(hue / 360, 0.5, dimBrightness);
@@ -790,22 +723,92 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     }
   };
 
+  // Add this new function near flashLights
+  const testEntertainmentAPI = async () => {
+    try {
+      // First verify connection
+      if (!connected) {
+        console.log("Not connected. Attempting to connect to Hue...");
+        await connectToHue();
+      }
+
+      if (!connected) {
+        setError("Could not connect to Hue bridge");
+        return;
+      }
+
+      console.log("🧪 TESTING ENTERTAINMENT API");
+
+      // Test sequence to flash several colors via entertainment API
+      const colors: [number, number, number][] = [
+        [1, 0, 0], // Red
+        [0, 1, 0], // Green
+        [0, 0, 1], // Blue
+        [1, 1, 0], // Yellow
+        [1, 0, 1], // Magenta
+      ];
+
+      // Using direct test function in HueService
+      const testResult = await HueService.testTransition();
+
+      if (testResult) {
+        setLastLightCommand("Entertainment API test successful!");
+
+        // Now send a sequence of colors
+        for (const color of colors) {
+          await HueService.sendColorTransition(color, 0, true); // Use forceSend=true for immediate effect
+          await new Promise(resolve => setTimeout(resolve, 300)); // 300ms between colors
+        }
+      } else {
+        setLastLightCommand("Entertainment API test failed - check console");
+        setError("Entertainment API test failed. See debug console for details.");
+      }
+    } catch (error) {
+      console.error("Test error:", error);
+      setError(`Test error: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  // Add this function to the HueMusicSync component:
+  const verifyAndFixEntertainmentSetup = async () => {
+    try {
+      setError(null);
+      setLastLightCommand("Verifying entertainment setup...");
+
+      // First, check if we're connected
+      if (!connected) {
+        await connectToHue();
+      }
+
+      if (!connected) {
+        setError("Could not connect to Hue bridge");
+        return;
+      }
+
+      // Run the verification function
+      const isValid = await HueService.verifyEntertainmentSetup();
+
+      if (isValid) {
+        setLastLightCommand("Entertainment setup is valid! Running color cycle test.");
+        // Let's also run the test color cycle again for good measure
+        await HueService.testColorCycle();
+      } else {
+        setLastLightCommand("Entertainment setup has issues. See console log for details.");
+        setError("Entertainment setup verification failed. Check the console for diagnostic information.");
+      }
+    } catch (error) {
+      console.error("Verification error:", error);
+      setError(`Verification error: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
   // Toggle the enabled state
   const handleToggleEnabled = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newEnabled = event.target.checked;
+    setEnabled(newEnabled);
 
-    // If turning off, make sure we disconnect properly first
-    if (!newEnabled && connected) {
-      disconnectFromHue().then(() => {
-        setEnabled(false);
-        // Update in HueContext too if available
-        hueContext?.setEnabled(false);
-      });
-    } else {
-      setEnabled(newEnabled);
-      // Update in HueContext too if available
-      hueContext?.setEnabled(newEnabled);
-    }
+    // Update in HueContext too if available
+    hueContext?.setEnabled(newEnabled);
   };
 
   // Handle color mode change
@@ -827,49 +830,14 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     return null;
   };
 
-  // Update the flash lights function to use advanced animations
-  const flashLights = async () => {
-    if (!hueConnected) {
-      alert('Please connect to Hue bridge first');
-      return;
-    }
+  const flashLights = () => {
+    if (!hueConnected || selectedLights.length === 0) return;
 
-    setLastFlashTime(new Date().toLocaleTimeString());
-    console.log('🎮 Manual DRAMATIC flash sequence requested');
+    // Use a more dynamic color selection
+    const hue = Math.random() * 360;
+    const rgb = hsvToRgb(hue / 360, 1, 1); // Full saturation and brightness
 
-    // Use our new animation utilities for a more dramatic effect
-    try {
-      // First try a standard test flash using HueService
-      const success = await HueAnimations.testFlash(flashColor);
-
-      if (!success) {
-        alert('Failed to flash lights. Check console for details.');
-      }
-    } catch (err) {
-      console.error('Error during animated flash sequence:', err);
-      alert('Error during animation sequence');
-    }
-  };
-
-  // Add a new function for rotating flash colors
-  const rotateFlashColor = () => {
-    // Cycle between red, green, blue, white, purple
-    if (flashColor[0] === 1 && flashColor[1] === 0 && flashColor[2] === 0) {
-      // Red -> Green
-      setFlashColor([0, 1, 0]);
-    } else if (flashColor[0] === 0 && flashColor[1] === 1 && flashColor[2] === 0) {
-      // Green -> Blue
-      setFlashColor([0, 0, 1]);
-    } else if (flashColor[0] === 0 && flashColor[1] === 0 && flashColor[2] === 1) {
-      // Blue -> White
-      setFlashColor([1, 1, 1]);
-    } else if (flashColor[0] === 1 && flashColor[1] === 1 && flashColor[2] === 1) {
-      // White -> Purple
-      setFlashColor([1, 0, 1]);
-    } else {
-      // Any -> Red
-      setFlashColor([1, 0, 0]);
-    }
+    sendDirectLightCommand(rgb, 100); // 100% brightness for manual flash
   };
 
   const handleDebugFlashToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -895,136 +863,6 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
           <li>Lights: {selectedLights.join(', ') || 'None'}</li>
           <li>Last Command: {lastLightCommand || 'None'}</li>
         </Box>
-
-        {/* New API stats section */}
-        {apiStats && (
-          <Box sx={{ mt: 1, borderTop: '1px dashed #ccc', pt: 1 }}>
-            <Typography variant="subtitle2" sx={{ color: '#1565C0' }}>API Usage Stats:</Typography>
-            <Box component="ul" sx={{ m: 0, pl: 2 }}>
-              <li>Entertainment API: {apiStats.entertainment} calls ({apiStats.errors.entertainment} errors)</li>
-              <li>Regular API: {apiStats.regular} calls ({apiStats.errors.regular} errors)</li>
-              <li>Queue sizes: Entertainment: {apiStats.queueSizes.entertainment}, Regular: {apiStats.queueSizes.regular}</li>
-              <li>Uptime: {Math.floor(apiStats.uptime / 60)}m {apiStats.uptime % 60}s</li>
-            </Box>
-          </Box>
-        )}
-      </Box>
-    );
-  };
-
-  // Add new button for a dramatic color cycle animation
-  const runColorCycleAnimation = async () => {
-    if (!hueConnected) {
-      alert('Please connect to Hue bridge first');
-      return;
-    }
-
-    setLastFlashTime(new Date().toLocaleTimeString());
-    console.log('🌈 Color cycle animation requested');
-
-    // Run a 1.5 second color cycle animation with 5 steps
-    await HueAnimations.createColorCycleAnimation(1500, 5);
-  };
-
-  // Add new reset handler with improved feedback
-  const handleReset = () => {
-    HueService.resetSync();
-    setApiStats(HueService.getApiStats(true)); // Reset stats too
-    setLastLightCommand("Sync reset - all queues cleared");
-    console.log("Hue sync has been reset completely.");
-  };
-
-  // Add new function for emergency clear button
-  const handleEmergencyReset = () => {
-    handleEmergencyClear();
-    // Wait a bit then reset stats
-    setTimeout(() => {
-      setApiStats(HueService.getApiStats(true));
-    }, 500);
-  };
-
-  // Add function to trigger emergency queue clearing
-  const handleEmergencyClear = () => {
-    HueService.emergencyClearQueues();
-    setLastLightCommand("Emergency queue clear executed");
-  };
-
-  // Add a direct test function
-  const handleTestConnection = async () => {
-    setTestingConnection(true);
-    setTestResult("Testing Entertainment API connection...");
-    try {
-      const result = await testEntertainmentConnection();
-      if (result.success) {
-        setTestResult(`✅ Entertainment API connection successful! ${JSON.stringify(result.details)}`);
-      } else {
-        setTestResult(`❌ Entertainment API test failed: ${result.error}`);
-      }
-    } catch (error) {
-      setTestResult(`❌ Error during test: ${error instanceof Error ? error.message : String(error)}`);
-    } finally {
-      setTestingConnection(false);
-    }
-  };
-
-  // Add a color sequence test
-  const handleRunColorSequence = async () => {
-    setTestingConnection(true);
-    setTestResult("Running color sequence test...");
-    try {
-      const success = await runColorSequence();
-      setTestResult(success ?
-        "✅ Color sequence completed successfully!" :
-        "❌ Color sequence test failed");
-    } catch (error) {
-      setTestResult(`❌ Error during color sequence: ${error instanceof Error ? error.message : String(error)}`);
-    } finally {
-      setTestingConnection(false);
-    }
-  };
-
-  // Add the test section to the UI, right before the renderDebugInfo
-  const renderTestPanel = () => {
-    if (!enabled) return null;
-
-    return (
-      <Box sx={{ mt: 2, p: 2, borderRadius: 1, bgcolor: '#fff3cd', fontSize: '0.75rem' }}>
-        <Typography variant="subtitle2" sx={{ color: '#856404', mb: 1 }}>Entertainment API Tests:</Typography>
-        <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-          <Button
-            variant="contained"
-            size="small"
-            onClick={handleTestConnection}
-            disabled={testingConnection}
-            sx={{ fontSize: '0.7rem' }}
-          >
-            Test Connection
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={handleRunColorSequence}
-            disabled={testingConnection}
-            sx={{ fontSize: '0.7rem' }}
-          >
-            Run Color Sequence
-          </Button>
-        </Box>
-        {testingConnection && <CircularProgress size={16} sx={{ mr: 1 }} />}
-        {testResult && (
-          <Typography
-            variant="body2"
-            sx={{
-              whiteSpace: 'pre-wrap',
-              fontSize: '0.7rem',
-              maxHeight: '100px',
-              overflowY: 'auto',
-              mt: 1
-            }}
-          >
-            {testResult}
-          </Typography>
-        )}
       </Box>
     );
   };
@@ -1237,9 +1075,6 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
         </Box>
       )}
 
-      {/* Add the test panel before debug info */}
-      {renderTestPanel()}
-
       {/* Add debug info component before the divider */}
       {renderDebugInfo()}
 
@@ -1253,55 +1088,32 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
           <Typography sx={{ color: '#555555' }}>
             Selected Lights: {selectedLights.length || "(Detecting...)"}
           </Typography>
-
-          {/* Updated button row with emergency clear option */}
-          <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            <Button
-              onClick={flashLights}
-              color="primary"
-              variant="contained"
-            >
-              Flash Lights
-            </Button>
-
-            <Button
-              onClick={rotateFlashColor}
-              variant="outlined"
-            >
-              Change Color
-            </Button>
-
-            <Button
-              onClick={runColorCycleAnimation}
-              color="secondary"
-              variant="outlined"
-            >
-              Color Cycle
-            </Button>
-
-            {/* Reset Sync button */}
-            <Button onClick={handleReset} variant="outlined" color="error">
-              Reset Sync
-            </Button>
-
-            {/* New Emergency Clear button - only show if queues > 10 */}
-            {apiStats && (apiStats.queueSizes.entertainment > 10 || apiStats.queueSizes.regular > 10) && (
-              <Button
-                onClick={handleEmergencyReset}
-                variant="contained"
-                color="error"
-                sx={{ fontWeight: 'bold' }}
-              >
-                EMERGENCY CLEAR
-              </Button>
-            )}
-          </Box>
-
-          {lastFlashTime && (
-            <Typography variant="caption" sx={{ display: 'block', mt: 1, color: '#666' }}>
-              Last animation: {lastFlashTime}
-            </Typography>
-          )}
+          <Button
+            sx={{ mt: 2 }}
+            onClick={flashLights}
+            color="primary"
+            variant="contained"
+          >
+            Flash Lights Manually
+          </Button>
+          <Button
+            sx={{ mt: 2, ml: 2 }}
+            onClick={testEntertainmentAPI}
+            color="secondary"
+            variant="contained"
+            disabled={!HueService.hasValidConfig()}
+          >
+            Test Entertainment API
+          </Button>
+          <Button
+            sx={{ mt: 2, ml: 2 }}
+            onClick={verifyAndFixEntertainmentSetup}
+            color="warning"
+            variant="contained"
+            disabled={!HueService.hasValidConfig()}
+          >
+            Verify & Fix Setup
+          </Button>
         </Box>
       ) : (
         <Typography sx={{ color: '#555555' }}>
@@ -1318,7 +1130,7 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
           />
         }
         label="Enable Debug Light Flashing"
-        sx={{ mb: 1, display: 'block', mt: 2 }}
+        sx={{ mb: 1, display: 'block' }}
       />
     </Paper>
   );

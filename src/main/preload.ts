@@ -56,6 +56,13 @@ const electronHandler = {
         'hue:setLightState',
         'hue:getEntertainmentAreas',
         'hue:setLights',
+        'hue:dtls-set-config',
+        'hue:dtls-has-valid-config',
+        'hue:dtls-connect',
+        'hue:dtls-disconnect',
+        'hue:dtls-is-connected',
+        'hue:dtls-send-colors',
+        'hue:dtls-test-sequence'
       ];
       if (validChannels.includes(channel)) {
         return ipcRenderer.invoke(channel, ...args);
@@ -85,3 +92,14 @@ const electronHandler = {
 contextBridge.exposeInMainWorld('electron', electronHandler);
 
 export type ElectronHandler = typeof electronHandler;
+
+// Fix the incomplete DOMContentLoaded event handler
+window.addEventListener('DOMContentLoaded', () => {
+  // Override CSP if not in production
+  if (process.env.NODE_ENV !== 'production') {
+    const meta = document.createElement('meta');
+    meta.httpEquiv = 'Content-Security-Policy';
+    meta.content = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.scdn.co; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.spotify.com wss://*.spotify.com https://api.spotify.com; img-src 'self' data: https://*.scdn.co";
+    document.head.appendChild(meta);
+  }
+});

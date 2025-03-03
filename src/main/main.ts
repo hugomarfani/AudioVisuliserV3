@@ -29,6 +29,7 @@ import https from 'https';
 import bonjour from 'bonjour';
 import net from 'net';
 import * as hueApi from 'node-hue-api'; // Import entire module
+import { initializeHueDTLSHandlers } from './hueIpcHandlers';
 const { v3 } = hueApi; // Extract v3
 
 // Change these to mutable variables so they can be updated
@@ -711,6 +712,35 @@ const installExtensions = async () => {
     .catch(console.log);
 };
 
+// Fix the getUpdatedCSP function
+function getUpdatedCSP(): string {
+  // Create a more permissive CSP for development
+  if (process.env.NODE_ENV === 'development') {
+    return "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; frame-src *; style-src * 'unsafe-inline';";
+  }
+
+  // For production, use a more restrictive but still functional CSP
+  const csp = [
+    // Base policies for security
+    "default-src 'self'",
+    // Allow inline scripts and unsafe-eval for our libraries
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.scdn.co",
+    // Allow inline styles
+    "style-src 'self' 'unsafe-inline'",
+    // For image sources
+    "img-src 'self' data: https://*.scdn.co",
+    // For fonts
+    "font-src 'self'",
+    // For media
+    "media-src 'self' blob:",
+    // For connections - expanded to allow more sources
+    "connect-src 'self' https://* wss://* http://*",
+  ];
+
+  return csp.join('; ');
+}
+
+// Fix the createWindow function
 const createWindow = async () => {
   if (isDebug) {
     await installExtensions();
@@ -734,8 +764,30 @@ const createWindow = async () => {
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
-      webSecurity: false,
+      webSecurity: process.env.NODE_ENV !== 'development', // Disable web security in development only
+      allowRunningInsecureContent: process.env.NODE_ENV === 'development'
     },
+  });
+
+  // Add this right after window creation - fix the CSP handling
+  mainWindow.webContents.once('did-start-loading', () => {
+    // Force set CSP headers at the very beginning
+    mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+      // Strip existing CSP headers completely
+      const responseHeaders = {...details.responseHeaders};
+
+      // Remove all variations of Content-Security-Policy headers
+      Object.keys(responseHeaders).forEach(key => {
+        if (key.toLowerCase().includes('content-security-policy')) {
+          delete responseHeaders[key];
+        }
+      });
+
+      // Add our custom CSP header
+      responseHeaders['Content-Security-Policy'] = [getUpdatedCSP()];
+
+      callback({ responseHeaders });
+    });
   });
 
   mainWindow.loadURL(resolveHtmlPath('index.html'));
@@ -768,6 +820,9 @@ const createWindow = async () => {
   // eslint-disable-next-line
   new AppUpdater();
 };
+
+// Initialize DTLS IPC handlers
+initializeHueDTLSHandlers();
 
 /**
  * Add event listeners...

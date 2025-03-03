@@ -102,7 +102,7 @@ export function getPheaInstance(): PheaInterface {
               bridgeInstance.transition = function(lightIds: (string|number)[],
                                               rgb: [number, number, number],
                                               transitionTime: number) {
-                // IMPORTANT - ensure RGB values are in proper 0-1 range
+                // Ensure RGB values are in proper 0-1 range
                 const normalizedRgb = rgb.map(v => Math.max(0, Math.min(1, v))) as [number, number, number];
 
                 console.log('Custom transition called:', {
@@ -111,46 +111,121 @@ export function getPheaInstance(): PheaInterface {
                   transitionTime
                 });
 
-                // Convert RGB to XY color space
-                const r = normalizedRgb[0], g = normalizedRgb[1], b = normalizedRgb[2];
-                const X = r * 0.664511 + g * 0.154324 + b * 0.162028;
-                const Y = r * 0.283881 + g * 0.668433 + b * 0.047685;
-                const Z = r * 0.000088 + g * 0.072310 + b * 0.986039;
-                const sum = X + Y + Z;
-                const xy = sum === 0 ? [0.33, 0.33] : [X / sum, Y / sum];
+                // NEW APPROACH: Try to access the raw DTLS connection directly if available
+                // This is the most direct approach and should work if the connection is valid
+                if (this._connection && typeof this._connection.write === 'function') {
+                  try {
+                    console.log('Using direct DTLS connection write method');
+                    // For each light, build a packet using the Hue Entertainment protocol
+                    const packets = [];
 
-                // Calculate brightness from RGB max (0-254 range for Hue API)
-                const brightness = Math.max(1, Math.min(254, Math.round(Math.max(...normalizedRgb) * 254)));
+                    // Convert RGB values to 16-bit integers (0-65535 range)
+                    const r = Math.max(0, Math.min(65535, Math.round(normalizedRgb[0] * 65535)));
+                    const g = Math.max(0, Math.min(65535, Math.round(normalizedRgb[1] * 65535)));
+                    const b = Math.max(0, Math.min(65535, Math.round(normalizedRgb[2] * 65535)));
 
-                // For DTLS streaming API, we need to directly update light channels
-                // This is what the Entertainment API uses
+                    for (const lightId of lightIds) {
+                      // Format: ID + R-high + R-low + G-high + G-low + B-high + B-low
+                      const channelId = typeof lightId === 'number' ? lightId : 0;
+                      const buffer = Buffer.alloc(7);
+                      buffer[0] = channelId;
+                      buffer[1] = (r >> 8) & 0xff; // R high byte
+                      buffer[2] = r & 0xff;        // R low byte
+                      buffer[3] = (g >> 8) & 0xff; // G high byte
+                      buffer[4] = g & 0xff;        // G low byte
+                      buffer[5] = (b >> 8) & 0xff; // B high byte
+                      buffer[6] = b & 0xff;        // B low byte
+                      packets.push(buffer);
+                    }
+
+                    // Concatenate all the packets
+                    const message = Buffer.concat(packets);
+
+                    // Add protocol header for entertainment API
+                    const header = Buffer.from([0x48, 0x45, 0x49]); // "HEI" header
+                    const fullMessage = Buffer.concat([header, message]);
+
+                    console.log(`Sending raw DTLS packet (${fullMessage.length} bytes)`);
+                    this._connection.write(fullMessage);
+                    return Promise.resolve();
+                  } catch (err) {
+                    console.error('Error with direct DTLS write:', err);
+                  }
+                }
+
+                // If the direct DTLS approach fails, try each method in sequence
+
+                // Try setChannelRGB first if available
+                if (typeof this.setChannelRGB === 'function') {
+                  try {
+                    console.log('Using setChannelRGB for Entertainment API');
+                    const promises = lightIds.map(id => {
+                      const channelId = typeof id === 'number' ? id : 0;
+                      console.log(`Setting channel ${channelId} RGB: ${normalizedRgb.join(', ')}`);
+                      return this.setChannelRGB(channelId, normalizedRgb[0], normalizedRgb[1], normalizedRgb[2]);
+                    });
+                    return Promise.all(promises);
+                  } catch (err) {
+                    console.error('Error using setChannelRGB:', err);
+                  }
+                }
+
+                // Try updateLightState next
                 if (typeof this.updateLightState === 'function') {
                   try {
                     console.log('Using updateLightState for Entertainment API');
-                    // Entertainment API uses indices
-                    lightIds.forEach(id => {
-                      this.updateLightState(id, normalizedRgb);
+                    const promises = lightIds.map(id => {
+                      const channelId = typeof id === 'number' ? id : 0;
+                      return this.updateLightState(channelId, normalizedRgb);
                     });
-                    return Promise.resolve();
+                    return Promise.all(promises);
                   } catch (err) {
                     console.error('Error using updateLightState:', err);
                   }
                 }
 
-                // Apply to all lights using setLightState if updateLightState isn't available
-                const promises = lightIds.map(lightId => {
-                  const lightState = {
-                    on: true,
-                    bri: brightness,
-                    xy: xy,
-                    transitiontime: Math.max(0, Math.round(transitionTime / 100))
-                  };
+                // Try the REST API as a last resort
+                if (typeof this.setLightState === 'function') {
+                  try {
+                    console.log('Falling back to REST API (will be slower)');
+                    // Convert RGB to XY color space for Hue REST API
+                    const r = normalizedRgb[0], g = normalizedRgb[1], b = normalizedRgb[2];
+                    const X = r * 0.664511 + g * 0.154324 + b * 0.162028;
+                    const Y = r * 0.283881 + g * 0.668433 + b * 0.047685;
+                    const Z = r * 0.000088 + g * 0.072310 + b * 0.986039;
+                    const sum = X + Y + Z;
+                    const xy = sum === 0 ? [0.33, 0.33] : [X / sum, Y / sum];
 
-                  console.log(`Setting light ${lightId} to:`, lightState);
-                  return this.setLightState(lightId, lightState);
-                });
+                    // Calculate brightness from RGB max (0-254 range for Hue API)
+                    const brightness = Math.max(1, Math.min(254, Math.round(Math.max(...normalizedRgb) * 254)));
 
-                return Promise.all(promises);
+                    const promises = lightIds.map(lightId => {
+                      // For REST API, we need string IDs (UUIDs)
+                      const stringId = typeof lightId === 'string' ? lightId : '';
+                      if (!stringId) {
+                        console.warn(`Cannot use numeric ID ${lightId} with REST API - need UUID`);
+                        return Promise.resolve();
+                      }
+
+                      const lightState = {
+                        on: true,
+                        bri: brightness,
+                        xy: xy,
+                        transitiontime: Math.max(0, Math.round(transitionTime / 100))
+                      };
+
+                      console.log(`Setting light ${stringId} to:`, lightState);
+                      return this.setLightState(stringId, lightState);
+                    });
+
+                    return Promise.all(promises);
+                  } catch (err) {
+                    console.error('Error using REST API:', err);
+                  }
+                }
+
+                console.error('No compatible method found to control lights');
+                return Promise.reject(new Error('No compatible method found to control lights'));
               };
             }
 
@@ -162,13 +237,68 @@ export function getPheaInstance(): PheaInterface {
                 // Implementation depends on the library's specific requirements
                 console.log(`Direct update for channel ${channelId} with RGB ${rgb.map(v => v.toFixed(2)).join()}`);
 
+                // This is where the fix is needed - the current implementation doesn't actually send anything to the device
+                // Instead, try to use the native functions from the Phea library
+
+                // First try - if there's a native setChannelRGB function
                 if (typeof this.setChannelRGB === 'function') {
-                  // Some versions use this method
-                  return this.setChannelRGB(channelId, rgb[0], rgb[1], rgb[2]);
+                  try {
+                    console.log(`Using native setChannelRGB for channel ${channelId}`);
+                    return this.setChannelRGB(channelId, rgb[0], rgb[1], rgb[2]);
+                  } catch (err) {
+                    console.error(`Error with setChannelRGB for channel ${channelId}:`, err);
+                  }
                 }
 
-                // Default no-op implementation
-                return Promise.resolve();
+                // Second attempt - try to use the raw streaming API if available
+                if (typeof this.stream === 'function' || this.stream) {
+                  try {
+                    console.log(`Attempting raw stream command for channel ${channelId}`);
+                    // Format the RGB values as required by the streaming protocol
+                    const r = Math.max(0, Math.min(65535, Math.round(rgb[0] * 65535)));
+                    const g = Math.max(0, Math.min(65535, Math.round(rgb[1] * 65535)));
+                    const b = Math.max(0, Math.min(65535, Math.round(rgb[2] * 65535)));
+
+                    // Create command buffer for this light
+                    // Format: Light ID (1 byte) | R-high | R-low | G-high | G-low | B-high | B-low
+                    const buffer = Buffer.alloc(7);
+                    buffer[0] = channelId;
+                    buffer[1] = (r >> 8) & 0xff; // R high byte
+                    buffer[2] = r & 0xff;        // R low byte
+                    buffer[3] = (g >> 8) & 0xff; // G high byte
+                    buffer[4] = g & 0xff;        // G low byte
+                    buffer[5] = (b >> 8) & 0xff; // B high byte
+                    buffer[6] = b & 0xff;        // B low byte
+
+                    // Some implementations use different methods to send the data
+                    if (typeof this.stream === 'function') {
+                      return this.stream(buffer);
+                    } else if (this.stream && typeof this.stream.write === 'function') {
+                      return this.stream.write(buffer);
+                    } else if (this._stream && typeof this._stream.write === 'function') {
+                      return this._stream.write(buffer);
+                    }
+                  } catch (e) {
+                    console.error(`Error with raw streaming for channel ${channelId}:`, e);
+                  }
+                }
+
+                // Third attempt - try setLights method if available (used in some newer versions)
+                if (typeof this.setLights === 'function') {
+                  try {
+                    console.log(`Trying setLights method for channel ${channelId}`);
+                    const lightState = {
+                      rgb: rgb,
+                      id: channelId
+                    };
+                    return this.setLights([lightState]);
+                  } catch (e) {
+                    console.error('Error using setLights method:', e);
+                  }
+                }
+
+                console.warn(`❗ No suitable method found to update light ${channelId} - LIGHTS WILL NOT CHANGE!`);
+                return Promise.resolve(); // Still resolve to not break the chain
               };
             }
 
@@ -255,4 +385,60 @@ export function validatePSK(psk: string): string {
   }
 
   return cleanedPSK;
+}
+
+// Add this enhanced function to the PheaConnector.ts file
+export function testPheaLibrary() {
+  try {
+    const pheaModule = require('phea');
+
+    console.log('====== PHEA LIBRARY DIAGNOSTIC TEST ======');
+    console.log('Module type:', typeof pheaModule);
+    console.log('Available properties:', Object.keys(pheaModule));
+
+    // Check for critical methods
+    const hasBridge = typeof pheaModule.bridge === 'function' || typeof pheaModule.HueBridge === 'function';
+    const hasDiscover = typeof pheaModule.discover === 'function';
+    const hasRegister = typeof pheaModule.register === 'function';
+
+    console.log('Has bridge function:', hasBridge);
+    console.log('Has discover function:', hasDiscover);
+    console.log('Has register function:', hasRegister);
+
+    // If the library has HueBridge constructor, check its prototype
+    if (typeof pheaModule.HueBridge === 'function') {
+      console.log('HueBridge prototype methods:',
+        Object.getOwnPropertyNames(pheaModule.HueBridge.prototype)
+          .filter(name => name !== 'constructor')
+      );
+
+      // Create a test instance to check available methods
+      try {
+        const testBridge = new pheaModule.HueBridge({
+          address: '192.168.1.100', // Dummy address
+          username: 'test',
+          psk: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' // Dummy PSK
+        });
+
+        console.log('Bridge instance methods:',
+          Object.getOwnPropertyNames(Object.getPrototypeOf(testBridge))
+        );
+
+        // Check for critical methods
+        console.log('Has connect method:', typeof testBridge.connect === 'function');
+        console.log('Has disconnect method:', typeof testBridge.disconnect === 'function');
+        console.log('Has transition method:', typeof testBridge.transition === 'function');
+        console.log('Has setChannelRGB method:', typeof testBridge.setChannelRGB === 'function');
+
+      } catch (err) {
+        console.error('Error creating test bridge instance:', err);
+      }
+    }
+
+    console.log('====== END PHEA LIBRARY TEST ======');
+    return true;
+  } catch (error) {
+    console.error('PHEA LIBRARY NOT AVAILABLE:', error);
+    return false;
+  }
 }

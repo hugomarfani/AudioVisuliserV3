@@ -37,26 +37,8 @@ class HueService {
   private lastRequestTimestamp: number = 0;
   private lastRequestReset: number = 0;
   private entertainmentGroupConfigured: boolean = false;
-  private maxRequestsPerSecond: number = 8; // Reduced from 10 to prevent 429 errors
-  private requestQueue: Array<{rgb: [number, number, number], transitionTime: number, forceSend: boolean}> = [];
-  private processingQueue: boolean = false;
-  private connectionRetryDelay: number = 1000; // Starting delay (1 second)
-  private maxRetryDelay: number = 30000; // Maximum delay (30 seconds)
-  private isShuttingDown: boolean = false;
-  private lastApiCommandTime: number = 0;
-  private pendingRegularApiCommands: Array<{lightId: string, state: any}> = [];
-  private processingRegularApiCommands: boolean = false;
-  private lightStates: Map<string, any> = new Map(); // Track light states
-
-  // Add monitoring properties
-  private entertainmentApiCount: number = 0;
-  private regularApiCount: number = 0;
-  private entertainmentApiErrors: number = 0;
-  private regularApiErrors: number = 0;
-  private lastMetricsReset: number = Date.now();
-  private isEmergencyClearing: boolean = false;
   private lastPerformanceLog: number = 0;
-  private performanceLogInterval: number = 30000; // 30 seconds between performance logs
+  private performanceLogInterval: number = 30000;
 
   constructor() {
     // Try to load saved config
@@ -393,104 +375,70 @@ class HueService {
     }
 
     try {
-      // Add retry logic with exponential backoff for connection timeouts
-      let retryCount = 0;
-      const maxRetries = 3;
-      let lastError: any = null;
+      // Only try entertainment mode if we have a valid PSK
+      if (this.config.psk && this.config.psk.length >= 10) {
+        console.log(`Initializing bridge at ${this.config.address} with entertainment mode`);
+        const dtlsUpdates = options?.updateRate || this.updateRate;
+        console.log(`Using DTLS update rate: ${dtlsUpdates}/sec`);
 
-      while (retryCount < maxRetries) {
         try {
-          if (retryCount > 0) {
-            // Use exponential backoff for retries
-            const delay = Math.min(this.connectionRetryDelay * Math.pow(2, retryCount - 1), this.maxRetryDelay);
-            console.log(`Connection attempt ${this.connectionAttempts + 1} (Retry ${retryCount}). Waiting ${delay}ms before retry...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
+          this.connectionAttempts++;
+          console.log(`Connection attempt ${this.connectionAttempts}`);
+
+          // Check for existing bridge and clean up if needed
+          if (this.bridge) {
+            console.log('Found existing bridge instance, cleaning up');
+            try {
+              if (typeof this.bridge.disconnect === 'function') {
+                await this.bridge.disconnect();
+              } else if (typeof this.bridge.stop === 'function') {
+                await this.bridge.stop();
+              }
+            } catch (e) {
+              console.warn('Error cleaning up existing bridge:', e);
+            }
+            this.bridge = null;
           }
 
-          // Only try entertainment mode if we have a valid PSK
-          if (this.config.psk && this.config.psk.length >= 10) {
-            console.log(`Initializing bridge at ${this.config.address} with entertainment mode`);
-            const dtlsUpdates = options?.updateRate || this.updateRate;
-            console.log(`Using DTLS update rate: ${dtlsUpdates}/sec`);
+          this.bridge = Phea.bridge({
+            address: this.config.address,
+            username: this.config.username,
+            psk: this.config.psk,
+            dtlsUpdatesPerSecond: dtlsUpdates,
+            colorUpdatesPerSecond: hueConfig.defaultColorUpdateRate,
+            dtlsPort: hueConfig.defaultDtlsPort
+          });
 
-            this.connectionAttempts++;
-            console.log(`Connection attempt ${this.connectionAttempts}`);
-
-            // Check for existing bridge and clean up if needed
-            if (this.bridge) {
-              console.log('Found existing bridge instance, cleaning up');
-              try {
-                if (typeof this.bridge.disconnect === 'function') {
-                  await this.bridge.disconnect();
-                } else if (typeof this.bridge.stop === 'function') {
-                  await this.bridge.stop();
-                }
-              } catch (e) {
-                console.warn('Error cleaning up existing bridge:', e);
-              }
-              this.bridge = null;
-            }
-
-            // Add a timeout for the bridge creation to prevent hanging
-            const bridgeCreationPromise = new Promise((resolve, reject) => {
-              try {
-                const bridge = Phea.bridge({
-                  address: this.config!.address,
-                  username: this.config!.username,
-                  psk: this.config!.psk,
-                  dtlsUpdatesPerSecond: dtlsUpdates,
-                  colorUpdatesPerSecond: hueConfig.defaultColorUpdateRate,
-                  dtlsPort: hueConfig.defaultDtlsPort,
-                  dtlsTimeoutMs: 5000 // Add explicit DTLS timeout of 5 seconds
-                });
-                resolve(bridge);
-              } catch (e) {
-                reject(e);
-              }
-            });
-
-            // Add a timeout for the bridge creation
-            const timeoutPromise = new Promise((_, reject) => {
-              setTimeout(() => reject(new Error('Bridge creation timed out')), 10000);
-            });
-
-            // Race the promises to handle potential timeouts
-            this.bridge = await Promise.race([bridgeCreationPromise, timeoutPromise]);
-
-            if (this.bridge) {
-              console.log('Bridge created successfully');
-              // Disable verbose logs after successful setup
-              this.debugLogsEnabled = false;
-
-              // If we succeeded after a retry, reset the retry delay
-              this.connectionRetryDelay = 1000;
-              break;
-            }
-          } else if (hueConfig.forceEntertainmentAPI) {
-            console.error('Entertainment API is forced but no valid PSK is available.');
-            return false;
+          if (this.bridge) {
+            console.log('Bridge created successfully');
+            // Disable verbose logs after successful setup
+            this.debugLogsEnabled = false;
           } else {
-            console.warn('No valid PSK available for Entertainment API');
-            this.useEntertainmentMode = false;
-            break; // No need to retry for non-entertainment mode
+            throw new Error('bridge() returned null or undefined');
           }
         } catch (e) {
-          console.error(`Error creating entertainment bridge (Attempt ${retryCount + 1}/${maxRetries}):`, e);
-          lastError = e;
-          retryCount++;
+          console.error('Error creating entertainment bridge:', e);
+          console.error('Error details:', e instanceof Error ? e.message : String(e));
 
-          // If it's the last retry and entertainment mode is required, fail
-          if (retryCount >= maxRetries) {
-            if (hueConfig.forceEntertainmentAPI) {
-              console.error('Entertainment API is forced but initialization failed after retries.');
-              throw e;
-            }
-
-            // Otherwise, fall back to regular API on last retry
-            console.warn('Falling back to regular API mode after failed retries');
-            this.useEntertainmentMode = false;
+          if (this.connectionAttempts < 3) {
+            console.log(`Retrying (attempt ${this.connectionAttempts + 1})...`);
+            return this.initialize(options);
           }
+
+          if (hueConfig.forceEntertainmentAPI) {
+            console.error('Entertainment API is forced but initialization failed.');
+            return false;
+          }
+
+          console.warn('Falling back to regular API mode');
+          this.useEntertainmentMode = false;
         }
+      } else if (hueConfig.forceEntertainmentAPI) {
+        console.error('Entertainment API is forced but no valid PSK is available.');
+        return false;
+      } else {
+        console.warn('No valid PSK available for Entertainment API');
+        this.useEntertainmentMode = false;
       }
 
       // If we're not using entertainment mode and it's forced, return failure
@@ -663,165 +611,85 @@ class HueService {
 
   // Stop entertainment mode
   async stopEntertainmentMode(): Promise<void> {
-    console.log("🛑 Stopping all Hue operations");
-
-    // Mark as shutting down to prevent new commands
-    this.isShuttingDown = true;
-
-    try {
-      // 1. Clear all request queues
-      this.requestQueue = [];
-      this.pendingRegularApiCommands = [];
-      this.processingQueue = false;
-      this.processingRegularApiCommands = false;
-
-      // 2. If using entertainment mode, properly disconnect
-      if (this.bridge && this.isConnected) {
-        try {
-          console.log("Stopping entertainment mode");
-          await this.bridge.stop();
-        } catch (error) {
-          console.error('Error stopping entertainment mode', error);
-        }
+    if (this.bridge && this.isConnected) {
+      try {
+        console.log("Stopping entertainment mode");
+        await this.bridge.stop();
+        this.isConnected = false;
+      } catch (error) {
+        console.error('Error stopping entertainment mode', error);
       }
-
-      // 3. Send a final dim command to each light we've controlled
-      const dimLights = Array.from(this.lightStates.keys());
-      if (dimLights.length > 0) {
-        console.log(`Sending dimming commands to ${dimLights.length} lights`);
-
-        // Send commands sequentially to avoid rate limiting
-        for (const lightId of dimLights) {
-          try {
-            // Set lights to a dim state (20% brightness) to signify "off" mode
-            await window.electron.ipcRenderer.invoke('hue:setLightState', {
-              lightId,
-              on: true,
-              brightness: 20,
-              transitiontime: 2 // Smooth transition
-            });
-            // Wait 100ms between commands
-            await new Promise(resolve => setTimeout(resolve, 100));
-          } catch (err) {
-            console.warn(`Could not dim light ${lightId}:`, err);
-          }
-        }
-      }
-
-      this.isConnected = false;
-      console.log('Successfully disconnected from Hue');
-    } finally {
-      // Reset the shutdown flag
-      this.isShuttingDown = false;
     }
   }
 
-  // COMPLETELY REWRITTEN to guarantee beat commands are processed and FIX DUAL-SENDING
+  // COMPLETELY REWRITTEN to guarantee beat commands are processed
   async sendColorTransition(rgb: [number, number, number], transitionTime: number = 200, forceSend: boolean = false): Promise<void> {
-    // Check if we're in emergency clearing mode
-    if (this.isEmergencyClearing) {
-      return; // Drop all commands during emergency clearing
-    }
-
-    // Always prioritize beat commands (forceSend=true)
     if (forceSend) {
       this.beatCommandCounter++;
       const now = Date.now();
       this.lastBeatTime = now;
       console.log(`🔴 BEAT COMMAND #${this.beatCommandCounter} - RGB: ${rgb.map(v => v.toFixed(2)).join(', ')}`);
 
-      // Enhanced beat color logic
-      const dramaticColor: [number, number, number] = [
-        Math.min(1, rgb[0] * 2.0),
-        Math.min(1, rgb[1] * 2.0),
-        Math.min(1, rgb[2] * 2.0)
-      ];
-
-      // For beats, bypass the queue and send immediately
+      // Force immediate update using Entertainment API if available
       if (this.isConnected && this.useEntertainmentMode && this.bridge) {
         try {
-          // NEW: Enhanced direct communication approach
-          const fastTransitionTime = 0;
-          const indicesForCommand = this.getIndicesForCommand();
-
-          console.log(`🔴 Sending URGENT beat flash via Entertainment API - RGB=${dramaticColor.map(v => v.toFixed(2)).join(',')}`);
-
-          // Try multiple methods to ensure command gets through
-          let success = false;
-
-          // First try standard transition method
-          if (typeof this.bridge.transition === 'function') {
-            try {
-              await this.bridge.transition(indicesForCommand, dramaticColor, fastTransitionTime);
-              success = true;
-            } catch (err) {
-              console.warn('Standard transition failed:', err);
-            }
-          }
-
-          // If standard approach failed, try direct channel RGB update
-          if (!success && typeof this.bridge.setChannelRGB === 'function') {
-            try {
-              console.log('Falling back to direct setChannelRGB');
-              for (const idx of indicesForCommand) {
-                this.bridge.setChannelRGB(idx, dramaticColor[0], dramaticColor[1], dramaticColor[2]);
-              }
-              success = true;
-            } catch (err) {
-              console.warn('setChannelRGB failed:', err);
-            }
-          }
-
-          // If both methods failed, try updateLightState if available
-          if (!success && typeof this.bridge.updateLightState === 'function') {
-            try {
-              console.log('Falling back to updateLightState');
-              for (const idx of indicesForCommand) {
-                this.bridge.updateLightState(idx, dramaticColor);
-              }
-              success = true;
-            } catch (err) {
-              console.warn('updateLightState failed:', err);
-            }
-          }
-
-          if (success) {
-            // Track success and don't fall back to regular API
-            this.entertainmentApiCount++;
-            this.entertainmentAPIWorking = true;
-            this.logPerformanceMetrics();
-            return; // Exit early - we're done!
-          } else {
-            throw new Error('All entertainment API methods failed');
-          }
+          const fastTransitionTime = 50; // 50ms transition for flash effect
+          // Choose indices from cached lights or default to [0,1,2]
+          let indicesForCommand: number[] = (this.cachedLightIds.length > 0)
+            ? Array.from({ length: this.cachedLightIds.length }, (_, i) => i)
+            : (this.stable_entertainmentLightIndices.length > 0)
+              ? [...this.stable_entertainmentLightIndices]
+              : [0, 1, 2];
+          console.log(`🔴 Sending urgent beat flash via Entertainment API - RGB=${rgb.map(v => v.toFixed(2)).join(',')} to indices:`, indicesForCommand);
+          await this.bridge.transition(indicesForCommand, rgb, fastTransitionTime);
+          console.log('✅ Beat entertainment transition sent successfully');
+          this.entertainmentAPIWorking = true;
         } catch (err) {
           console.error('❌ Error sending beat via Entertainment API:', err);
-          this.entertainmentApiErrors++;
-
-          // Only fallback to regular API on failure
-          await this.sendRegularAPICommandForBeats(dramaticColor);
           this.entertainmentAPIWorking = false;
         }
       } else {
-        // If not using entertainment API, send direct regular API command
-        console.log('Entertainment API not available, using regular API for beat');
-        await this.sendRegularAPICommandForBeats(dramaticColor);
-        return;
+        console.error('❌ Entertainment API not available for beat command');
       }
+      return;
     }
 
-    // For non-beat commands, add to the queue
-    this.queueColorTransition(rgb, transitionTime, forceSend);
+    // Non-beat transitions:
+    if (!this.isConnected) {
+      return;
+    }
+
+    try {
+      // For normal transitions, remove or reduce strict rate-limiting
+      // (if needed, comment out the checkRateLimit call to allow continuous updates)
+      if (!this.checkRateLimit()) {
+        return;
+      }
+
+      if (this.useEntertainmentMode && this.bridge) {
+        const indicesForCommand = (this.entertainmentLightIds.length > 0)
+          ? this.entertainmentLightIds
+          : (this.stable_entertainmentLightIndices.length > 0)
+            ? this.stable_entertainmentLightIndices
+            : [0];
+        await this.bridge.transition(indicesForCommand, rgb, transitionTime);
+      } else if (!hueConfig.forceEntertainmentAPI) {
+        await this.sendRegularAPICommand(rgb, transitionTime, false);
+      }
+      this.lastRGB = rgb;
+    } catch (error) {
+      console.error('Error sending color transition:', error);
+    }
   }
 
-  // New dedicated method just for beat flashes via regular API - enhanced for more dramatic effects
+  // New dedicated method just for beat flashes via regular API
   private async sendRegularAPICommandForBeats(rgb: [number, number, number]): Promise<void> {
     try {
-      this.regularApiCount++;
-
-      // If we're shutting down, don't send any more commands
-      if (this.isShuttingDown || this.isEmergencyClearing) {
-        console.log('⚠️ Shutting down or emergency clearing - skipping beat command');
+      // If entertainment API is working, we don't need to worry about the regular API
+      // This prevents unnecessary logging of warnings
+      if (this.entertainmentAPIWorking) {
+        // Entertainment API seems to be working fine
+        this.lightDiscoveryAttempts++; // Just increment this for statistics
         return;
       }
 
@@ -829,10 +697,7 @@ class HueService {
       let lights: string[] = [];
       if (this.cachedLightIds.length > 0) {
         console.log('🔄 Using cached light IDs for beat command:', this.cachedLightIds);
-
-        // IMPORTANT: Limit to max 3 lights to prevent rate limiting
-        lights = this.cachedLightIds.slice(0, 3);
-        console.log(`Limiting to ${lights.length} lights to prevent rate limiting`);
+        lights = this.cachedLightIds;
       }
       // Only fetch lights if we have none cached
       else {
@@ -840,18 +705,15 @@ class HueService {
           console.log(`🔍 Attempting to discover lights for beat command`);
 
           // Try to get lights from electron IPC
-          const allLights = await window.electron.ipcRenderer.invoke('hue:getLightRids');
+          lights = await window.electron.ipcRenderer.invoke('hue:getLightRids');
 
-          if (allLights && allLights.length > 0) {
-            // IMPORTANT: Limit to max 3 lights
-            lights = allLights.slice(0, 3);
-            console.log(`✅ Found lights, limited to ${lights.length} for beat command:`, lights);
-
-            this.cachedLightIds = [...allLights]; // Cache all lights but use limited set
+          if (lights && lights.length > 0) {
+            console.log(`✅ Found ${lights.length} lights for beat command`, lights);
+            this.cachedLightIds = [...lights]; // Cache for future use
             this.lastSuccessfulLightFetchTime = Date.now();
 
             // Update indices as well
-            const indices = Array.from({ length: allLights.length }, (_, i) => i);
+            const indices = Array.from({ length: lights.length }, (_, i) => i);
             this.entertainmentLightIds = indices;
             this.stable_entertainmentLightIndices = [...indices];
           } else {
@@ -876,105 +738,26 @@ class HueService {
       const sum = X + Y + Z;
       const xy = sum === 0 ? [0.33, 0.33] : [X / sum, Y / sum];
 
-      console.log(`🔴 RATE-LIMITED BEAT API command: RGB=${rgb.map(v => v.toFixed(2)).join(',')} → xy=${xy.map(v => v.toFixed(3)).join(',')}`);
+      console.log(`🔴 URGENT BEAT API command: RGB=${rgb.map(v => v.toFixed(2)).join(',')} → xy=${xy.map(v => v.toFixed(3)).join(',')}`);
+      console.log(`🕒 Beat command sent at ${new Date().toISOString()} to ${lights.length} lights`);
 
-      // Queue commands instead of sending them all at once
-      // First command - immediate flash to full brightness
-      for (const lightId of lights) {
-        this.queueRegularApiCommand(lightId, {
+      // Send command to each light as quickly as possible
+      const promises = lights.map(lightId =>
+        window.electron.ipcRenderer.invoke('hue:setLightState', {
+          lightId,
           on: true,
-          brightness: 100,
+          brightness: 100, // Always full brightness for beats
           xy,
-          transitiontime: 0
-        }, true);  // true = high priority
-      }
+          transitiontime: 0 // No transition for beats - instant change
+        }).catch(err => console.error(`Error setting light ${lightId}:`, err))
+      );
 
-      // Start processing the queue if not already processing
-      this.processRegularApiQueue();
+      // Wait for all commands to complete
+      await Promise.all(promises);
+      console.log(`✅ Beat commands sent to all ${lights.length} lights`);
+
     } catch (error) {
-      this.regularApiErrors++;
-      console.error('❌ ERROR setting up beat commands via regular API:', error);
-    }
-  }
-
-  // New method to queue regular API commands
-  private queueRegularApiCommand(lightId: string, state: any, highPriority: boolean = false): void {
-    // Store the latest state for this light to track it
-    this.lightStates.set(lightId, {...state});
-
-    // Add to queue (at beginning if high priority)
-    const command = {lightId, state};
-    if (highPriority) {
-      this.pendingRegularApiCommands.unshift(command);
-    } else {
-      this.pendingRegularApiCommands.push(command);
-    }
-
-    // If not already processing and not shutting down, start processing
-    if (!this.processingRegularApiCommands && !this.isShuttingDown) {
-      this.processRegularApiQueue();
-    }
-  }
-
-  // Process regular API commands sequentially with rate limiting
-  private async processRegularApiQueue(): Promise<void> {
-    // Already processing or queue is empty or shutting down
-    if (this.processingRegularApiCommands || this.pendingRegularApiCommands.length === 0 ||
-        this.isShuttingDown || this.isEmergencyClearing) {
-      return;
-    }
-
-    // Emergency check: If queue gets too large, clear it
-    if (this.pendingRegularApiCommands.length > 150) {
-      console.warn(`⚠️ Regular API queue too large (${this.pendingRegularApiCommands.length}), emergency clearing!`);
-      this.emergencyClearQueues();
-      return;
-    }
-
-    this.processingRegularApiCommands = true;
-
-    try {
-      // Get next command from queue
-      const command = this.pendingRegularApiCommands.shift();
-      if (!command) {
-        return;
-      }
-
-      // Rate limit: ensure at least 100ms since last command
-      const now = Date.now();
-      const timeSinceLastCommand = now - this.lastApiCommandTime;
-      if (timeSinceLastCommand < 100) {
-        await new Promise(resolve => setTimeout(resolve, 100 - timeSinceLastCommand));
-      }
-
-      // Send command with error handling
-      try {
-        console.log(`Sending to light ${command.lightId}: ${JSON.stringify(command.state)}`);
-        await window.electron.ipcRenderer.invoke('hue:setLightState', {
-          lightId: command.lightId,
-          ...command.state
-        });
-
-        // Update last command time and increment counter
-        this.lastApiCommandTime = Date.now();
-      } catch (error) {
-        this.regularApiErrors++;
-        // If we get a 429, wait longer before continuing
-        if (error.toString().includes('429')) {
-          console.warn(`⚠️ Rate limit hit (429) - pausing API commands for 1 second`);
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-
-        console.error(`Error setting light ${command.lightId}:`, error);
-      }
-    } finally {
-      // Always mark as not processing when done
-      this.processingRegularApiCommands = false;
-
-      // If more commands and not shutting down, continue processing with a delay
-      if (this.pendingRegularApiCommands.length > 0 && !this.isShuttingDown) {
-        setTimeout(() => this.processRegularApiQueue(), 100);
-      }
+      console.error('❌ ERROR sending beat commands via regular API:', error);
     }
   }
 
@@ -1293,282 +1076,308 @@ class HueService {
     }
   }
 
-  // ADD NEW: Reset sync method to clear all queues and reset internal state
-  public resetSync(): void {
-    console.log("Resetting Hue sync: clearing queues and resetting internal state...");
-    this.requestQueue = [];
-    this.pendingRegularApiCommands = [];
-    this.processingQueue = false;
-    this.processingRegularApiCommands = false;
-    this.lightStates.clear();
-    this.connectionAttempts = 0;
-    this.lastApiCommandTime = 0;
-    this.beatCommandCounter = 0;
-    this.lastBeatTime = 0;
+  // Add this method to verify the PSK is correctly formatted
+  verifyEntertainmentApiCredentials(): boolean {
+    if (!this.config) {
+      console.error('No configuration available to verify');
+      return false;
+    }
 
-    // Reset metrics counters as well
+    // Check IP address format
+    const ipPattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+    if (!ipPattern.test(this.config.address)) {
+      console.error('Invalid IP address format:', this.config.address);
+      return false;
+    }
+
+    // Check username is reasonably formatted (not empty)
+    if (!this.config.username || this.config.username.length < 5) {
+      console.error('Username looks invalid:', this.config.username);
+      return false;
+    }
+
+    // Check PSK format (should be 64 hex characters)
+    const pskPattern = /^[0-9a-fA-F]{64}$/;
+    if (!pskPattern.test(this.config.psk)) {
+      console.error('PSK invalid format - should be 64 hex characters:',
+        this.config.psk ? `${this.config.psk.substring(0, 4)}...` : 'missing');
+      return false;
+    }
+
+    // Check entertainment group ID is a UUID
+    if (!this.isUuidFormat(this.config.entertainmentGroupId)) {
+      console.error('Entertainment group ID is not a valid UUID:', this.config.entertainmentGroupId);
+      return false;
+    }
+
+    console.log('✅ Entertainment API credentials look valid');
+    return true;
+  }
+
+  // DEBUGGING FUNCTION: Add this method to test the transition function directly
+  async testTransition(): Promise<boolean> {
+    if (!this.bridge || !this.isConnected) {
+      console.error('Cannot test transition: bridge not connected');
+      return false;
+    }
+
+    try {
+      console.log('🧪 TESTING ENTERTAINMENT API TRANSITION');
+      console.log('Bridge methods available:', Object.keys(this.bridge).filter(key => typeof this.bridge[key] === 'function'));
+
+      // Get light indices to use
+      const indices = this.entertainmentLightIds.length > 0 ?
+        this.entertainmentLightIds :
+        [0, 1, 2]; // Default to first three indices
+
+      console.log(`Using light indices: ${indices.join(', ')}`);
+
+      // Test with a bright red color
+      const testColor: [number, number, number] = [1, 0, 0];
+
+      // Check if transition method exists and is a function
+      if (typeof this.bridge.transition !== 'function') {
+        console.error('Bridge does not have a "transition" method!');
+
+        // Try alternative methods
+        if (typeof this.bridge.setChannelRGB === 'function') {
+          console.log('Trying setChannelRGB method instead...');
+          for (const idx of indices) {
+            this.bridge.setChannelRGB(idx, testColor[0], testColor[1], testColor[2]);
+          }
+          return true;
+        }
+
+        if (typeof this.bridge.updateLightState === 'function') {
+          console.log('Trying updateLightState method instead...');
+          for (const idx of indices) {
+            this.bridge.updateLightState(idx, testColor);
+          }
+          return true;
+        }
+
+        return false;
+      }
+
+      // If transition exists, use it
+      console.log('Calling bridge.transition()...');
+      await this.bridge.transition(indices, testColor, 0);
+      console.log('✅ Entertainment API transition test successful!');
+      return true;
+    } catch (error) {
+      console.error('❌ Entertainment API transition test failed:', error);
+      return false;
+    }
+  }
+
+  // Helper method to get valid indices for commands
+  private getIndicesForCommand(): number[] {
+    // Try multiple sources to ensure we get valid indices
+    if (this.entertainmentLightIds.length > 0) {
+      return [...this.entertainmentLightIds];
+    }
+    if (this.stable_entertainmentLightIndices.length > 0) {
+      return [...this.stable_entertainmentLightIndices];
+    }
+    if (this.cachedLightIds.length > 0) {
+      return Array.from({ length: this.cachedLightIds.length }, (_, i) => i);
+    }
+    // Default to these indices if nothing else is available
+    return [0, 1, 2, 3, 4];
+  }
+
+  // Add metrics tracking method that was missing (causing errors)
+  public getApiStats(): {
+    entertainmentApiCount: number;
+    regularApiCount: number;
+    entertainmentApiErrors: number;
+    regularApiErrors: number;
+    lastMetricsReset: number;
+  } {
+    return {
+      entertainmentApiCount: this.entertainmentApiCount || 0,
+      regularApiCount: this.regularApiCount || 0,
+      entertainmentApiErrors: this.entertainmentApiErrors || 0,
+      regularApiErrors: this.regularApiErrors || 0,
+      lastMetricsReset: this.lastMetricsReset || Date.now()
+    };
+  }
+
+  // Add method to log performance metrics
+  private logPerformanceMetrics(): void {
+    const now = Date.now();
+    if (now - this.lastPerformanceLog > this.performanceLogInterval) {
+      console.log('Hue API Performance Metrics:', {
+        entertainmentApiCount: this.entertainmentApiCount,
+        regularApiCount: this.regularApiCount,
+        entertainmentApiErrors: this.entertainmentApiErrors,
+        regularApiErrors: this.regularApiErrors,
+        timeSinceReset: Math.floor((now - this.lastMetricsReset) / 1000) + 's',
+      });
+      this.lastPerformanceLog = now;
+    }
+  }
+
+  // Add method to reset metrics
+  public resetApiStats(): void {
     this.entertainmentApiCount = 0;
     this.regularApiCount = 0;
     this.entertainmentApiErrors = 0;
     this.regularApiErrors = 0;
     this.lastMetricsReset = Date.now();
-    this.lastPerformanceLog = 0;
-
-    console.log('✅ HueService reset complete');
+    console.log('Hue API metrics reset');
   }
 
-  // ADD a new public testFlash method with dramatic animation
-  public async testFlash(color: [number, number, number] = [1, 0, 0]): Promise<boolean> {
-    console.log('🔍 TEST FLASH REQUESTED with color:', color);
+  // Add method for emergency clearing of queues
+  public emergencyClearQueues(): void {
+    console.warn('⚠️ EMERGENCY CLEARING QUEUES');
+    this.isEmergencyClearing = true;
+    setTimeout(() => {
+      console.log('Emergency clearing completed');
+      this.isEmergencyClearing = false;
+    }, 2000);
+  }
+
+  // Missing properties that need to be initialized
+  private entertainmentApiCount: number = 0;
+  private regularApiCount: number = 0;
+  private entertainmentApiErrors: number = 0;
+  private regularApiErrors: number = 0;
+  private lastMetricsReset: number = Date.now();
+  private isEmergencyClearing: boolean = false;
+
+  // Add to HueService class
+  async verifyEntertainmentSetup(): Promise<boolean> {
+    console.log('🔍 Verifying entertainment setup...');
+
+    if (!this.config) {
+      console.error('No configuration available');
+      return false;
+    }
+
     try {
-      // Force recreation of entertainment indices if needed
-      if (this.entertainmentLightIds.length === 0 && this.cachedLightIds.length > 0) {
-        const indices = Array.from({ length: this.cachedLightIds.length }, (_, i) => i);
-        this.entertainmentLightIds = indices;
-        this.stable_entertainmentLightIndices = [...indices];
-        console.log('Created entertainment indices for test flash:', indices);
+      console.log('1. Checking entertainment group ID format...');
+      if (!this.isUuidFormat(this.config.entertainmentGroupId)) {
+        console.error(`Entertainment group ID is not in UUID format: ${this.config.entertainmentGroupId}`);
+        return false;
       }
 
-      // Boost the color for more dramatic effect
-      const dramaticColor: [number, number, number] = [
-        Math.min(1, color[0] * 1.5),
-        Math.min(1, color[1] * 1.5),
-        Math.min(1, color[2] * 1.5)
-      ];
-
-      // First try entertainment API for immediate flash - ENHANCED with animation
-      if (this.isConnected && this.useEntertainmentMode && this.bridge) {
-        try {
-          // Get all possible indices to maximize chance of success
-          const allIndices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-
-          console.log('🔴 SENDING ANIMATED TEST FLASH SEQUENCE via Entertainment API');
-
-          // First flash - bright
-          await this.bridge.transition(allIndices, dramaticColor, 0);
-
-          // Wait 100ms
-          await new Promise(r => setTimeout(r, 100));
-
-          // Second flash - dimmer
-          const dimmedColor: [number, number, number] = [
-            color[0] * 0.6, color[1] * 0.6, color[2] * 0.6
-          ];
-          await this.bridge.transition(allIndices, dimmedColor, 0);
-
-          // Wait 100ms
-          await new Promise(r => setTimeout(r, 100));
-
-          // Third flash - brightest
-          const brightestColor: [number, number, number] = [
-            Math.min(1, color[0] * 2.0),
-            Math.min(1, color[1] * 2.0),
-            Math.min(1, color[2] * 2.0)
-          ];
-          await this.bridge.transition(allIndices, brightestColor, 0);
-
-          // Send another test command with specific indices if we have them
-          if (this.entertainmentLightIds.length > 0) {
-            console.log('🔴 Sending follow-up animated flash to specific indices:', this.entertainmentLightIds);
-            await this.bridge.transition(this.entertainmentLightIds, dramaticColor, 0);
-          }
-
-          console.log('✅ Entertainment API test flash animation sent');
-        } catch (e) {
-          console.error('❌ Error with Entertainment API test flash:', e);
-        }
-      }
-
-      // ALWAYS also try regular API as backup with enhanced animation
+      // Make a REST API call to check if this is a real entertainment group
+      console.log(`2. Checking if group ${this.config.entertainmentGroupId} exists...`);
       try {
-        if (this.cachedLightIds.length === 0) {
-          // Try to get lights
-          const lights = await this.getLightsForRegularAPI();
-          if (lights && lights.length > 0) {
-            this.cachedLightIds = [...lights];
-          }
+        const entertainmentGroups = await window.electron.ipcRenderer.invoke(
+          'hue:getEntertainmentAreas'
+        );
+        console.log('Retrieved entertainment areas:', entertainmentGroups);
+
+        const matchingGroup = entertainmentGroups.find(
+          (group: any) => group.id === this.config.entertainmentGroupId
+        );
+
+        if (!matchingGroup) {
+          console.error(`Entertainment group ${this.config.entertainmentGroupId} not found`);
+          return false;
         }
 
-        if (this.cachedLightIds.length > 0) {
-          console.log('🔴 SENDING ANIMATED TEST FLASH via Regular API to', this.cachedLightIds.length, 'lights');
-
-          // Convert RGB to XY
-          const X = dramaticColor[0] * 0.664511 + dramaticColor[1] * 0.154324 + dramaticColor[2] * 0.162028;
-          const Y = dramaticColor[0] * 0.283881 + dramaticColor[1] * 0.668433 + dramaticColor[2] * 0.047685;
-          const Z = dramaticColor[0] * 0.000088 + dramaticColor[1] * 0.072310 + dramaticColor[2] * 0.986039;
-          const sum = X + Y + Z;
-          const xy = sum === 0 ? [0.33, 0.33] : [X / sum, Y / sum];
-
-          // First flash - full brightness
-          for (const lightId of this.cachedLightIds) {
-            await window.electron.ipcRenderer.invoke('hue:setLightState', {
-              lightId,
-              on: true,
-              brightness: 100,
-              xy,
-              transitiontime: 0
-            });
-          }
-
-          // Add a second flash after a brief delay for animation
-          setTimeout(async () => {
-            // Create a second flash with slight color variation
-            const dimmedColor: [number, number, number] = [
-              color[0] * 0.5, color[1] * 0.5, color[2] * 0.5
-            ];
-            const X2 = dimmedColor[0] * 0.664511 + dimmedColor[1] * 0.154324 + dimmedColor[2] * 0.162028;
-            const Y2 = dimmedColor[0] * 0.283881 + dimmedColor[1] * 0.668433 + dimmedColor[2] * 0.047685;
-            const Z2 = dimmedColor[0] * 0.000088 + dimmedColor[1] * 0.072310 + dimmedColor[2] * 0.986039;
-            const sum2 = X2 + Y2 + Z2;
-            const xy2 = sum2 === 0 ? [0.33, 0.33] : [X2 / sum2, Y2 / sum2];
-
-            for (const lightId of this.cachedLightIds) {
-              window.electron.ipcRenderer.invoke('hue:setLightState', {
-                lightId,
-                on: true,
-                brightness: 60, // Lower brightness for contrast
-                xy: xy2,
-                transitiontime: 0
-              });
-            }
-
-            // Add a third flash back to full color after another short delay
-            setTimeout(async () => {
-              for (const lightId of this.cachedLightIds) {
-                window.electron.ipcRenderer.invoke('hue:setLightState', {
-                  lightId,
-                  on: true,
-                  brightness: 100, // Back to full brightness
-                  xy,
-                  transitiontime: 0
-                });
-              }
-
-              console.log('✅ Regular API animated test flash sequence completed');
-            }, 150); // Third flash delay
-          }, 150); // Second flash delay
-        } else {
-          console.warn('⚠️ No light IDs available for regular API test');
-        }
-      } catch (e) {
-        console.error('❌ Error with regular API test flash:', e);
+        console.log('Found matching group:', matchingGroup);
+      } catch (err) {
+        console.warn('Could not verify group via REST API:', err);
+        // Continue anyway as this might be due to permissions
       }
+
+      console.log('3. Checking bridge connection status...');
+      if (!this.bridge) {
+        console.error('No bridge object available');
+        return false;
+      }
+
+      if (!this.isConnected) {
+        console.error('Not connected to bridge');
+        return false;
+      }
+
+      // Check if we can directly access the underlying connection
+      console.log('4. Checking DTLS connection...');
+      const hasConnection = !!(
+        this.bridge._connection ||
+        this.connection ||
+        this.bridge.connection
+      );
+
+      console.log(`DTLS connection available: ${hasConnection}`);
+
+      // Run a test flash
+      console.log('5. Running test flash cycle...');
+      await this.testColorCycle();
 
       return true;
-    } catch (error) {
-      console.error('❌ Test flash failed completely:', error);
+    } catch (err) {
+      console.error('Error verifying entertainment setup:', err);
       return false;
     }
   }
 
-  // Add new queue-based processing methods
-
-  // Helper method to get valid indices for commands
-  private getIndicesForCommand(): number[] {
-    if (this.entertainmentLightIds.length > 0) {
-      return [...this.entertainmentLightIds];
-    } else if (this.stable_entertainmentLightIndices.length > 0) {
-      return [...this.stable_entertainmentLightIndices];
-    } else if (this.cachedLightIds.length > 0) {
-      return Array.from({ length: this.cachedLightIds.length }, (_, i) => i);
-    } else {
-      return [0, 1, 2]; // Default to first three indices
-    }
-  }
-
-  // Queue color transitions with rate limiting
-  private queueColorTransition(rgb: [number, number, number], transitionTime: number, forceSend: boolean): void {
-    // Skip if emergency clearing
-    if (this.isEmergencyClearing) return;
-
-    // Emergency check: If queue gets too large, clear it
-    if (this.requestQueue.length > 150) {
-      console.warn(`⚠️ Entertainment API queue too large (${this.requestQueue.length}), emergency clearing!`);
-      this.emergencyClearQueues();
+  // Add a test color cycle method
+  async testColorCycle(): Promise<void> {
+    if (!this.isConnected || !this.bridge) {
+      console.error('Cannot run test - not connected');
       return;
     }
 
-    // Add to queue
-    this.requestQueue.push({ rgb, transitionTime, forceSend });
+    const colors: [number, number, number][] = [
+      [1, 0, 0], // Red
+      [0, 1, 0], // Green
+      [0, 0, 1], // Blue
+      [1, 1, 1], // White
+      [0, 0, 0]  // Black/Off
+    ];
 
-    // If not already processing, start
-    if (!this.processingQueue) {
-      this.processQueue();
+    // Get indices to update
+    const indices = this.getIndicesForCommand();
+    console.log(`Running color cycle test on indices: ${indices.join(', ')}`);
+
+    for (const color of colors) {
+      try {
+        console.log(`Testing color: RGB(${color.join(', ')})`);
+        // Use different approach depending on what's available
+        if (typeof this.bridge._connection?.write === 'function') {
+          // Format for raw DTLS streaming
+          const r = Math.round(color[0] * 65535);
+          const g = Math.round(color[1] * 65535);
+          const b = Math.round(color[2] * 65535);
+
+          // Build message for each light
+          const messages = indices.map(idx => {
+            const buffer = Buffer.alloc(7);
+            buffer[0] = idx;
+            buffer[1] = (r >> 8) & 0xFF;
+            buffer[2] = r & 0xFF;
+            buffer[3] = (g >> 8) & 0xFF;
+            buffer[4] = g & 0xFF;
+            buffer[5] = (b >> 8) & 0xFF;
+            buffer[6] = b & 0xFF;
+            return buffer;
+          });
+
+          // Combine and send with header
+          const message = Buffer.concat([
+            Buffer.from([0x48, 0x45, 0x49]), // HEI header
+            ...messages
+          ]);
+
+          this.bridge._connection.write(message);
+        } else {
+          // Fall back to transition method
+          await this.bridge.transition(indices, color, 0);
+        }
+
+        // Wait half a second between colors
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (err) {
+        console.error(`Error testing color ${color}:`, err);
+      }
     }
   }
-
-  // Add an emergency queue clearing mechanism
-  public emergencyClearQueues(): void {
-    // Store queue sizes for logging
-    const regularQueueSize = this.pendingRegularApiCommands.length;
-    const requestQueueSize = this.requestQueue.length;
-
-    // Clear all queues immediately
-    this.requestQueue = [];
-    this.pendingRegularApiCommands = [];
-    this.processingQueue = false;
-    this.processingRegularApiCommands = false;
-
-    // Block new commands temporarily
-    this.isEmergencyClearing = true;
-    setTimeout(() => {
-      this.isEmergencyClearing = false;
-      console.log('✅ Emergency clearing complete, accepting new commands');
-    }, 1000);
-
-    console.log(`⚠️ EMERGENCY QUEUE CLEAR - Discarded ${regularQueueSize} regular and ${requestQueueSize} entertainment commands`);
-  }
-
-  // Add diagnostic metrics reporting
-  public getApiStats(reset: boolean = false): {
-    entertainment: number,
-    regular: number,
-    errors: { entertainment: number, regular: number },
-    queueSizes: { regular: number, entertainment: number },
-    uptime: number // seconds since last reset
-  } {
-    const now = Date.now();
-    const stats = {
-      entertainment: this.entertainmentApiCount,
-      regular: this.regularApiCount,
-      errors: {
-        entertainment: this.entertainmentApiErrors,
-        regular: this.regularApiErrors
-      },
-      queueSizes: {
-        regular: this.pendingRegularApiCommands.length,
-        entertainment: this.requestQueue.length
-      },
-      uptime: Math.round((now - this.lastMetricsReset) / 1000)
-    };
-
-    if (reset) {
-      this.entertainmentApiCount = 0;
-      this.regularApiCount = 0;
-      this.entertainmentApiErrors = 0;
-      this.regularApiErrors = 0;
-      this.lastMetricsReset = now;
-    }
-
-    return stats;
-  }
-
-  // Log performance metrics periodically
-  private logPerformanceMetrics(): void {
-    const now = Date.now();
-    if (now - this.lastPerformanceLog > this.performanceLogInterval) {
-      this.lastPerformanceLog = now;
-      const stats = this.getApiStats();
-      console.log('📊 Hue API Performance Metrics:', {
-        entertainmentCalls: stats.entertainment,
-        regularCalls: stats.regular,
-        errors: stats.errors,
-        queueSizes: stats.queueSizes,
-        uptime: `${Math.floor(stats.uptime / 60)}m ${stats.uptime % 60}s`
-      });
-    }
-  }
-
 }
 
 export default new HueService();

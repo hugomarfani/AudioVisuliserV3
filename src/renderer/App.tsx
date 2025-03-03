@@ -16,9 +16,9 @@ import { Button, Modal, Box } from '@mui/material';
 import PhillipsHueControls from '../components/Hue/PhillipsHueControls';
 import HueConfigModal from '../components/Hue/HueConfigModal';
 import '../styles/hue.css';
-import { testPheaLibrary } from '../utils/testPhea';
+import { testPheaLibrary } from '../utils/PheaConnector';
 
-// Run test on app start
+// Run tests on app start
 console.log('Testing Phea library on app start...');
 testPheaLibrary();
 
