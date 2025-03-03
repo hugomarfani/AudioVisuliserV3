@@ -79,7 +79,7 @@ const App: React.FC = () => {
     <Router>
       <Routes>
         <Route
-          path="/"
+          path="/test"
           element={
             <MeshGradientBackground>
               {accessToken === '123' ? (
@@ -113,7 +113,8 @@ const App: React.FC = () => {
         <Route path="/particles/:id" element={<Particles />} />
         {/* <Route path="/aiden/:id" element={<ThreeTest />} /> */}
         <Route
-          path="/aiden/:id"
+          // path="/aiden/:id"
+          path="/"
           element={
             <ShaderVisuals
               track={{
