@@ -43,9 +43,9 @@ const Aiden: React.FC = () => {
 
   return (
     <div className={`page-transition ${isVisible ? 'visible' : ''}`}
-      style={{ 
-        width: '100vw', 
-        height: '100vh', 
+      style={{
+        width: '100vw',
+        height: '100vh',
         background: '#000',
         color: 'white',
         padding: '20px',

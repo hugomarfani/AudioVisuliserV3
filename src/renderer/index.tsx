@@ -1,11 +1,12 @@
 import { createRoot } from 'react-dom/client';
 import App from './App';
-import PlayScene from '../components/SongPlayer/PlayScene';
+import ThreeTest from './threetest';
+import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
+import ShaderVisuals from '../shader/ShaderVisuals';
 
 const container = document.getElementById('root') as HTMLElement;
 const root = createRoot(container);
-root.render(<App />);
-// root.render(<PlayScene />);
+root.render(<App /> );
 
 // calling IPC exposed from preload script
 window.electron.ipcRenderer.once('ipc-example', (arg) => {

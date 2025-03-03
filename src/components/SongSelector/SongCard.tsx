@@ -3,6 +3,7 @@ import { FaInfoCircle } from 'react-icons/fa';
 import colors from '../../theme/colors';
 import { SongModel } from '../../database/models/Song';
 import { useNavigate } from 'react-router-dom';
+import { encode } from 'node:punycode';
 
 type SongCardProps = {
   uri: string;
@@ -201,7 +202,7 @@ function SongCard({
           }}
           onClick={handleAidenClick}
         >
-          Aiden
+          Shader
         </button>
       </div>
     </div>
