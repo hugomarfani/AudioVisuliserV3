@@ -62,7 +62,14 @@ const electronHandler = {
         'hue:dtls-disconnect',
         'hue:dtls-is-connected',
         'hue:dtls-send-colors',
-        'hue:dtls-test-sequence'
+        'hue:dtls-test-sequence',
+        // New Direct Hue channels
+        'hue:activateEntertainmentGroup',
+        'hue:startDTLSStream',
+        'hue:sendDTLSColor',
+        'hue:deactivateEntertainmentGroup',
+        'hue:stopDTLSStream',
+        'hue:isDTLSStreaming'
       ];
       if (validChannels.includes(channel)) {
         return ipcRenderer.invoke(channel, ...args);

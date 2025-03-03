@@ -53,6 +53,7 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
   const [availableGroups, setAvailableGroups] = useState<any[]>([]);
   // Add debug state to show more info
   const [lastLightCommand, setLastLightCommand] = useState<string>("");
+  const [useDirectDTLS, setUseDirectDTLS] = useState<boolean>(true);
 
   // Use a state for config so that dependency changes trigger refetch
   const [config, setConfig] = useState(HueService.getConfig());
@@ -723,85 +724,6 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
     }
   };
 
-  // Add this new function near flashLights
-  const testEntertainmentAPI = async () => {
-    try {
-      // First verify connection
-      if (!connected) {
-        console.log("Not connected. Attempting to connect to Hue...");
-        await connectToHue();
-      }
-
-      if (!connected) {
-        setError("Could not connect to Hue bridge");
-        return;
-      }
-
-      console.log("🧪 TESTING ENTERTAINMENT API");
-
-      // Test sequence to flash several colors via entertainment API
-      const colors: [number, number, number][] = [
-        [1, 0, 0], // Red
-        [0, 1, 0], // Green
-        [0, 0, 1], // Blue
-        [1, 1, 0], // Yellow
-        [1, 0, 1], // Magenta
-      ];
-
-      // Using direct test function in HueService
-      const testResult = await HueService.testTransition();
-
-      if (testResult) {
-        setLastLightCommand("Entertainment API test successful!");
-
-        // Now send a sequence of colors
-        for (const color of colors) {
-          await HueService.sendColorTransition(color, 0, true); // Use forceSend=true for immediate effect
-          await new Promise(resolve => setTimeout(resolve, 300)); // 300ms between colors
-        }
-      } else {
-        setLastLightCommand("Entertainment API test failed - check console");
-        setError("Entertainment API test failed. See debug console for details.");
-      }
-    } catch (error) {
-      console.error("Test error:", error);
-      setError(`Test error: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  };
-
-  // Add this function to the HueMusicSync component:
-  const verifyAndFixEntertainmentSetup = async () => {
-    try {
-      setError(null);
-      setLastLightCommand("Verifying entertainment setup...");
-
-      // First, check if we're connected
-      if (!connected) {
-        await connectToHue();
-      }
-
-      if (!connected) {
-        setError("Could not connect to Hue bridge");
-        return;
-      }
-
-      // Run the verification function
-      const isValid = await HueService.verifyEntertainmentSetup();
-
-      if (isValid) {
-        setLastLightCommand("Entertainment setup is valid! Running color cycle test.");
-        // Let's also run the test color cycle again for good measure
-        await HueService.testColorCycle();
-      } else {
-        setLastLightCommand("Entertainment setup has issues. See console log for details.");
-        setError("Entertainment setup verification failed. Check the console for diagnostic information.");
-      }
-    } catch (error) {
-      console.error("Verification error:", error);
-      setError(`Verification error: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  };
-
   // Toggle the enabled state
   const handleToggleEnabled = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newEnabled = event.target.checked;
@@ -1095,24 +1017,6 @@ const HueMusicSync: React.FC<HueMusicSyncProps> = ({
             variant="contained"
           >
             Flash Lights Manually
-          </Button>
-          <Button
-            sx={{ mt: 2, ml: 2 }}
-            onClick={testEntertainmentAPI}
-            color="secondary"
-            variant="contained"
-            disabled={!HueService.hasValidConfig()}
-          >
-            Test Entertainment API
-          </Button>
-          <Button
-            sx={{ mt: 2, ml: 2 }}
-            onClick={verifyAndFixEntertainmentSetup}
-            color="warning"
-            variant="contained"
-            disabled={!HueService.hasValidConfig()}
-          >
-            Verify & Fix Setup
           </Button>
         </Box>
       ) : (

@@ -30,6 +30,7 @@ import bonjour from 'bonjour';
 import net from 'net';
 import * as hueApi from 'node-hue-api'; // Import entire module
 import { initializeHueDTLSHandlers } from './hueIpcHandlers';
+import { initializeDirectHueHandlers, cleanupDirectHueHandlers } from './directHueHandlers';
 const { v3 } = hueApi; // Extract v3
 
 // Change these to mutable variables so they can be updated
@@ -823,6 +824,7 @@ const createWindow = async () => {
 
 // Initialize DTLS IPC handlers
 initializeHueDTLSHandlers();
+initializeDirectHueHandlers();
 
 /**
  * Add event listeners...
@@ -844,6 +846,9 @@ app.on('before-quit', () => {
       console.log('Database connection closed');
     }
   });
+
+  // Add this cleanup call
+  cleanupDirectHueHandlers();
 });
 
 app.whenReady()
