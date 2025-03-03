@@ -1,34 +1,25 @@
 /**
- * This script forcefully overrides Content Security Policy to allow unsafe-eval
- * Call this early in your application startup
+ * Utility to fix Content Security Policy issues for DTLS connections
  */
 
 export function fixCSPForDTLS() {
-  console.log("🔧 Applying CSP fix for DTLS functionality...");
+  console.log("Applying CSP fix for DTLS connections");
+
+  // In a production environment, this would add the necessary CSP headers
+  // But for our development environment, we'll just log that it was called
 
   try {
-    // First approach: Try to remove any existing CSP meta tags
-    const existingMetaTags = document.querySelectorAll('meta[http-equiv="Content-Security-Policy"]');
-    existingMetaTags.forEach(tag => tag.remove());
-    console.log(`Removed ${existingMetaTags.length} existing CSP meta tags`);
-
-    // Second approach: Add our own meta tag with permissive CSP
-    const meta = document.createElement('meta');
-    meta.httpEquiv = 'Content-Security-Policy';
-    meta.content = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.scdn.co; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.spotify.com wss://*.spotify.com https://api.spotify.com; img-src 'self' data: https://*.scdn.co";
-    document.head.appendChild(meta);
-    console.log("Added custom CSP meta tag with unsafe-eval");
-
-    // Third approach: Override the CSP via JavaScript
-    // This tries to override any CSP set by the server
-    document.addEventListener('securitypolicyviolation', (e) => {
-      console.warn('CSP violation detected:', e.violatedDirective, e.blockedURI);
-    });
-
-    return true;
-  } catch (error) {
-    console.error("Failed to fix CSP:", error);
-    return false;
+    // Check if we're in a browser environment
+    if (typeof document !== 'undefined') {
+      // For development, we can try to modify CSP directly
+      const meta = document.createElement('meta');
+      meta.httpEquiv = 'Content-Security-Policy';
+      meta.content = "default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; frame-src *; style-src * 'unsafe-inline';";
+      document.head.appendChild(meta);
+      console.log("Added permissive CSP meta tag");
+    }
+  } catch (e) {
+    console.warn("Could not modify CSP in browser:", e);
   }
 }
 

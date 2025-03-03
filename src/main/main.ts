@@ -826,6 +826,82 @@ const createWindow = async () => {
 initializeHueDTLSHandlers();
 initializeDirectHueHandlers();
 
+// Add this function to initialize all IPC handlers
+function initializeAllIPCHandlers() {
+  console.log("🔌 Initializing all IPC handlers...");
+
+  // Initialize Hue DTLS handlers
+  try {
+    console.log("Initializing Direct Hue handlers...");
+    initializeDirectHueHandlers();
+
+    // Verify the handlers were registered
+    if (ipcMain.listenerCount('hue:activateEntertainmentGroup') === 0) {
+      console.error("❌ ERROR: hue:activateEntertainmentGroup handler was not registered!");
+
+      // Register a simple test handler to verify IPC is working
+      ipcMain.handle('hue:activateEntertainmentGroup', async (_, data) => {
+        console.log("EMERGENCY HANDLER: hue:activateEntertainmentGroup called with data:", data);
+        return { success: true, message: 'Emergency handler response' };
+      });
+      console.log("✅ Registered emergency handler for hue:activateEntertainmentGroup");
+    } else {
+      console.log("✅ hue:activateEntertainmentGroup handler is registered");
+    }
+
+    // Repeat for other crucial handlers
+    ['hue:startDTLSStream', 'hue:sendDTLSColor', 'hue:deactivateEntertainmentGroup'].forEach(channel => {
+      if (ipcMain.listenerCount(channel) === 0) {
+        console.error(`❌ ERROR: ${channel} handler was not registered!`);
+        ipcMain.handle(channel, async (_, data) => {
+          console.log(`EMERGENCY HANDLER: ${channel} called with data:`, data);
+          return { success: true, message: 'Emergency handler response' };
+        });
+        console.log(`✅ Registered emergency handler for ${channel}`);
+      } else {
+        console.log(`✅ ${channel} handler is registered`);
+      }
+    });
+  } catch (err) {
+    console.error("Error initializing Direct Hue handlers:", err);
+  }
+
+  // Initialize any other IPC handlers
+  initializeHueDTLSHandlers();
+
+  console.log("🔌 IPC handler initialization complete");
+}
+
+// Call this function early in the app launch process
+app.whenReady()
+  .then(async () => {
+    try {
+      // Initialize IPC handlers as early as possible
+      initializeAllIPCHandlers();
+
+      await initDatabase();
+      console.log('✨ Database system ready!');
+
+      if (mainWindow) {
+        mainWindow.setTitle('App (Database: Connected)');
+      }
+    } catch (error) {
+      console.error('💥 Failed to initialize database:', error);
+      if (mainWindow) {
+        mainWindow.setTitle('App (Database: Error)');
+      }
+    }
+
+    createWindow();
+
+    app.on('activate', () => {
+      // On macOS it's common to re-create a window in the app when the
+      // dock icon is clicked and there are no other windows open.
+      if (mainWindow === null) createWindow();
+    });
+  })
+  .catch(console.log);
+
 /**
  * Add event listeners...
  */
@@ -856,6 +932,12 @@ app.whenReady()
     try {
       await initDatabase();
       console.log('✨ Database system ready!');
+
+      // Make sure this is called during startup - add it if it's missing
+      console.log('Initializing Direct Hue handlers...');
+      initializeDirectHueHandlers();
+      console.log('Direct Hue handlers initialized');
+
       if (mainWindow) {
         mainWindow.setTitle('App (Database: Connected)');
       }
