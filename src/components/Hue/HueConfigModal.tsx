@@ -18,6 +18,7 @@ import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import VisibilityIcon from '@mui/icons-material/VisibilityOff';
 import CodeIcon from '@mui/icons-material/Code';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'; // <-- Added missing import
+import { directFetchEntertainmentConfigs, formatEntertainmentConfig } from '../../utils/HueEntertainmentUtil';
 
 // Apple-inspired styled components
 const AppleCard = styled(Paper)(({ theme }) => ({
@@ -187,6 +188,8 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
   });
   const [showCredentials, setShowCredentials] = useState<boolean>(false);
   const [storedCredentials, setStoredCredentials] = useState<StoredCredential[]>([]);
+  const [loadingGroups, setLoadingGroups] = useState<boolean>(false);
+  const [entertainmentGroupId, setEntertainmentGroupId] = useState<string>('');
 
   // Check if configuration exists
   useEffect(() => {
@@ -364,29 +367,127 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
   };
 
   // Fetch entertainment groups
-  const fetchEntertainmentGroups = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      // Use IPC to get entertainment areas
-      const entertainmentAreas = await window.electron.ipcRenderer.invoke('hue:getEntertainmentAreas');
+  const fetchEntertainmentGroups = async (ip?: string, user?: string) => {
+    console.log('🔍 Starting entertainment group fetch...');
 
-      if (entertainmentAreas && entertainmentAreas.length > 0) {
-        setEntertainmentGroups(entertainmentAreas);
-        setSelectedGroup(entertainmentAreas[0].id);
-        showToast(`Found ${entertainmentAreas.length} entertainment area(s)`, 'success');
-      } else {
-        const errorMsg = "No entertainment areas found. You need to create an entertainment area in the Philips Hue app first.";
-        setError(errorMsg);
-        showToast(errorMsg, 'warning', 'No Entertainment Areas');
+    // Get credentials if not provided
+    if (!ip || !user) {
+      console.log('🔑 No credentials provided, trying to load from local storage');
+      try {
+        const storedConfig = localStorage.getItem('hueConfig');
+        const bridgeInfo = localStorage.getItem('hueBridgeInfo');
+
+        if (storedConfig) {
+          const config = JSON.parse(storedConfig);
+          ip = config.address;
+          user = config.username;
+          console.log(`🔑 Found stored credentials in hueConfig - IP: ${ip}`);
+        } else if (bridgeInfo) {
+          const info = JSON.parse(bridgeInfo);
+          ip = info.ip;
+          user = info.username;
+          console.log(`🔑 Found stored credentials in hueBridgeInfo - IP: ${ip}`);
+        }
+      } catch (error) {
+        console.error('❌ Error parsing stored credentials:', error);
       }
-    } catch (error: any) {
-      const errorMsg = error.message || "Unknown error";
-      setError(`Error fetching entertainment areas: ${errorMsg}`);
-      showToast(`Error fetching entertainment areas: ${errorMsg}`, 'error');
-      console.error('Error fetching entertainment areas:', error);
+    }
+
+    if (!ip || !user) {
+      console.error('❌ No credentials available to fetch entertainment groups');
+      return;
+    }
+
+    setLoadingGroups(true);
+    setError(null);
+
+    console.log(`📡 Will fetch entertainment configurations from ${ip} with username ${user.substring(0, 8)}...`);
+
+    try {
+      // METHOD 1: Direct fetch using browser's fetch API
+      console.log(`🌐 ATTEMPT 1: Using direct fetch API call to ${ip}`);
+
+      try {
+        const configs = await directFetchEntertainmentConfigs(ip, user);
+        console.log(`📥 Direct API returned ${configs.length} configurations:`, configs);
+
+        if (configs.length > 0) {
+          // Format configurations for display
+          const formattedGroups = configs.map(config => formatEntertainmentConfig(config));
+          console.log(`✅ Formatted ${formattedGroups.length} entertainment groups:`, formattedGroups);
+
+          setEntertainmentGroups(formattedGroups);
+          console.log(`💾 State updated with ${formattedGroups.length} entertainment groups`);
+
+          // If we don't have a selected group yet, select the first one
+          if (!entertainmentGroupId && formattedGroups.length > 0) {
+            const firstGroupId = formattedGroups[0].id;
+            console.log(`🎯 Auto-selecting first group: ${firstGroupId}`);
+            setEntertainmentGroupId(firstGroupId);
+            HueService.setEntertainmentGroupId(firstGroupId);
+          }
+
+          setLoadingGroups(false);
+          return; // Exit early since we found groups
+        } else {
+          console.log('⚠️ No entertainment configurations found via direct API');
+        }
+      } catch (directErr) {
+        console.error('❌ Direct fetch API error:', directErr);
+        console.log('🔄 Falling back to IPC method');
+      }
+
+      // METHOD 2: Using Electron IPC
+      console.log(`🔌 ATTEMPT 2: Using Electron IPC hue:getEntertainmentAreas`);
+      const response = await window.electron.ipcRenderer.invoke('hue:getEntertainmentAreas');
+      console.log('📥 IPC response received:', response);
+
+      if (Array.isArray(response) && response.length > 0) {
+        console.log(`✅ IPC returned ${response.length} entertainment groups`);
+        setEntertainmentGroups(response);
+        console.log('💾 State updated with IPC response groups');
+
+        if (!entertainmentGroupId && response.length > 0) {
+          const firstGroupId = response[0].id;
+          console.log(`🎯 Auto-selecting first group from IPC: ${firstGroupId}`);
+          setEntertainmentGroupId(firstGroupId);
+          HueService.setEntertainmentGroupId(firstGroupId);
+        }
+      } else {
+        console.log('⚠️ No entertainment groups found via IPC or empty/invalid response');
+        console.log('🔄 Falling back to hard-coded values');
+        setEntertainmentGroups([]);
+
+        // Last resort - use the hardcoded value from your Postman response
+        const hardcodedGroup = {
+          id: "98738d08-0a7a-487d-9989-2ee50d42b7e8",
+          name: "Music area",
+          type: "music",
+          status: "inactive"
+        };
+
+        console.log('🔧 Using hardcoded entertainment group:', hardcodedGroup);
+        setEntertainmentGroups([hardcodedGroup]);
+        setEntertainmentGroupId(hardcodedGroup.id);
+        HueService.setEntertainmentGroupId(hardcodedGroup.id);
+      }
+    } catch (err) {
+      console.error('❌ Top-level error fetching entertainment configurations:', err);
+      setError('Failed to fetch entertainment configurations. Using hardcoded backup.');
+
+      // Last resort - use a hardcoded fallback based on your API response
+      const fallbackGroup = {
+        id: "98738d08-0a7a-487d-9989-2ee50d42b7e8",
+        name: "Music area (Fallback)"
+      };
+
+      console.log('🚨 Using emergency fallback group:', fallbackGroup);
+      setEntertainmentGroups([fallbackGroup]);
+      setEntertainmentGroupId(fallbackGroup.id);
+      HueService.setEntertainmentGroupId(fallbackGroup.id);
     } finally {
-      setIsLoading(false);
+      console.log('🏁 Entertainment group fetch process complete');
+      setLoadingGroups(false);
     }
   };
 
@@ -687,20 +788,33 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
                 </AppleButton>
               </Box>
             ) : (
-              <FormControl fullWidth sx={{ mb: 3 }}>
-                <InputLabel id="group-select-label" sx={{ ml: 1 }}>Select Entertainment Area</InputLabel>
-                <AppleSelect
-                  labelId="group-select-label"
-                  value={selectedGroup}
-                  label="Select Entertainment Area"
-                  onChange={(e) => setSelectedGroup(e.target.value)}
+              <FormControl fullWidth margin="normal">
+                <InputLabel id="entertainment-group-label">Entertainment Area</InputLabel>
+                <Select
+                  labelId="entertainment-group-label"
+                  id="entertainment-group"
+                  value={entertainmentGroupId}
+                  onChange={handleGroupChange}
+                  disabled={loadingGroups}
+                  label="Entertainment Area"
                 >
-                  {entertainmentGroups.map((group) => (
-                    <MenuItem key={group.id} value={group.id}>
-                      {group.name}
+                  {entertainmentGroups.length > 0 ? (
+                    entertainmentGroups.map((group) => (
+                      <MenuItem key={group.id} value={group.id}>
+                        {group.name} {group.status === 'active' && '(Active)'}
+                      </MenuItem>
+                    ))
+                  ) : (
+                    <MenuItem value="" disabled>
+                      <em>No entertainment areas found</em>
                     </MenuItem>
-                  ))}
-                </AppleSelect>
+                  )}
+                </Select>
+                {entertainmentGroups.length === 0 && !loadingGroups && (
+                  <Typography variant="caption" color="error" display="block" sx={{ mt: 1 }}>
+                    No entertainment areas found. Please create one in the Hue app.
+                  </Typography>
+                )}
               </FormControl>
             )}
           </Box>
@@ -929,6 +1043,50 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
     setStoredCredentials(credentials);
   };
 
+  // Add the missing handler function
+  const handleGroupChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+    const newId = event.target.value as string;
+    setEntertainmentGroupId(newId);
+    if (newId) {
+      HueService.setEntertainmentGroupId(newId);
+    }
+  };
+
+  // Add an effect to run on component mount to fetch entertainment groups
+  useEffect(() => {
+    console.log('🔍 HueConfigModal mounted, checking for bridge credentials...');
+    try {
+      const hueBridgeInfo = localStorage.getItem('hueBridgeInfo');
+      const hueConfig = localStorage.getItem('hueConfig');
+
+      if (hueBridgeInfo) {
+        try {
+          const info = JSON.parse(hueBridgeInfo);
+          if (info?.ip && info?.username) {
+            console.log(`🔍 Found hueBridgeInfo credentials, IP: ${info.ip}`);
+            fetchEntertainmentGroups(info.ip, info.username);
+          }
+        } catch (e) {
+          console.error('❌ Error parsing hueBridgeInfo:', e);
+        }
+      } else if (hueConfig) {
+        try {
+          const config = JSON.parse(hueConfig);
+          if (config?.address && config?.username) {
+            console.log(`🔍 Found hueConfig credentials, IP: ${config.address}`);
+            fetchEntertainmentGroups(config.address, config.username);
+          }
+        } catch (e) {
+          console.error('❌ Error parsing hueConfig:', e);
+        }
+      } else {
+        console.log('⚠️ No stored credentials found, entertainment groups will be fetched after bridge setup');
+      }
+    } catch (e) {
+      console.error('❌ Error checking for credentials:', e);
+    }
+  }, []);
+
   return (
     <AppleCard>
       <Box
@@ -1015,4 +1173,3 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
 };
 
 export default HueConfigModal;
-

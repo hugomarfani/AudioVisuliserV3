@@ -234,71 +234,81 @@ export function getPheaInstance(): PheaInterface {
               console.log('Adding direct RGB updateLightState method');
 
               bridgeInstance.updateLightState = function(channelId: number, rgb: [number, number, number]) {
-                // Implementation depends on the library's specific requirements
+                // Log the request for debugging
                 console.log(`Direct update for channel ${channelId} with RGB ${rgb.map(v => v.toFixed(2)).join()}`);
 
-                // This is where the fix is needed - the current implementation doesn't actually send anything to the device
-                // Instead, try to use the native functions from the Phea library
-
-                // First try - if there's a native setChannelRGB function
-                if (typeof this.setChannelRGB === 'function') {
-                  try {
+                try {
+                  // First try - if there's a native setChannelRGB function
+                  if (typeof this.setChannelRGB === 'function') {
                     console.log(`Using native setChannelRGB for channel ${channelId}`);
                     return this.setChannelRGB(channelId, rgb[0], rgb[1], rgb[2]);
-                  } catch (err) {
-                    console.error(`Error with setChannelRGB for channel ${channelId}:`, err);
                   }
-                }
 
-                // Second attempt - try to use the raw streaming API if available
-                if (typeof this.stream === 'function' || this.stream) {
-                  try {
-                    console.log(`Attempting raw stream command for channel ${channelId}`);
-                    // Format the RGB values as required by the streaming protocol
-                    const r = Math.max(0, Math.min(65535, Math.round(rgb[0] * 65535)));
-                    const g = Math.max(0, Math.min(65535, Math.round(rgb[1] * 65535)));
-                    const b = Math.max(0, Math.min(65535, Math.round(rgb[2] * 65535)));
+                  // Second attempt - try to access the DTLS socket directly
+                  if (this._connection && typeof this._connection.write === 'function') {
+                    console.log(`Using _connection.write for channel ${channelId}`);
 
-                    // Create command buffer for this light
-                    // Format: Light ID (1 byte) | R-high | R-low | G-high | G-low | B-high | B-low
-                    const buffer = Buffer.alloc(7);
-                    buffer[0] = channelId;
-                    buffer[1] = (r >> 8) & 0xff; // R high byte
-                    buffer[2] = r & 0xff;        // R low byte
-                    buffer[3] = (g >> 8) & 0xff; // G high byte
-                    buffer[4] = g & 0xff;        // G low byte
-                    buffer[5] = (b >> 8) & 0xff; // B high byte
-                    buffer[6] = b & 0xff;        // B low byte
+                    // Format the message according to Hue Entertainment API protocol
+                    // Header: "HEI"
+                    const header = Buffer.from([0x48, 0x45, 0x49]);
 
-                    // Some implementations use different methods to send the data
-                    if (typeof this.stream === 'function') {
-                      return this.stream(buffer);
-                    } else if (this.stream && typeof this.stream.write === 'function') {
-                      return this.stream.write(buffer);
-                    } else if (this._stream && typeof this._stream.write === 'function') {
-                      return this._stream.write(buffer);
-                    }
-                  } catch (e) {
-                    console.error(`Error with raw streaming for channel ${channelId}:`, e);
+                    // Convert RGB to 16-bit values (0-65535)
+                    const r = Math.round(rgb[0] * 65535);
+                    const g = Math.round(rgb[1] * 65535);
+                    const b = Math.round(rgb[2] * 65535);
+
+                    // Create a buffer for this light (7 bytes - ID + RGB 16-bit values)
+                    const lightData = Buffer.alloc(7);
+                    lightData[0] = channelId;              // Light ID
+                    lightData[1] = (r >> 8) & 0xff;        // R high byte
+                    lightData[2] = r & 0xff;               // R low byte
+                    lightData[3] = (g >> 8) & 0xff;        // G high byte
+                    lightData[4] = g & 0xff;               // G low byte
+                    lightData[5] = (b >> 8) & 0xff;        // B high byte
+                    lightData[6] = b & 0xff;               // B low byte
+
+                    // Combine the message
+                    const message = Buffer.concat([header, lightData]);
+                    console.log(`Sending raw message: ${message.toString('hex')}`);
+
+                    // Send the message via DTLS
+                    this._connection.write(message);
+                    return Promise.resolve();
                   }
-                }
 
-                // Third attempt - try setLights method if available (used in some newer versions)
-                if (typeof this.setLights === 'function') {
-                  try {
-                    console.log(`Trying setLights method for channel ${channelId}`);
-                    const lightState = {
-                      rgb: rgb,
-                      id: channelId
-                    };
-                    return this.setLights([lightState]);
-                  } catch (e) {
-                    console.error('Error using setLights method:', e);
-                  }
-                }
+                  // NEW: Try the experimental direct socket command via IPC
+                  console.log(`Trying IPC command for channel ${channelId}`);
+                  const config = this._config || {};
 
-                console.warn(`❗ No suitable method found to update light ${channelId} - LIGHTS WILL NOT CHANGE!`);
-                return Promise.resolve(); // Still resolve to not break the chain
+                  // Use our bridge's configuration to send a command via our DirectHueBridge implementation
+                  return window.electron.ipcRenderer.invoke('hue:sendDTLSColor', {
+                    entertainmentGroupId: config.groupId || 'default-group',
+                    rgb
+                  }).then(() => {
+                    console.log(`Successfully sent color via IPC for channel ${channelId}`);
+                    return Promise.resolve();
+                  }).catch(err => {
+                    console.error(`IPC command failed for channel ${channelId}:`, err);
+                    throw err;
+                  });
+                } catch (error) {
+                  console.error(`Error in updateLightState for channel ${channelId}:`, error);
+
+                  // We'll no longer show "No suitable method" but will actually try to use our IPC implementation
+                  console.log(`Falling back to IPC mechanism for channel ${channelId}`);
+
+                  // Try to use our DirectHueBridge IPC methods as a last resort
+                  return window.electron.ipcRenderer.invoke('hue:sendDTLSColor', {
+                    entertainmentGroupId: 'default-group', // Will be replaced in main process with active group
+                    rgb
+                  }).then(() => {
+                    console.log(`Fallback IPC command succeeded for channel ${channelId}`);
+                    return Promise.resolve();
+                  }).catch(() => {
+                    console.warn(`❗ All methods failed for light ${channelId} - LIGHTS MAY NOT CHANGE!`);
+                    return Promise.resolve(); // Still resolve to not break the chain
+                  });
+                }
               };
             }
 

@@ -2,12 +2,8 @@
  * Direct implementation of Philips Hue Entertainment API using DTLS
  * This class is used as an alternative to the Phea library
  */
-import { fixCSPForDTLS } from './CSPFix';
 import { safeInvokeIPC } from './DirectHueIPCTest';
 import { ensureIPCIsAvailable, verifyIPCReady } from './HueIPCInitializer';
-
-// Make sure CSP allows necessary operations
-fixCSPForDTLS();
 
 // Run IPC availability check on import
 ensureIPCIsAvailable();
@@ -25,7 +21,7 @@ export class DirectHueBridge {
   private connected: boolean = false;
   private throttleTimeout: NodeJS.Timeout | null = null;
   private lastSentColor: [number, number, number] | null = null;
-  private lightIndices: number[] = [0]; // Default to just light index 0
+  private lightIndices: number[] = [0, 1, 2, 3, 4]; // Use all 5 possible light indices by default
   private consecutiveErrors: number = 0;
 
   constructor(config: DirectHueBridgeConfig) {
@@ -50,16 +46,36 @@ export class DirectHueBridge {
         throw new Error("IPC is not ready! The Electron preload script may not be configured correctly.");
       }
 
+      // NEW: Fetch actual entertainment configurations to make sure we're using a valid ID
+      console.log('Fetching entertainment configurations to verify group ID...');
+      const entertainmentConfigs = await window.electron.ipcRenderer.invoke('hue:getEntertainmentAreas');
+
+      console.log('Available entertainment configurations:', entertainmentConfigs);
+
+      // Check if our configured group ID exists in the list
+      const configExists = entertainmentConfigs.some((config: any) => config.id === this.config.entertainmentGroupId);
+
+      if (!configExists && entertainmentConfigs.length > 0) {
+        // Use the first available configuration instead
+        const newGroupId = entertainmentConfigs[0].id;
+        console.log(`Entertainment configuration ${this.config.entertainmentGroupId} not found, using ${newGroupId} instead`);
+        this.config.entertainmentGroupId = newGroupId;
+      } else if (!configExists) {
+        throw new Error(`Entertainment configuration ${this.config.entertainmentGroupId} not found and no alternatives available`);
+      }
+
+      console.log(`Using entertainment configuration: ${this.config.entertainmentGroupId}`);
+
       console.log(`Activating entertainment group ${this.config.entertainmentGroupId} on bridge ${this.config.address}`);
 
-      // Use our safe invoke function instead of direct invoke
+      // Step 1: Activate the entertainment group
       const activateResult = await safeInvokeIPC('hue:activateEntertainmentGroup', {
         ip: this.config.address,
         username: this.config.username,
         entertainmentGroupId: this.config.entertainmentGroupId
       });
 
-      console.log('Activation result:', activateResult); // Add this for debugging
+      console.log('Activation result:', activateResult);
 
       if (!activateResult.success) {
         throw new Error(`Failed to activate entertainment group: ${activateResult.error}`);
@@ -67,7 +83,7 @@ export class DirectHueBridge {
 
       console.log('Entertainment group activated successfully');
 
-      // Then start the DTLS stream
+      // Step 2: Start the DTLS stream
       const streamResult = await safeInvokeIPC('hue:startDTLSStream', {
         ip: this.config.address,
         username: this.config.username,
@@ -104,6 +120,7 @@ export class DirectHueBridge {
 
   /**
    * Send color to lights using our direct DTLS implementation
+   * This is the key method we're improving for controlling lights
    */
   async sendColor(rgb: [number, number, number], throttleMs: number = 50): Promise<void> {
     if (!this.connected) {
@@ -227,6 +244,9 @@ export class DirectHueBridge {
     console.log('Color cycle test completed');
   }
 
+  /**
+   * Get the light indices for this bridge
+   */
   /**
    * Get the light indices for this bridge
    */

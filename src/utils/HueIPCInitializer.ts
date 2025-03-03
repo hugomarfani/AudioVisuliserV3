@@ -30,12 +30,45 @@ export function verifyIPCReady(): boolean {
     'hue:startDTLSStream',
     'hue:sendDTLSColor'
   ];
-
+  
   // Simple check that window.electron exists
   if (!window.electron || !window.electron.ipcRenderer || !window.electron.ipcRenderer.invoke) {
     console.error("❌ window.electron.ipcRenderer.invoke is not available!");
     return false;
   }
-
+  
   return true;
+}
+
+// Helper to fetch actual entertainment group IDs from the bridge
+export async function fetchActualEntertainmentGroups(ip: string, username: string): Promise<string[]> {
+  try {
+    console.log(`Fetching actual entertainment groups from bridge at ${ip}...`);
+    
+    // Call the bridge API to get entertainment configurations
+    const response = await fetch(`https://${ip}/clip/v2/resource/entertainment_configuration`, {
+      headers: {
+        'hue-application-key': username
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Error fetching entertainment groups: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    console.log('Entertainment groups response:', data);
+    
+    // Extract the IDs
+    if (data.data && Array.isArray(data.data)) {
+      const groupIds = data.data.map((group: any) => group.id);
+      console.log(`Found ${groupIds.length} entertainment groups:`, groupIds);
+      return groupIds;
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Error fetching entertainment groups:', error);
+    return [];
+  }
 }

@@ -1,9 +1,7 @@
 /**
- * This file provides a simple test for IPC communication with Hue
- * It helps verify if IPC channels are properly registered and working
+ * This file provides functions for testing IPC communication with Hue
  */
 
-// Function to test IPC connections in renderer process
 export async function testIPCConnections() {
   try {
     console.log("🧪 Testing IPC connections for Hue DTLS...");
