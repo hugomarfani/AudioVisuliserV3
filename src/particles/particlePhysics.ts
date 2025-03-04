@@ -157,6 +157,16 @@ export const particlePhysics: Record<string, ParticlePhysics> = {
     lifespan: 5000,
     images: [animal1, animal2, animal3, animal4, animal5, animal6],
     moods: ['happy', 'energetic']
+  },
+  emoji: {
+    name: "emoji",
+    weight: 0.5,
+    gravity: 0.17,
+    bounce: 0.4,
+    airResistance: 0.03,
+    lifespan: 7000,
+    images: [defaultParticle], // Replace with actual emoji images
+    moods: ['happy', 'playful', 'fun']
   }
   
 };
@@ -171,7 +181,7 @@ export const getRandomParticleImage = async (type: string): Promise<string> => {
         star: { dir: 'stars', count: 2 },
         bubble: { dir: 'bubbles', count: 1 },
         snowflake: { dir: 'snowflakes', count: 1 },
-        heart: { dir: 'hearts', count: 2},
+        heart: { dir: 'hearts', count: 3},
         leaves: { dir: 'leaves', count: 1 },
         butterfly: { dir: 'butterflies', count: 1 },
         confetti: { dir: 'confetti', count: 1 },
@@ -179,9 +189,10 @@ export const getRandomParticleImage = async (type: string): Promise<string> => {
         firefly: { dir: 'fireflies', count: 1 },
         balloon: { dir: 'balloons', count: 2},
         flower: { dir: 'flowers', count: 1 },
-        firework: { dir: 'fireworks', count: 1 },
+        firework: { dir: 'fireworks', count: 2 },
         crown: { dir: 'crowns', count: 1 },
-        animal: { dir: 'animals', count: 6 }
+        animal: { dir: 'animals', count: 6 },
+        emoji: { dir: 'emojis', count: 4 }
     };
 
     const config = particleConfig[type] || particleConfig.musicNote;

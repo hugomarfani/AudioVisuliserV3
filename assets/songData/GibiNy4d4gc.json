@@ -42,7 +42,7 @@
         "planet$",
         "circle$"
     ],
-    "particles": ["musicNotes", "stars"],
+    "particles": ["musicNotes", "stars", "crowns"],
     "status": "Red",
     "title": "Carmen Twillie, Lebo M. - Circle of Life (From \"The Lion King\")",
     "updatedAt": "2025-02-23T15:04:38.905Z",

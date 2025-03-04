@@ -273,7 +273,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
           gap: '1rem',
-          minHeight: '600px', // Fixed height to prevent layout shift
+          minHeight: '400px', // Fixed height to prevent layout shift
         }}
       >
         {currentSongs.length > 0 ? (

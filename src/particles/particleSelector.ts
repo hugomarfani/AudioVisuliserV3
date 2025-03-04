@@ -18,6 +18,7 @@ export class ParticleSelector {
         'firework',
         'crown',
         'animal',
+        'emoji',
     ];
 
     private static normalizeParticleType(type: string): string {
