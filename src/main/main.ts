@@ -24,6 +24,7 @@ import {
   downloadYoutubeAudio as downloadYoutubeAudioWav,
   getYoutubeMetadata,
 } from '../youtube/youtubeToWav';
+import { registerImageHandlers } from './ipc/imageHandlers';
 
 class AppUpdater {
   constructor() {
@@ -341,6 +342,9 @@ app
     app.on('activate', () => {
       if (mainWindow === null) createWindow();
     });
+
+    // Register IPC handlers
+    registerImageHandlers();
   })
   .catch(console.log);
 
