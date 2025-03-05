@@ -179,20 +179,20 @@ const configuration: webpack.Configuration = {
     },
     historyApiFallback: {
       verbose: true,
-      rewrites: [
-        // Prevent rewriting for `/auth` routes, ensuring they are proxied to the backend
-        { from: /^\/auth\/.*/, to: (context) => context.parsedUrl.pathname },
-        // Catch-all rewrite rule for other paths
-        { from: /./, to: '/index.html' },
-      ],
-    },
-    proxy: {
-      // Proxy all `/auth` routes to the backend server
-      '/auth': {
-        target: 'http://localhost:5001', // Backend server
-        changeOrigin: true,
-        logLevel: 'debug', // Debug logs to confirm proxying
-      },
+    //   rewrites: [
+    //     // Prevent rewriting for `/auth` routes, ensuring they are proxied to the backend
+    //     { from: /^\/auth\/.*/, to: (context) => context.parsedUrl.pathname },
+    //     // Catch-all rewrite rule for other paths
+    //     { from: /./, to: '/index.html' },
+    //   ],
+    // },
+    // proxy: {
+    //   // Proxy all `/auth` routes to the backend server
+    //   '/auth': {
+    //     target: 'http://localhost:5001', // Backend server
+    //     changeOrigin: true,
+    //     logLevel: 'debug', // Debug logs to confirm proxying
+    //   },
     },
     setupMiddlewares(middlewares) {
       console.log('Starting preload.js builder...');
