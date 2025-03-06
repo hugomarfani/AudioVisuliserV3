@@ -26,6 +26,7 @@ export default class HueService {
   private selectedGroup: string | null = null;
   private isStreaming = false;
   private streamInterval: NodeJS.Timeout | null = null;
+  private groupIdMap: Map<string, string> = new Map(); // Map to store UUID to numeric ID mapping
 
   constructor() {
     this.registerIpcHandlers();
@@ -85,6 +86,15 @@ export default class HueService {
   };
 
   /**
+   * Extracts numeric ID from v1 API path (e.g., '/groups/200' -> '200')
+   */
+  private extractNumericId(idV1Path: string): string | null {
+    if (!idV1Path) return null;
+    const match = idV1Path.match(/\/groups\/(\d+)$/);
+    return match ? match[1] : null;
+  }
+
+  /**
    * Fetches available entertainment groups from the Hue bridge using CLIP v2 API
    */
   private handleFetchGroups = async (_: any, { ip, username }: { ip: string; username: string }): Promise<any> => {
@@ -98,14 +108,26 @@ export default class HueService {
       });
       
       console.log('Entertainment groups response:', response.data);
+      this.groupIdMap.clear(); // Clear previous mappings
       
       if (response.data && Array.isArray(response.data.data)) {
-        const groups = response.data.data.map((group: any) => ({
-          id: group.id,
-          name: group.metadata?.name || 'Unknown',
-          lights: group.light_services?.map((light: any) => light.rid) || []
-        }));
+        const groups = response.data.data.map((group: any) => {
+          // Extract the numeric ID from the v1 API path
+          const numericId = this.extractNumericId(group.id_v1);
+          if (numericId) {
+            // Store mapping of UUID to numeric ID
+            this.groupIdMap.set(group.id, numericId);
+          }
+          
+          return {
+            id: group.id, // Keep using UUID for frontend
+            name: group.metadata?.name || 'Unknown',
+            lights: group.light_services?.map((light: any) => light.rid) || [],
+            numericId: numericId // Add numeric ID to response
+          };
+        });
         
+        console.log('Processed entertainment groups with numeric IDs:', this.groupIdMap);
         return groups;
       }
       
@@ -122,6 +144,15 @@ export default class HueService {
   private handleStartStreaming = async (_: any, { ip, username, psk, groupId }: { ip: string; username: string; psk: string; groupId: string }): Promise<boolean> => {
     try {
       console.log(`Starting streaming to group ${groupId}`);
+      
+      // Get the numeric ID for the selected group
+      const numericId = this.groupIdMap.get(groupId);
+      if (!numericId) {
+        console.error(`No numeric ID found for group ${groupId}`);
+        return false;
+      }
+      
+      console.log(`Using numeric group ID: ${numericId}`);
       
       if (this.isStreaming) {
         await this.stopStreaming();
@@ -140,8 +171,11 @@ export default class HueService {
       
       this.bridge = await Phea.bridge(options);
       
-      // Start streaming
-      this.connection = await this.bridge.start(groupId);
+      // Start streaming with the numeric ID - Convert to integer when passing to start()
+      const groupIdInt = parseInt(numericId, 10);
+      console.log(`Starting streaming with integer group ID: ${groupIdInt}`);
+      this.connection = await this.bridge.start(groupIdInt);
+      
       this.selectedGroup = groupId;
       this.isStreaming = true;
       

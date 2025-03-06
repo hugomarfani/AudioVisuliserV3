@@ -36,36 +36,39 @@ const HueContext = createContext<HueContextType>({
   resetHueSettings: () => {},
 });
 
-interface HueProviderProps {
-  children: ReactNode;
-}
+// Hook to use the Hue context
+export const useHue = () => useContext(HueContext);
 
-function HueProvider({ children }: HueProviderProps) {
+// Local storage key for Hue settings
+const HUE_SETTINGS_KEY = 'hue_settings';
+
+// Provider component that wraps app and provides Hue context
+export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [hueSettings, setHueSettings] = useState<HueSettings | null>(null);
   const [isConfigured, setIsConfigured] = useState<boolean>(false);
   const [isStreamingActive, setIsStreamingActive] = useState<boolean>(false);
 
-  // Load saved Hue settings from localStorage on component mount
+  // Load saved settings on mount
   useEffect(() => {
-    const savedSettings = localStorage.getItem('hueSettings');
+    const savedSettings = localStorage.getItem(HUE_SETTINGS_KEY);
     if (savedSettings) {
       try {
-        const parsedSettings = JSON.parse(savedSettings);
-        if (parsedSettings.bridge && parsedSettings.credentials && parsedSettings.selectedGroup) {
-          setHueSettings(parsedSettings);
-          setIsConfigured(true);
-        }
-      } catch (e) {
-        console.error('Failed to parse saved Hue settings', e);
+        const parsed = JSON.parse(savedSettings);
+        setHueSettings(parsed);
+        setIsConfigured(true);
+      } catch (error) {
+        console.error('Failed to parse saved Hue settings:', error);
+        localStorage.removeItem(HUE_SETTINGS_KEY);
       }
     }
   }, []);
 
-  // Register with a bridge by IP address
+  // Register with Hue bridge
   const registerBridge = useCallback(async (ip: string): Promise<HueCredentials> => {
     try {
       const credentials = await window.electron.hue.registerBridge(ip);
-      return credentials;
+      console.log('Registered with bridge:', credentials);
+      return credentials as HueCredentials;
     } catch (error) {
       console.error('Failed to register with bridge:', error);
       throw error;
@@ -73,9 +76,18 @@ function HueProvider({ children }: HueProviderProps) {
   }, []);
 
   // Fetch entertainment groups
-  const fetchGroups = useCallback(async (ip: string, username: string, clientkey: string): Promise<EntertainmentGroup[]> => {
+  const fetchGroups = useCallback(async (
+    ip: string,
+    username: string,
+    clientkey: string
+  ): Promise<EntertainmentGroup[]> => {
     try {
-      const groups = await window.electron.hue.fetchGroups({ ip, username, psk: clientkey });
+      const groups = await window.electron.hue.fetchGroups({
+        ip,
+        username,
+        clientkey
+      });
+      console.log('Fetched entertainment groups:', groups);
       return groups;
     } catch (error) {
       console.error('Failed to fetch groups:', error);
@@ -83,24 +95,22 @@ function HueProvider({ children }: HueProviderProps) {
     }
   }, []);
 
-  // Start streaming to entertainment group
+  // Start streaming to Hue lights
   const startHueStreaming = useCallback(async (): Promise<boolean> => {
     if (!hueSettings) return false;
-    
+
     try {
-      const { bridge, credentials, selectedGroup } = hueSettings;
-      const result = await window.electron.hue.startStreaming({
-        ip: bridge.ip,
-        username: credentials.username,
-        psk: credentials.clientkey,
-        groupId: selectedGroup
+      const success = await window.electron.hue.startStreaming({
+        ip: hueSettings.bridge.ip,
+        username: hueSettings.credentials.username,
+        psk: hueSettings.credentials.clientkey,
+        groupId: hueSettings.selectedGroup
       });
       
-      setIsStreamingActive(Boolean(result));
-      return Boolean(result);
+      setIsStreamingActive(success);
+      return success;
     } catch (error) {
-      console.error('Failed to start Hue streaming:', error);
-      setIsStreamingActive(false);
+      console.error('Failed to start streaming:', error);
       return false;
     }
   }, [hueSettings]);
@@ -108,74 +118,77 @@ function HueProvider({ children }: HueProviderProps) {
   // Stop streaming
   const stopHueStreaming = useCallback(async (): Promise<boolean> => {
     try {
-      const result = await window.electron.hue.stopStreaming();
+      const success = await window.electron.hue.stopStreaming();
       setIsStreamingActive(false);
-      return Boolean(result);
+      return success;
     } catch (error) {
-      console.error('Failed to stop Hue streaming:', error);
+      console.error('Failed to stop streaming:', error);
+      setIsStreamingActive(false);
       return false;
     }
   }, []);
 
-  // Set light colors
-  const setLightColor = useCallback(async (lightIds: number[], rgb: number[], transitionTime: number): Promise<boolean> => {
+  // Set light color
+  const setLightColor = useCallback(async (
+    lightIds: number[],
+    rgb: number[],
+    transitionTime: number
+  ): Promise<boolean> => {
     if (!isStreamingActive) return false;
-    
+
     try {
-      const result = await window.electron.hue.setColor({
+      return await window.electron.hue.setColor({
         lightIds,
         rgb,
         transitionTime
       });
-      
-      return Boolean(result);
     } catch (error) {
       console.error('Failed to set light color:', error);
       return false;
     }
   }, [isStreamingActive]);
 
-  // Save Hue settings
+  // Save Hue settings to local storage
   const saveHueSettings = useCallback((settings: HueSettings) => {
-    localStorage.setItem('hueSettings', JSON.stringify(settings));
-    setHueSettings(settings);
-    setIsConfigured(true);
+    try {
+      localStorage.setItem(HUE_SETTINGS_KEY, JSON.stringify(settings));
+      setHueSettings(settings);
+      setIsConfigured(true);
+    } catch (error) {
+      console.error('Failed to save Hue settings:', error);
+    }
   }, []);
 
   // Reset Hue settings
   const resetHueSettings = useCallback(() => {
-    localStorage.removeItem('hueSettings');
+    localStorage.removeItem(HUE_SETTINGS_KEY);
     setHueSettings(null);
     setIsConfigured(false);
     setIsStreamingActive(false);
   }, []);
 
-  return (
-    <HueContext.Provider
-      value={{
-        isConfigured,
-        hueSettings,
-        isStreamingActive,
-        registerBridge,
-        fetchGroups,
-        startHueStreaming,
-        stopHueStreaming,
-        setLightColor,
-        saveHueSettings,
-        resetHueSettings
-      }}
-    >
-      {children}
-    </HueContext.Provider>
-  );
-}
+  // Cleanup streaming on unmount
+  useEffect(() => {
+    return () => {
+      if (isStreamingActive) {
+        window.electron.hue.stopStreaming().catch(console.error);
+      }
+    };
+  }, [isStreamingActive]);
 
-function useHue() {
-  const context = useContext(HueContext);
-  if (context === undefined) {
-    throw new Error('useHue must be used within a HueProvider');
-  }
-  return context;
-}
+  // Create context value object with all functions and state
+  const value = {
+    isConfigured,
+    hueSettings,
+    isStreamingActive,
+    registerBridge,
+    fetchGroups,
+    startHueStreaming,
+    stopHueStreaming,
+    setLightColor,
+    saveHueSettings,
+    resetHueSettings
+  };
 
-export { HueProvider, useHue };
+  return <HueContext.Provider value={value}>{children}</HueContext.Provider>;
+};
