@@ -69,6 +69,22 @@ class Particle {
     airResistance.mult(-physics.airResistance);
     this.applyForce(airResistance);
 
+    // Add edge repulsion force to prevent accumulation at edges
+    const edgeBuffer = 40; // Distance from edge where repulsion starts
+    const edgeForceStrength = 0.05; // Strength of the repulsion
+    
+    // Left edge repulsion
+    if (this.pos.x < edgeBuffer) {
+      const force = edgeForceStrength * (1 - this.pos.x / edgeBuffer);
+      this.applyForce(this.p.createVector(force, 0));
+    }
+    
+    // Right edge repulsion
+    if (this.pos.x > this.p.width - edgeBuffer) {
+      const force = edgeForceStrength * (1 - (this.p.width - this.pos.x) / edgeBuffer);
+      this.applyForce(this.p.createVector(-force, 0));
+    }
+
     this.vel.add(this.acc);
     this.pos.add(this.vel);
     this.acc.mult(0);
@@ -76,6 +92,9 @@ class Particle {
     // Only bounce off left and right edges
     if (this.pos.x < 0 || this.pos.x > this.p.width) {
       this.vel.x *= -physics.bounce;
+      // Push particles more firmly back into view if they've gone beyond the edge
+      if (this.pos.x < 0) this.pos.x = 5;
+      if (this.pos.x > this.p.width) this.pos.x = this.p.width - 5;
     }
 
     this.lifespan -= 2;
@@ -195,7 +214,7 @@ class Particle {
 class ParticleSystem {
   particles: Particle[] = [];
   p: p5;
-  maxParticles = 30;  // Changed from 50 to 10
+  maxParticles = 150;  // Changed from 50 to 10
 
   constructor(p: p5) {
     console.log('Initializing ParticleSystem');
