@@ -25,7 +25,7 @@ const songList = [
 
 // Kimi stuff
 const findImagePath = async () => {
-  const response = await window.electron.fileSystem.mergeAssetPath('Tests.png');
+  const response = await window.electron.fileSystem.mergeAssetPath('Test.png');
   return response;
 };
 let t1;
