@@ -147,6 +147,7 @@
     "@types/webpack-bundle-analyzer": "^4.6.0",
     "@typescript-eslint/eslint-plugin": "^6.7.0",
     "@typescript-eslint/parser": "^6.7.0",
+    "@vercel/webpack-asset-relocator-loader": "^1.7.4",
     "app-builder-bin": "^4.2.0",
     "autoprefixer": "^10.4.20",
     "browserslist-config-erb": "^0.0.3",
