@@ -18,7 +18,7 @@ export interface HueContextType {
   startHueStreaming: () => Promise<boolean>;
   stopHueStreaming: () => Promise<boolean>;
   setLightColor: (lightIds: number[], rgb: number[], transitionTime: number) => Promise<boolean>;
-  saveHueSettings: (settings: HueSettings) => void;
+  saveHueSettings: (settings: HueSettings, numericId?: string) => void;
   resetHueSettings: () => void;
 }
 
@@ -75,7 +75,7 @@ export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, []);
 
-  // Fetch entertainment groups
+  // Fetch entertainment groups with numeric IDs
   const fetchGroups = useCallback(async (
     ip: string,
     username: string,
@@ -104,7 +104,8 @@ export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         ip: hueSettings.bridge.ip,
         username: hueSettings.credentials.username,
         psk: hueSettings.credentials.clientkey,
-        groupId: hueSettings.selectedGroup
+        groupId: hueSettings.selectedGroup,
+        numericGroupId: hueSettings.numericGroupId // Pass the numeric ID
       });
       
       setIsStreamingActive(success);
@@ -149,10 +150,15 @@ export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [isStreamingActive]);
 
   // Save Hue settings to local storage
-  const saveHueSettings = useCallback((settings: HueSettings) => {
+  const saveHueSettings = useCallback((settings: HueSettings, numericId?: string) => {
     try {
-      localStorage.setItem(HUE_SETTINGS_KEY, JSON.stringify(settings));
-      setHueSettings(settings);
+      // Include the numeric ID in settings if provided
+      const settingsToSave = numericId ? 
+        { ...settings, numericGroupId: numericId } : 
+        settings;
+      
+      localStorage.setItem(HUE_SETTINGS_KEY, JSON.stringify(settingsToSave));
+      setHueSettings(settingsToSave);
       setIsConfigured(true);
     } catch (error) {
       console.error('Failed to save Hue settings:', error);

@@ -14,12 +14,14 @@ export interface EntertainmentGroup {
   id: string;
   name: string;
   lights: string[];
+  numericId?: string; // Add the numeric ID to the interface
 }
 
 export interface HueSettings {
   bridge: HueBridge;
   credentials: HueCredentials;
   selectedGroup: string;
+  numericGroupId?: string; // Add the numeric ID to persist it
 }
 
 export interface LightState {

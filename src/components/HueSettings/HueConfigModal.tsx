@@ -292,10 +292,16 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
   const handleGroupSelect = async (groupId: string) => {
     if (!bridge || !credentials) return;
     setSelectedGroup(groupId);
+    
+    // Find the selected group to get its numeric ID
+    const selectedGroupObj = groups.find(group => group.id === groupId);
+    const numericId = selectedGroupObj?.numericId;
+    
     const settings = {
       bridge,
       credentials,
-      selectedGroup: groupId
+      selectedGroup: groupId,
+      numericGroupId: numericId // Store numeric ID
     };
     saveHueSettings(settings);
     setActiveStep(3);
@@ -583,6 +589,41 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
                 <Typography variant="body2" color="#666">
                   {bridge.ip}
                 </Typography>
+              </Box>
+            )}
+            
+            {/* Display Entertainment Area Details */}
+            {selectedGroup && (
+              <Box sx={{ 
+                mb: 3, 
+                p: 2, 
+                borderRadius: 2, 
+                backgroundColor: 'rgba(142, 142, 147, 0.1)',
+                textAlign: 'left'
+              }}>
+                <Typography variant="subtitle2" color="#666">
+                  Selected Entertainment Area:
+                </Typography>
+                {groups.map(group => {
+                  if (group.id === selectedGroup) {
+                    return (
+                      <Box key={group.id}>
+                        <Typography variant="body1">
+                          {group.name}
+                        </Typography>
+                        <Typography variant="body2" color="#666">
+                          {group.lights.length} lights
+                        </Typography>
+                        {group.numericId && (
+                          <Typography variant="body2" color="#666">
+                            Group ID: {group.numericId}
+                          </Typography>
+                        )}
+                      </Box>
+                    );
+                  }
+                  return null;
+                })}
               </Box>
             )}
             

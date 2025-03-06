@@ -158,15 +158,30 @@ export default class HueService {
   /**
    * Starts streaming to the selected entertainment group
    */
-  private handleStartStreaming = async (_: any, { ip, username, psk, groupId }: { ip: string; username: string; psk: string; groupId: string }): Promise<boolean> => {
+  private handleStartStreaming = async (_: any, { 
+    ip, 
+    username, 
+    psk, 
+    groupId, 
+    numericGroupId 
+  }: { 
+    ip: string; 
+    username: string; 
+    psk: string; 
+    groupId: string;
+    numericGroupId?: string;
+  }): Promise<boolean> => {
     try {
       console.log(`Starting streaming to group ${groupId}`);
       
-      // Get the numeric ID for the selected group
-      const numericId = this.groupIdMap.get(groupId);
+      // Use provided numeric ID if available, otherwise look it up
+      let numericId = numericGroupId;
       if (!numericId) {
-        console.error(`No numeric ID found for group ${groupId}`);
-        return false;
+        numericId = this.groupIdMap.get(groupId);
+        if (!numericId) {
+          console.error(`No numeric ID found for group ${groupId}`);
+          return false;
+        }
       }
       
       console.log(`Using numeric group ID: ${numericId}`);
@@ -186,29 +201,53 @@ export default class HueService {
         colorUpdatesPerSecond: 25,
       };
       
+      console.log('Creating bridge instance with options:', JSON.stringify(options, null, 2));
       this.bridge = await Phea.bridge(options);
       
-      // Start streaming with the numeric ID - Convert to integer when passing to start()
+      // Get group info for debugging purposes
       const groupIdInt = parseInt(numericId, 10);
-      
-      // Get and log group information before starting
       await this.getGroupInfo(this.bridge, groupIdInt);
       
-      console.log(`Starting streaming with integer group ID: ${groupIdInt}`);
-      this.connection = await this.bridge.start(groupIdInt);
+      // Try various approaches to start streaming
+      try {
+        console.log(`First attempt: Starting streaming with integer group ID: ${groupIdInt}`);
+        this.connection = await this.bridge.start(groupIdInt);
+      } catch (error) {
+        console.log('First attempt failed, trying with alternative group ID');
+        
+        // Try with a small number (1) which is typically the first entertainment group
+        try {
+          console.log('Second attempt: Starting streaming with group ID: 1');
+          this.connection = await this.bridge.start(1);
+        } catch (error2) {
+          // Last resort - try with empty string (let Phea select the first available group)
+          console.log('Second attempt failed, trying with empty string group ID');
+          this.connection = await this.bridge.start("");
+        }
+      }
       
+      // Check if connection was established
+      if (!this.connection) {
+        throw new Error('Failed to establish connection');
+      }
+      
+      console.log('Connection established successfully');
       this.selectedGroup = groupId;
       this.isStreaming = true;
       
-      // Listen for connection close events
-      this.connection.on("close", () => {
-        console.log("Hue connection closed");
-        this.isStreaming = false;
-        if (this.streamInterval) {
-          clearInterval(this.streamInterval);
-          this.streamInterval = null;
-        }
-      });
+      // Set up event handlers and interval safely
+      if (typeof this.connection.on === 'function') {
+        this.connection.on("close", () => {
+          console.log("Hue connection closed");
+          this.isStreaming = false;
+          if (this.streamInterval) {
+            clearInterval(this.streamInterval);
+            this.streamInterval = null;
+          }
+        });
+      } else {
+        console.warn("Connection object doesn't have expected 'on' method");
+      }
       
       // Keep connection alive with type-safe error handling
       this.streamInterval = setInterval(() => {

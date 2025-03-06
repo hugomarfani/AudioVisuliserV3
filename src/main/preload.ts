@@ -62,7 +62,13 @@ const electronHandler = {
     registerBridge: (ip: string) => ipcRenderer.invoke('hue-register', ip),
     fetchGroups: (data: { ip: string; username: string; psk: string }) => 
       ipcRenderer.invoke('hue-fetch-groups', data),
-    startStreaming: (data: { ip: string; username: string; psk: string; groupId: string }) => 
+    startStreaming: (data: { 
+      ip: string; 
+      username: string; 
+      psk: string; 
+      groupId: string;
+      numericGroupId?: string; // Add numeric group ID parameter
+    }) => 
       ipcRenderer.invoke('hue-start-streaming', data),
     stopStreaming: () => ipcRenderer.invoke('hue-stop-streaming'),
     setColor: (data: { lightIds: number[]; rgb: number[]; transitionTime: number }) => 
