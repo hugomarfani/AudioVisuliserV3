@@ -6,16 +6,14 @@ const { app } = require('electron');
 
 const ffmpegPath = path.join(
   app.getAppPath(),
-  '.erb',
-  'bin',
+  'resources',
   'ffmpeg',
   'bin',
   'ffmpeg.exe',
 );
 const ffprobePath = path.join(
   app.getAppPath(),
-  '.erb',
-  'bin',
+  'resources',
   'ffmpeg',
   'bin',
   'ffprobe.exe',
