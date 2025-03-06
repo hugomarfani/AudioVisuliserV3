@@ -3,30 +3,20 @@ const ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
 const fs = require('fs');
 const { app } = require('electron');
+const { mainPaths} = require('../main/paths');
 
-const ffmpegPath = path.join(
-  app.getAppPath(),
-  '.erb',
-  'bin',
-  'ffmpeg',
-  'bin',
-  'ffmpeg.exe',
-);
-const ffprobePath = path.join(
-  app.getAppPath(),
-  '.erb',
-  'bin',
-  'ffmpeg',
-  'bin',
-  'ffprobe.exe',
-);
+const ffmpegPath = mainPaths.ffmpegPath;
+const ffprobePath = mainPaths.ffprobePath;
+
 
 // Verify FFmpeg files exist
 if (!fs.existsSync(ffmpegPath)) {
+  console.log(`FFmpeg not found at: ${ffmpegPath}`);
   throw new Error(`FFmpeg not found at: ${ffmpegPath}`);
 }
 
 if (!fs.existsSync(ffprobePath)) {
+  console.log(`FFprobe not found at: ${ffprobePath}`);
   throw new Error(`FFprobe not found at: ${ffprobePath}`);
 }
 
