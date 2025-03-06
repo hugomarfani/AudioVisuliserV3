@@ -114,6 +114,7 @@ export default class HueService {
         const groups = response.data.data.map((group: any) => {
           // Extract the numeric ID from the v1 API path
           const numericId = this.extractNumericId(group.id_v1);
+          console.log(`Group ID: ${group.id}, Numeric ID: ${numericId}`);
           if (numericId) {
             // Store mapping of UUID to numeric ID
             this.groupIdMap.set(group.id, numericId);
@@ -137,6 +138,22 @@ export default class HueService {
       return [];
     }
   };
+
+  /**
+   * Gets information about the specified entertainment group
+   */
+  private async getGroupInfo(bridge: any, groupId: number): Promise<any> {
+    try {
+      console.log(`Fetching info for entertainment group ${groupId}`);
+      const groupInfo = await bridge.getGroup(groupId);
+      console.log(`Group ${groupId} info:`, groupInfo);
+      console.log(`Number of lights in group: ${groupInfo.lights?.length || 'unknown'}`);
+      return groupInfo;
+    } catch (error) {
+      console.error(`Failed to get group ${groupId} info:`, error);
+      return null;
+    }
+  }
 
   /**
    * Starts streaming to the selected entertainment group
@@ -173,6 +190,10 @@ export default class HueService {
       
       // Start streaming with the numeric ID - Convert to integer when passing to start()
       const groupIdInt = parseInt(numericId, 10);
+      
+      // Get and log group information before starting
+      await this.getGroupInfo(this.bridge, groupIdInt);
+      
       console.log(`Starting streaming with integer group ID: ${groupIdInt}`);
       this.connection = await this.bridge.start(groupIdInt);
       
