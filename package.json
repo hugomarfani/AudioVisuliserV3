@@ -259,14 +259,13 @@
       "output": "release/build"
     },
     "extraResources": [
-      "./assets/**",
       {
         "from": "release/app/node_modules",
         "to": "node_modules"
       },
       {
-        "from": "./AiResources",
-        "to": "./AiResources",
+        "from": "./resources",
+        "to": "./",
         "filter": [
           "**/*"
         ]
