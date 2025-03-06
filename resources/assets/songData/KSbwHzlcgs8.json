@@ -5,8 +5,7 @@
   "audioPath": "audio/KSbwHzlcgs8.mp3",
   "jacket": "images/firework/firework.png",
   "images": [
-    "images/firework/firework.gif",
-    "images/KSbwHzlcgs8/image_1741288142073.png"
+    "images/firework/firework.gif"
   ],
   "moods": [],
   "status": "Yellow",
@@ -20,5 +19,5 @@
   "backgrounds": [],
   "background_prompts": [],
   "createdAt": "2025-03-03T15:49:46.780Z",
-  "updatedAt": "2025-03-06T19:09:02.081Z"
+  "updatedAt": "2025-03-06T20:03:03.933Z"
 }

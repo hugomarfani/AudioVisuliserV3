@@ -131,7 +131,14 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
 
     try {
       // Extract relative path from full path
-      const relativePath = imageToDelete.split('/assets/')[1];
+      let relativePath = imageToDelete.split('\\assets\\')[1];
+      if (!relativePath) {
+        relativePath = imageToDelete.split('/assets/')[1];
+      }
+      let imageName = relativePath.split('\\').pop();
+      if (!imageName) {
+        imageName = relativePath.split('/').pop();
+      }
       
       const result = await window.electron.ipcRenderer.invoke('delete-image', {
         songId: songId,
@@ -139,6 +146,20 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
       });
 
       if (result.success) {
+        // Update the song with the new images list
+        const updatedImages = song.dataValues.images.filter(img => !img.includes(imageName ? imageName : 'NaN'));
+        console.log('Updated Images:', updatedImages);
+        console.log("relativePath", relativePath);
+        
+        // Update song in database (same pattern as image upload)
+        await window.electron.ipcRenderer.invoke('update-song', {
+          id: songId,
+          images: updatedImages
+        });
+        
+        // Save the updated song as JSON (same pattern as image upload)
+        await window.electron.ipcRenderer.invoke('save-song-as-json', { id: songId });
+        
         // Remove image from the UI
         setUploadedImages(uploadedImages.filter(img => img !== imageToDelete));
         setUploadStatus('Image deleted successfully');

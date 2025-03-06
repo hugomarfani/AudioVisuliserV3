@@ -54,24 +54,7 @@ export const registerImageHandlers = () => {
       if (fs.existsSync(fullPath)) {
         // Delete the file
         fs.unlinkSync(fullPath);
-        
-        // Get the song and update its images list
-        const song = await Song.findByPk(songId);
-        if (song) {
-          const currentImages = song.dataValues.images || [];
-          const updatedImages = currentImages.filter(img => img !== imagePath);
-          
-          // Update song in database
-          await Song.update({ images: updatedImages }, {
-            where: { id: songId }
-          });
-          
-          // Update the JSON file
-          await saveSongAsJson(await Song.findByPk(songId));
-          
-          return { success: true };
-        }
-        return { success: false, error: 'Song not found' };
+        return { success: true, deletedPath: imagePath };
       } else {
         return { success: false, error: 'Image file not found' };
       }
