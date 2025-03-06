@@ -1,17 +1,38 @@
 // Using a single default image for now
-import defaultParticle from '../../assets/icon.png';
-import musicNote1 from '../../assets/particles/musicNotes/musicNote1.png';
-import musicNote2 from '../../assets/particles/musicNotes/musicNote2.png';
-import bubble1 from '../../assets/particles/bubbles/bubbles1.png';
-import star1 from '../../assets/particles/stars/star1.png';
-import star2 from '../../assets/particles/stars/star2.png';
-import crown1 from '../../assets/particles/crowns/crown1.png';
-import animal1 from '../../assets/particles/animals/animal1.png';
-import animal2 from '../../assets/particles/animals/animal2.png';
-import animal3 from '../../assets/particles/animals/animal3.png';
-import animal4 from '../../assets/particles/animals/animal4.png';
-import animal5 from '../../assets/particles/animals/animal5.png';
-import animal6 from '../../assets/particles/animals/animal6.png';
+
+// load in the images -> TODO: change to dynamic changes later
+const findImagePath = async (p: string) => {
+  const response = await window.electron.fileSystem.mergeAssetPath(p);
+  return response;
+};
+let defaultParticle;
+let musicNote1;
+let musicNote2;
+let bubble1;
+let star1;
+let star2;
+let crown1;
+let animal1;
+let animal2;
+let animal3;
+let animal4;
+let animal5;
+let animal6;
+(async () => {
+  defaultParticle = await findImagePath('icon.png');
+  musicNote1 = await findImagePath('particles/musicNotes/musicNote1.png');
+  musicNote2 = await findImagePath('particles/musicNotes/musicNote2.png');
+  bubble1 = await findImagePath('particles/bubbles/bubbles1.png');
+  star1 = await findImagePath('particles/stars/star1.png');
+  star2 = await findImagePath('particles/stars/star2.png');
+  crown1 = await findImagePath('particles/crowns/crown1.png');
+  animal1 = await findImagePath('particles/animals/animal1.png');
+  animal2 = await findImagePath('particles/animals/animal2.png');
+  animal3 = await findImagePath('particles/animals/animal3.png');
+  animal4 = await findImagePath('particles/animals/animal4.png');
+  animal5 = await findImagePath('particles/animals/animal5.png');
+  animal6 = await findImagePath('particles/animals/animal6.png');
+})();
 
 
 export interface ParticlePhysics {

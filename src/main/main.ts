@@ -24,7 +24,7 @@ import {
   downloadYoutubeAudio as downloadYoutubeAudioWav,
   getYoutubeMetadata,
 } from '../youtube/youtubeToWav';
-import { registerImageHandlers } from './ipc/imageHandlers';
+import { mainPaths, getResourcePath } from './paths';
 
 class AppUpdater {
   constructor() {
@@ -36,11 +36,8 @@ class AppUpdater {
 
 let mainWindow: BrowserWindow | null = null;
 
-const ps1Path = path.join(
-  app.getAppPath(),
-  'AiResources/openvino_2025/setupvars.ps1',
-);
-const exePath = path.join(app.getAppPath(), 'test.exe');
+const ps1Path = mainPaths.ps1Path;
+const exePath = mainPaths.llmWhisperPath;
 
 ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
@@ -92,7 +89,7 @@ ipcMain.handle('add-song', async (_event, songData) => {
 });
 
 ipcMain.handle('merge-asset-path', async (_, pathToAdd) => {
-  return path.join(app.getAppPath(), 'assets', pathToAdd);
+  return getResourcePath('assets',pathToAdd);
 });
 
 ipcMain.handle('reload-songs', async () => {
@@ -342,9 +339,6 @@ app
     app.on('activate', () => {
       if (mainWindow === null) createWindow();
     });
-
-    // Register IPC handlers
-    registerImageHandlers();
   })
   .catch(console.log);
 

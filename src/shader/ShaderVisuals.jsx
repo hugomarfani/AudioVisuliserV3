@@ -6,7 +6,7 @@ import texture from './Assets/bg.jpg';
 // import t1 from './Assets/texture.png';
 import { lerp } from 'three/src/math/MathUtils';
 
-import LIG from '../../assets/audio/frozen_let_it_go.wav';
+import LIG from '../../resources/assets/audio/frozen_let_it_go.wav';
 
 import { AiOutlineForward, AiOutlineBackward } from 'react-icons/ai';
 import { FaPlay, FaPause } from 'react-icons/fa';

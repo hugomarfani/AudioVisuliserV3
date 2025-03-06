@@ -50,7 +50,7 @@ const initDatabase = async () => {
     console.log('Database synced successfully');
 
     // Read in json files from assets/songData
-    const songDataDir = path.join(app.getAppPath(), 'assets', 'songData');
+    const songDataDir = path.join(app.getAppPath(), 'resources', 'assets', 'songData');
     const songFiles = fs
       .readdirSync(songDataDir)
       .filter((file) => file.endsWith('.json'));

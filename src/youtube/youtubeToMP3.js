@@ -1,3 +1,10 @@
+// ======= FILE DEPRECATED =======
+
+
+// ======= FILE DEPRECATED =======
+
+// This file is deprecated and should not be used. It is kept here for reference only.
+// The file contains the original implementation of the YouTube to MP3 conversion, which was later replaced with a more robust solution using the `yt-dlp-exec` and `fluent-ffmpeg` libraries.
 const ytdlp = require('yt-dlp-exec');
 const ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
