@@ -10,7 +10,6 @@ import SongDetails from '../components/SongDetails/SongDetails';
 import Particles from '../components/Particles/Particles';
 import ShaderVisuals from '../shader/ShaderVisuals';
 import { HueProvider } from '../hooks/useHue';
-import HueSettings from '../components/HueSettings/HueSettings';
 
 const AppContent: FC = () => {
   const navigate = useNavigate();
@@ -59,7 +58,6 @@ const AppContent: FC = () => {
         />
         <Route path="/particles/:id" element={<Particles />} />
         <Route path="/aiden/:id" element={<ShaderVisuals />} />
-        <Route path="/settings/hue" element={<HueSettings />} />
       </Routes>
     </div>
   );

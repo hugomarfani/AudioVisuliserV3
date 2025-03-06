@@ -11,6 +11,7 @@ import { FaMusic, FaDatabase, FaSync, FaChevronLeft, FaChevronRight, FaCog } fro
 import Database from '../Database/Database'; // Import Database component
 import Library from '../Library/Library'; // Import Library component
 import SongDetails from '../SongDetails/SongDetails'; // Import SongDetails component
+import HueSettings from '../HueSettings/HueSettings'; // Import HueSettings component
 
 interface SongSelectorProps {
   onTrackSelect: (uri: string) => void;
@@ -40,6 +41,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
   const [isLibraryOpen, setIsLibraryOpen] = useState(false); // State to manage library popup
   const [isSongDetailsOpen, setIsSongDetailsOpen] = useState(false); // State to manage song details popup
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null); // State to store selected song ID
+  const [isHueSettingsOpen, setIsHueSettingsOpen] = useState(false); // State to manage Hue settings modal
   const { songs, loading, error, refetch } = useSongs();
   const [currentPage, setCurrentPage] = useState(1);
   const songsPerPage = 8;
@@ -157,7 +159,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
         }}
-        onClick={() => navigate('/settings/hue')}
+        onClick={() => setIsHueSettingsOpen(true)}
       >
         <FaCog />
         <span style={{ marginLeft: '0.5rem' }}>Hue Settings</span>
@@ -173,6 +175,11 @@ const SongSelector: React.FC<SongSelectorProps> = ({
           />
         )}
       </button>
+
+      {/* Hue Settings Modal */}
+      {isHueSettingsOpen && (
+        <HueSettings onClose={() => setIsHueSettingsOpen(false)} />
+      )}
 
       {/* Library Button */}
       <button

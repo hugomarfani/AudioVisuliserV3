@@ -36,8 +36,23 @@ const configuration: webpack.Configuration = {
     },
   },
 
+  module: {
+    rules: [
+      // Add support for native node modules
+      {
+        // We're now also including native modules that contain `.node` file extensions
+        test: /\.node$/,
+        use: 'node-loader',
+      },
+    ],
+  },
+
+  // Exclude problematic native modules from bundling
   externals: {
     'sqlite3': 'commonjs sqlite3',
+    'node-aead-crypto': 'commonjs node-aead-crypto',
+    'node-dtls-client': 'commonjs node-dtls-client',
+    'phea': 'commonjs phea',
   },
 
   plugins: [
