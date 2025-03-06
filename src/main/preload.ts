@@ -10,7 +10,13 @@ export type Channels =
   | 'download-mp3'
   | 'run-whisper'
   | 'run-gemma'
-  | 'run-gemma-reply';
+  | 'run-gemma-reply'
+  | 'hue-discover'
+  | 'hue-register'
+  | 'hue-fetch-groups'
+  | 'hue-start-streaming'
+  | 'hue-stop-streaming'
+  | 'hue-set-color';
 
 const electronHandler = {
   ipcRenderer: {
@@ -50,6 +56,17 @@ const electronHandler = {
       ipcRenderer.invoke('merge-asset-path', path),
     downloadWav: (url: string) => ipcRenderer.invoke('download-wav', url),
     downloadMp3: (url: string) => ipcRenderer.invoke('download-mp3', url),
+  },
+  hue: {
+    discoverBridges: () => ipcRenderer.invoke('hue-discover'),
+    registerBridge: (ip: string) => ipcRenderer.invoke('hue-register', ip),
+    fetchGroups: (data: { ip: string; username: string; psk: string }) => 
+      ipcRenderer.invoke('hue-fetch-groups', data),
+    startStreaming: (data: { ip: string; username: string; psk: string; groupId: string }) => 
+      ipcRenderer.invoke('hue-start-streaming', data),
+    stopStreaming: () => ipcRenderer.invoke('hue-stop-streaming'),
+    setColor: (data: { lightIds: number[]; rgb: number[]; transitionTime: number }) => 
+      ipcRenderer.invoke('hue-set-color', data),
   },
 };
 

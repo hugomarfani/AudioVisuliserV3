@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import FilterButton from './FilterButton';
 import SongCard from './SongCard';
 import { SongModel } from '../../database/models/Song'; // Import Song type
 import { useSongs } from '../../hooks/useSongs';
+import { useHue } from '../../hooks/useHue';
 import colors from '../../theme/colors';
 import axios from 'axios';
-import { FaMusic, FaDatabase, FaSync, FaChevronLeft, FaChevronRight } from 'react-icons/fa'; // Import music notes icon
+import { FaMusic, FaDatabase, FaSync, FaChevronLeft, FaChevronRight, FaCog } from 'react-icons/fa'; // Added FaCog
 import Database from '../Database/Database'; // Import Database component
 import Library from '../Library/Library'; // Import Library component
 import SongDetails from '../SongDetails/SongDetails'; // Import SongDetails component
@@ -26,6 +28,8 @@ const SongSelector: React.FC<SongSelectorProps> = ({
   onTrackSelect,
   accessToken,
 }) => {
+  const navigate = useNavigate();
+  const { isConfigured } = useHue();
   const [selectedFilters, setSelectedFilters] = useState<
     Array<'Blue' | 'Green' | 'Yellow' | 'Red'>
   >([]);
@@ -137,32 +141,39 @@ const SongSelector: React.FC<SongSelectorProps> = ({
         position: 'relative', // Add position relative for absolute positioning of the button
       }}
     >
-      {/* Database Button
+      {/* Settings Button */}
       <button
         style={{
           position: 'absolute',
           top: '1rem',
-          right: '7rem',
-          backgroundColor: colors.grey2,
+          right: isLibraryOpen ? '13rem' : '13rem',
+          backgroundColor: isConfigured ? colors.blue : colors.grey2,
           color: colors.white,
           border: 'none',
-          borderRadius: '9999px', // Change to pill shape
-          padding: '0.5rem 1rem', // Adjust padding for pill shape
+          borderRadius: '9999px',
+          padding: '0.5rem 1rem',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}
-        onClick={() => setIsDatabaseOpen(true)} // Open library popup on click
+        onClick={() => navigate('/settings/hue')}
       >
-        <FaDatabase />
-        <span style={{ marginLeft: '0.5rem' }}>Database</span>
+        <FaCog />
+        <span style={{ marginLeft: '0.5rem' }}>Hue Settings</span>
+        {isConfigured && (
+          <div 
+            style={{
+              width: '8px',
+              height: '8px',
+              backgroundColor: '#4ade80',
+              borderRadius: '50%',
+              marginLeft: '6px'
+            }}
+          />
+        )}
       </button>
-      {/* Database Popup */}
-      {/* {isDatabaseOpen && (
-        <Database onClose={() => setIsDatabaseOpen(false)} />
-      )}{' '} */}
-      {/* Render Database component when isDatabaseOpen */}
+
       {/* Library Button */}
       <button
         style={{

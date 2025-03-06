@@ -25,6 +25,7 @@ import {
   getYoutubeMetadata,
 } from '../youtube/youtubeToWav';
 import { mainPaths, getResourcePath } from './paths';
+import HueService from './HueService';
 
 class AppUpdater {
   constructor() {
@@ -38,6 +39,9 @@ let mainWindow: BrowserWindow | null = null;
 
 const ps1Path = mainPaths.ps1Path;
 const exePath = mainPaths.llmWhisperPath;
+
+// Initialize Hue Service
+const hueService = new HueService();
 
 ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;

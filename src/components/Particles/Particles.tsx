@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { SongModel } from '../../database/models/Song';
 import Player from '../SongPlayer/Player';
 import { initializeSketch } from '../../particles/sketch';
+import HueVisualizer from '../HueSettings/HueVisualizer';
 import p5 from 'p5';
 
 const Particles: React.FC = () => {
@@ -19,6 +20,9 @@ const Particles: React.FC = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [songDuration, setSongDuration] = useState(0);
   const playerRef = useRef<any>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioData, setAudioData] = useState<Uint8Array | undefined>(undefined);
+  const [dominantColors, setDominantColors] = useState<number[][]>([]);
 
   useEffect(() => {
     const loadAssets = async () => {
@@ -127,6 +131,53 @@ const Particles: React.FC = () => {
       console.log('Switching to image index:', newIndex);
       console.log('Current image path:', backgroundImages[newIndex]);
       setCurrentImageIndex(newIndex);
+
+      // Extract dominant colors from the current background image for Hue lights
+      if (backgroundImages[newIndex]) {
+        extractDominantColors(backgroundImages[newIndex]);
+      }
+    }
+  };
+
+  // Handle player state changes
+  const handlePlayerStateChange = (isPlayingNow: boolean, audioDataArray?: Uint8Array) => {
+    setIsPlaying(isPlayingNow);
+    if (audioDataArray) {
+      setAudioData(audioDataArray);
+    }
+  };
+
+  // Extract dominant colors from the current image for Hue lights
+  const extractDominantColors = (imagePath: string) => {
+    // Simple implementation to extract representative colors from the song data
+    // In a real app, you might want to use a proper image analysis library
+    // This is just a simplified approach
+    
+    if (songDetails && songDetails.colours && songDetails.colours.length > 0) {
+      // Use song's predefined colors if available
+      const colors = songDetails.colours.map(colorStr => {
+        // Convert hex string to RGB array
+        const hex = colorStr.replace('#', '');
+        return [
+          parseInt(hex.substring(0, 2), 16),
+          parseInt(hex.substring(2, 4), 16),
+          parseInt(hex.substring(4, 6), 16)
+        ];
+      });
+      setDominantColors(colors);
+    } else {
+      // Fallback to some default colors based on the current image index
+      const defaultColors = [
+        [255, 0, 0],    // Red
+        [0, 255, 0],    // Green
+        [0, 0, 255],    // Blue
+        [255, 255, 0],  // Yellow
+        [255, 0, 255],  // Magenta
+      ];
+      
+      // Use the image index to rotate through colors
+      const colorIndex = currentImageIndex % defaultColors.length;
+      setDominantColors([defaultColors[colorIndex]]);
     }
   };
 
@@ -217,9 +268,17 @@ const Particles: React.FC = () => {
             }}
             autoPlay={true}
             onTimeUpdate={handleTimeUpdate}
+            onPlayStateChange={handlePlayerStateChange}
           />
         </div>
       )}
+
+      {/* Hue integration */}
+      <HueVisualizer 
+        audioData={audioData} 
+        dominantColors={dominantColors} 
+        isPlaying={isPlaying} 
+      />
 
       {/* Force image preloading */}
       <div style={{ display: 'none', position: 'absolute' }}>

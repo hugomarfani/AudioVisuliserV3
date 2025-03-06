@@ -11,21 +11,122 @@ interface PlayerProps {
   };
   autoPlay?: boolean;
   onTimeUpdate?: (currentTime: number, duration: number) => void;
+  onPlayStateChange?: (isPlaying: boolean, audioData?: Uint8Array) => void; // New prop for Hue integration
 }
 
-const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUpdate }, ref) => {
+const Player = forwardRef<any, PlayerProps>(({ 
+  track, 
+  autoPlay = false, 
+  onTimeUpdate,
+  onPlayStateChange 
+}, ref) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [hoverProgress, setHoverProgress] = useState<number | null>(null);
   const [rotation, setRotation] = useState(0);
+  
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyzerRef = useRef<AnalyserNode | null>(null);
+  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const dataArrayRef = useRef<Uint8Array | null>(null);
 
   useImperativeHandle(ref, () => ({
     play: () => audioRef.current?.play(),
     pause: () => audioRef.current?.pause(),
     getCurrentTime: () => audioRef.current?.currentTime || 0,
     getDuration: () => audioRef.current?.duration || 0,
+    getAudioData: () => dataArrayRef.current,
   }));
+
+  // Initialize audio context and analyzer
+  useEffect(() => {
+    if (!audioRef.current) return;
+
+    // Create audio context and analyzer on mount
+    if (!audioContextRef.current) {
+      try {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        analyzerRef.current = audioContextRef.current.createAnalyser();
+        analyzerRef.current.fftSize = 256; // Power of 2, smaller values = less detail but better performance
+        
+        const bufferLength = analyzerRef.current.frequencyBinCount;
+        dataArrayRef.current = new Uint8Array(bufferLength);
+        
+        sourceNodeRef.current = audioContextRef.current.createMediaElementSource(audioRef.current);
+        sourceNodeRef.current.connect(analyzerRef.current);
+        analyzerRef.current.connect(audioContextRef.current.destination);
+      } catch (error) {
+        console.error("Failed to initialize Web Audio API:", error);
+      }
+    }
+
+    return () => {
+      // Cleanup animation frame on unmount
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, []);
+
+  // Handle track change - if audio source changes, reconnect the nodes
+  useEffect(() => {
+    if (!audioRef.current || !audioContextRef.current || !analyzerRef.current) return;
+
+    // If the track changes and we already have a source node, disconnect it
+    if (sourceNodeRef.current) {
+      sourceNodeRef.current.disconnect();
+    }
+
+    // Create a new source node for the new audio element
+    try {
+      sourceNodeRef.current = audioContextRef.current.createMediaElementSource(audioRef.current);
+      sourceNodeRef.current.connect(analyzerRef.current);
+      analyzerRef.current.connect(audioContextRef.current.destination);
+    } catch (error) {
+      console.error("Failed to reconnect audio nodes:", error);
+    }
+  }, [track.audioSrc]);
+
+  // Set up audio analysis and animation loop
+  useEffect(() => {
+    const analyzeAudio = () => {
+      if (!analyzerRef.current || !dataArrayRef.current) return;
+      
+      // Get frequency data
+      analyzerRef.current.getByteFrequencyData(dataArrayRef.current);
+      
+      // Notify callback with current play state and audio data
+      onPlayStateChange?.(isPlaying, dataArrayRef.current);
+      
+      // Continue the loop if still playing
+      if (isPlaying) {
+        animationFrameRef.current = requestAnimationFrame(analyzeAudio);
+      }
+    };
+    
+    if (isPlaying) {
+      // Resume audio context if needed (browsers require user interaction)
+      if (audioContextRef.current?.state === 'suspended') {
+        audioContextRef.current.resume();
+      }
+      animationFrameRef.current = requestAnimationFrame(analyzeAudio);
+    } else {
+      // Cancel animation when not playing
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      // Still notify about paused state
+      onPlayStateChange?.(false);
+    }
+    
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [isPlaying, onPlayStateChange]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -35,32 +136,41 @@ const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUp
       // Avoid NaN by using "|| 0"
       const currentProgress = (audio.currentTime / audio.duration) * 100 || 0;
       setProgress(currentProgress);
-      console.log('Audio progress:', currentProgress);
       onTimeUpdate?.(audio.currentTime, audio.duration);
     };
 
     const handleError = (e: Event) => {
       console.error('Failed to load audio source', e);
       setIsPlaying(false);
+      onPlayStateChange?.(false);
+    };
+
+    const handleEnded = () => {
+      setIsPlaying(false);
+      onPlayStateChange?.(false);
     };
 
     audio.addEventListener('timeupdate', updateProgress);
     audio.addEventListener('error', handleError);
+    audio.addEventListener('ended', handleEnded);
 
     // Auto-play when track changes
     if (autoPlay && track.audioSrc) {
       audio.play().catch(error => {
         console.error('Error auto-playing audio:', error);
         setIsPlaying(false);
+        onPlayStateChange?.(false);
       });
       setIsPlaying(true); // Set playing state to true when auto-playing
+      onPlayStateChange?.(true);
     }
 
     return () => {
       audio.removeEventListener('timeupdate', updateProgress);
       audio.removeEventListener('error', handleError);
+      audio.removeEventListener('ended', handleEnded);
     };
-  }, [track.audioSrc, autoPlay, onTimeUpdate]);
+  }, [track.audioSrc, autoPlay, onTimeUpdate, onPlayStateChange]);
 
   useEffect(() => {
     let animationFrame: number;
@@ -70,26 +180,35 @@ const Player = forwardRef<any, PlayerProps>(({ track, autoPlay = false, onTimeUp
         animationFrame = requestAnimationFrame(updateRotation);
       }
     };
+    
     if (isPlaying) {
       animationFrame = requestAnimationFrame(updateRotation);
     }
+    
     return () => cancelAnimationFrame(animationFrame);
   }, [isPlaying]);
 
   const togglePlayPause = () => {
     if (!audioRef.current || !track.audioSrc) return;
     
-    console.log('Toggle play/pause, current state:', isPlaying);
-    
     if (isPlaying) {
       audioRef.current.pause();
     } else {
+      // Resume audio context if it's suspended (browser policy requires user interaction)
+      if (audioContextRef.current?.state === 'suspended') {
+        audioContextRef.current.resume();
+      }
+      
       audioRef.current.play().catch(error => {
         console.error('Error playing audio:', error);
         setIsPlaying(false);
+        onPlayStateChange?.(false);
       });
     }
-    setIsPlaying(!isPlaying);
+    
+    const newPlayState = !isPlaying;
+    setIsPlaying(newPlayState);
+    onPlayStateChange?.(newPlayState);
   };
 
   const skipBackward = () => {
