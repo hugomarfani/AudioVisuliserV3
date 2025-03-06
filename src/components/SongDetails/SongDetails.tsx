@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { SongModel } from '../../database/models/Song';
 import { useSongs } from '../../hooks/useSongs';
 import colors from '../../theme/colors';
-import { FaPlay, FaArrowLeft, FaUpload, FaImage, FaTrash } from 'react-icons/fa'; // Added FaTrash
+import { FaPlay, FaArrowLeft, FaUpload, FaImage, FaTrash, FaPaintBrush } from 'react-icons/fa'; // Added FaPaintBrush
 
 interface SongDetailsProps {
   onClose: () => void;
@@ -14,6 +14,7 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
   const { songs, refetch } = useSongs();
   const [song, setSong] = useState<SongModel | null>(null);
   const [gemmaStatus, setGemmaStatus] = useState<string>('');
+  const [sdStatus, setSDStatus] = useState<string>(''); // New state for Stable Diffusion status
   const [selectedImage, setSelectedImage] = useState<{name: string, path: string} | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string>('');
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
@@ -59,6 +60,38 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
       refetch();
     } catch (error) {
       setGemmaStatus(`Error: ${error.message || 'Unknown error occurred'}`);
+    }
+  };
+
+  // New handler for Stable Diffusion
+  const handleRunStableDiffusion = async () => {
+    // Check if backgrounds are empty
+    if (!song || !song.dataValues.backgrounds || song.dataValues.backgrounds.length === 0) {
+      setSDStatus('Please run Gemma first to generate backgrounds');
+      return;
+    }
+    
+    setSDStatus('Running Stable Diffusion...');
+    try {
+      const result = await window.electron.ipcRenderer.invoke(
+        'run-stable-diffusion',
+        songId,
+      );
+      setSDStatus(`Stable Diffusion running ... ${result}`);
+      if (result){
+        //update the databse with the new images
+        const new_images = ["background_prompts_1.png", "background_prompts_2.png", "background_prompts_3.png",
+          "object_prompts_1.png", "object_prompts_2.png", "object_prompts_3.png"];
+        await window.electron.ipcRenderer.invoke('update-song', {
+          id: songId,
+          images: new_images
+        });
+        // Save the updated song as JSON
+        await window.electron.ipcRenderer.invoke('save-song-as-json', { id: songId });
+      }
+      refetch();
+    } catch (error) {
+      setSDStatus(`Error: ${error.message || 'Unknown error occurred'}`);
     }
   };
 
@@ -552,29 +585,67 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
           </div>
         )}
         
-        <button
-          onClick={handleRunGemma}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            backgroundColor: colors.blue,
-            color: colors.white,
-            border: 'none',
-            borderRadius: '9999px',
-            padding: '0.5rem 1rem',
-            cursor: 'pointer',
-            fontSize: '1rem',
-            marginTop: '1rem',
-          }}
-        >
-          <FaPlay style={{ marginRight: '0.5rem' }} />
-          Run Gemma
-        </button>
+        {/* Add the buttons side by side in a container */}
+        <div style={{ 
+          display: 'flex', 
+          gap: '12px', 
+          marginTop: '1rem',
+          flexWrap: 'wrap'
+        }}>
+          <button
+            onClick={handleRunGemma}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: colors.blue,
+              color: colors.white,
+              border: 'none',
+              borderRadius: '9999px',
+              padding: '0.5rem 1rem',
+              cursor: 'pointer',
+              fontSize: '1rem',
+            }}
+          >
+            <FaPlay style={{ marginRight: '0.5rem' }} />
+            Run Gemma
+          </button>
+          
+          <button
+            onClick={handleRunStableDiffusion}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: song?.dataValues.backgrounds?.length ? '#5856D6' : colors.grey3, // Apple purple for active, grey for disabled
+              color: colors.white,
+              border: 'none',
+              borderRadius: '9999px',
+              padding: '0.5rem 1rem',
+              cursor: song?.dataValues.backgrounds?.length ? 'pointer' : 'not-allowed',
+              fontSize: '1rem',
+            }}
+          >
+            <FaPaintBrush style={{ marginRight: '0.5rem' }} />
+            Generate Images
+          </button>
+        </div>
+        
         {gemmaStatus && (
           <p
             style={{ fontSize: '1rem', color: colors.grey2, marginTop: '1rem' }}
           >
             {gemmaStatus}
+          </p>
+        )}
+        
+        {sdStatus && (
+          <p
+            style={{ 
+              fontSize: '1rem', 
+              color: sdStatus.includes('Error') || sdStatus.includes('Please run Gemma') ? '#FF3B30' : colors.grey2,
+              marginTop: '0.5rem' 
+            }}
+          >
+            {sdStatus}
           </p>
         )}
       </div>

@@ -39,6 +39,7 @@ let mainWindow: BrowserWindow | null = null;
 
 const ps1Path = mainPaths.ps1Path;
 const exePath = mainPaths.llmWhisperPath;
+const SDPath = mainPaths.SDPath;
 
 registerImageHandlers();
 
@@ -206,6 +207,28 @@ ipcMain.handle('run-gemma', (event, songId: string) => {
   process.on('close', (code) => {
     console.log(`✅ Process exited with code ${code}`);
     return code;
+  });
+});
+
+// Add the Stable Diffusion handler
+ipcMain.handle('run-stable-diffusion', (event, songId: string) => {
+  console.log('Running Stable Diffusion with songId:', songId);
+  const sdPathStr = SDPath.toString();;
+  const process = spawn('powershell', [
+    '-ExecutionPolicy',
+    'Bypass',
+    '-Command',
+    `& { . '${ps1Path}'; & ${sdPathStr} --songId ${songId}; }`,
+  ]);
+  process.stdout.on('data', (data) => {
+    console.log(`📜 SD stdout: ${data.toString()}`);
+  });
+  process.stderr.on('data', (data) => {
+    console.error(`⚠️ SD stderr: ${data.toString()}`);
+  });
+  process.on('close', (code) => {
+    console.log(`✅ SD Process exited with code ${code}`);
+    return true;
   });
 });
 
