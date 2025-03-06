@@ -39,4 +39,4 @@ external/python/sd_env
 
 # Moved to AiResources folder
 AiResources/
-resources/
+resources/AiResources/
