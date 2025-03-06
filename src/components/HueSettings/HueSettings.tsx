@@ -1,168 +1,116 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MeshGradientBackground from '../Backgrounds/MeshGradientBackground';
-import { HueBridge, HueCredentials, EntertainmentGroup, HueSettings as HueSettingsType } from '../../hooks/useHue';
+import { HueBridge, HueCredentials, EntertainmentGroup } from '../../types/HueTypes';
 import { useHue } from '../../hooks/useHue';
 
-// Setup stages for the onboarding flow
-type SetupStage = 'discovery' | 'link' | 'groups' | 'complete' | 'test';
+type SetupStage = 'connect' | 'link' | 'groups' | 'complete' | 'test';
 
 const HueSettings: React.FC = () => {
   const navigate = useNavigate();
-  const { isConfigured, hueSettings: savedSettings, resetHueSettings, startHueStreaming, stopHueStreaming, setLightColor } = useHue();
+  const { isConfigured, hueSettings, registerBridge, fetchGroups, startHueStreaming, stopHueStreaming, setLightColor, saveHueSettings, resetHueSettings } = useHue();
   
-  const [bridges, setBridges] = useState<HueBridge[]>([]);
-  const [selectedBridge, setSelectedBridge] = useState<HueBridge | null>(null);
+  const [ipAddress, setIpAddress] = useState<string>('');
+  const [isIpValid, setIsIpValid] = useState<boolean>(false);
+  const [setupStage, setSetupStage] = useState<SetupStage>('connect');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [bridge, setBridge] = useState<HueBridge | null>(null);
   const [credentials, setCredentials] = useState<HueCredentials | null>(null);
   const [groups, setGroups] = useState<EntertainmentGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<string>('');
-  const [setupStage, setSetupStage] = useState<SetupStage>('discovery');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [linkButtonPressed, setLinkButtonPressed] = useState<boolean>(false);
-  const [linkAttempts, setLinkAttempts] = useState(0);
   const [isStreaming, setIsStreaming] = useState(false);
 
   // Show the complete stage if already configured
   useEffect(() => {
-    if (isConfigured && savedSettings) {
-      setSelectedBridge(savedSettings.bridge);
-      setCredentials(savedSettings.credentials);
-      setSelectedGroup(savedSettings.selectedGroup);
+    if (isConfigured && hueSettings) {
+      setBridge(hueSettings.bridge);
+      setCredentials(hueSettings.credentials);
+      setSelectedGroup(hueSettings.selectedGroup);
       setSetupStage('complete');
     }
-  }, [isConfigured, savedSettings]);
+  }, [isConfigured, hueSettings]);
 
-  // Discover Hue bridges when on discovery stage
-  useEffect(() => {
-    if (setupStage === 'discovery') {
-      discoverBridges();
+  // Validate IP address format
+  const validateIpAddress = (ip: string): boolean => {
+    const ipPattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+    const match = ip.match(ipPattern);
+    
+    if (!match) return false;
+    
+    for (let i = 1; i <= 4; i++) {
+      const octet = parseInt(match[i], 10);
+      if (octet < 0 || octet > 255) return false;
     }
-  }, [setupStage]);
+    
+    return true;
+  };
 
-  // Attempt to register with bridge when link button is pressed
+  // Update IP validation state when IP changes
   useEffect(() => {
-    if (linkButtonPressed && selectedBridge && setupStage === 'link') {
-      const registerInterval = setInterval(async () => {
-        try {
-          setIsLoading(true);
-          setError(null);
-          
-          const response = await window.electron.hue.registerBridge(selectedBridge.ip);
-          
-          if (response && response.username && response.clientkey) {
-            setCredentials({
-              username: response.username,
-              psk: response.clientkey
-            });
-            clearInterval(registerInterval);
-            setIsLoading(false);
-            setSetupStage('groups');
-            
-            // Fetch entertainment groups after successful registration
-            fetchEntertainmentGroups(selectedBridge.ip, response.username, response.clientkey);
-          } else {
-            setLinkAttempts(prev => prev + 1);
-            if (linkAttempts > 30) { // Try for about 30 seconds
-              clearInterval(registerInterval);
-              setError('Link button not pressed in time. Please try again.');
-              setIsLoading(false);
-              setLinkButtonPressed(false);
-              setLinkAttempts(0);
-            }
-          }
-        } catch (err) {
-          console.error('Registration error:', err);
-        }
-      }, 1000);
-      
-      return () => clearInterval(registerInterval);
-    }
-  }, [linkButtonPressed, selectedBridge, setupStage, linkAttempts]);
+    setIsIpValid(validateIpAddress(ipAddress));
+  }, [ipAddress]);
 
-  const discoverBridges = async () => {
+  const handleBridgeConnect = async () => {
+    if (!isIpValid) return;
+    
     setIsLoading(true);
     setError(null);
+    
     try {
-      console.log('Frontend: Starting bridge discovery...');
+      // Create bridge object
+      const newBridge: HueBridge = {
+        id: `manual_${Date.now()}`,
+        ip: ipAddress,
+        name: 'Hue Bridge (Manual)',
+      };
       
-      console.log('Frontend: Calling window.electron.hue.discoverBridges()');
-      const discoveredBridges = await window.electron.hue.discoverBridges() as HueBridge[];
-      
-      console.log('Frontend: Received bridge discovery response:', discoveredBridges);
-      setBridges(discoveredBridges || []);
-      
-      if (!discoveredBridges || discoveredBridges.length === 0) {
-        console.log('Frontend: No bridges found in discovery response');
-      }
+      setBridge(newBridge);
+      setSetupStage('link');
     } catch (err) {
-      console.error('Frontend: Error during bridge discovery:', err);
-      setError('Failed to discover Hue bridges');
-    } finally {
-      console.log('Frontend: Bridge discovery process completed');
-      setIsLoading(false);
-    }
-  };
-
-  const handleBridgeSelect = (bridge: HueBridge) => {
-    setSelectedBridge(bridge);
-    setSetupStage('link');
-  };
-
-  const handleLinkButtonPress = () => {
-    setLinkButtonPressed(true);
-    setLinkAttempts(0);
-  };
-
-  const fetchEntertainmentGroups = async (ip: string, username: string, psk: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const fetchedGroups = await window.electron.hue.fetchGroups({ ip, username, psk }) as Record<string, any>;
-      
-      // Filter for entertainment groups
-      const entertainmentGroups = Object.entries(fetchedGroups)
-        .filter(([_, group]: [string, any]) => group.type === 'Entertainment')
-        .map(([id, group]: [string, any]) => ({
-          id,
-          name: group.name,
-          lights: group.lights,
-          type: group.type
-        }));
-      
-      setGroups(entertainmentGroups);
-    } catch (err) {
-      setError('Failed to fetch entertainment groups');
+      setError('Failed to connect to bridge');
       console.error(err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleGroupSelect = (groupId: string) => {
-    setSelectedGroup(groupId);
+  const handleLinkButtonPress = async () => {
+    if (!bridge) return;
     
-    // Save complete Hue settings to localStorage
-    if (selectedBridge && credentials) {
-      const settings: HueSettingsType = {
-        bridge: selectedBridge,
-        credentials,
-        selectedGroup: groupId
-      };
-      localStorage.setItem('hueSettings', JSON.stringify(settings));
-      setSetupStage('complete');
-      // Force a reload to update the context with the new settings
-      window.location.reload();
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const newCredentials = await registerBridge(bridge.ip);
+      setCredentials(newCredentials);
+      
+      // Fetch entertainment groups
+      const groups = await fetchGroups(bridge.ip, newCredentials.username, newCredentials.clientkey);
+      setGroups(groups);
+      
+      setSetupStage('groups');
+    } catch (err: any) {
+      setError(err.message || 'Failed to register with bridge');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleCreateGroup = () => {
-    // For demonstration purposes, show a message about creating a group in the Hue app
-    alert('Please use the Philips Hue app to create an Entertainment Area, then return here.');
+  const handleGroupSelect = async (groupId: string) => {
+    if (!bridge || !credentials) return;
     
-    // Deep link examples (could be implemented with platform detection):
-    // For Android: hue.settings.ADD_ENTERTAINMENT_AREA with BRIDGEID argument
-    // For iOS: hue2sync://entertainment-setup?bridge_id=${bridgeId}
+    setSelectedGroup(groupId);
+    
+    const settings = {
+      bridge,
+      credentials,
+      selectedGroup: groupId
+    };
+    
+    saveHueSettings(settings);
+    setSetupStage('complete');
   };
 
   const handleStartTest = async () => {
@@ -185,45 +133,44 @@ const HueSettings: React.FC = () => {
 
   const renderStage = () => {
     switch (setupStage) {
-      case 'discovery':
+      case 'connect':
         return (
           <div className="bg-white bg-opacity-20 backdrop-blur-lg rounded-xl p-8 shadow-xl max-w-md w-full">
             <h2 className="text-2xl font-bold mb-6 text-center">Set Up Phillips Hue Integration</h2>
             
+            <div className="mb-6">
+              <p className="text-sm mb-4">
+                Enter your Hue Bridge's IP address. You can find this in the Hue app under Settings → Hue Bridges.
+              </p>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1">IP Address</label>
+                <input
+                  type="text"
+                  value={ipAddress}
+                  onChange={(e) => setIpAddress(e.target.value)}
+                  placeholder="e.g. 192.168.1.2"
+                  className="w-full p-2 border rounded-md bg-white bg-opacity-80"
+                />
+                {ipAddress && !isIpValid && (
+                  <p className="text-red-500 text-sm mt-1">Please enter a valid IP address</p>
+                )}
+              </div>
+            </div>
+            
             {error && <div className="text-red-500 mb-4">{error}</div>}
             
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center my-6">
-                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
-                <p className="mt-4">Discovering Hue bridges...</p>
-              </div>
-            ) : bridges.length > 0 ? (
-              <>
-                <p className="mb-4">Select your Hue Bridge:</p>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {bridges.map((bridge) => (
-                    <button
-                      key={bridge.id}
-                      onClick={() => handleBridgeSelect(bridge)}
-                      className="w-full bg-white bg-opacity-50 hover:bg-opacity-70 backdrop-filter backdrop-blur-lg rounded-lg p-4 flex justify-between items-center transition-colors"
-                    >
-                      <span>{bridge.name || `Hue Bridge (${bridge.id})`}</span>
-                      <span className="text-sm text-gray-600">{bridge.ip}</span>
-                    </button>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <p className="text-center mb-4">No Hue Bridges found on your network.</p>
-            )}
-            
-            <div className="mt-6 flex justify-center space-x-4">
+            <div className="flex justify-center space-x-4">
               <button
-                onClick={discoverBridges}
-                className="px-6 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
-                disabled={isLoading}
+                onClick={handleBridgeConnect}
+                className={`px-6 py-2 text-white rounded-full transition-colors ${
+                  isIpValid && !isLoading
+                    ? "bg-blue-500 hover:bg-blue-600" 
+                    : "bg-gray-400 cursor-not-allowed"
+                }`}
+                disabled={!isIpValid || isLoading}
               >
-                Refresh
+                {isLoading ? 'Connecting...' : 'Connect'}
               </button>
               <button
                 onClick={() => navigate('/')}
@@ -242,10 +189,10 @@ const HueSettings: React.FC = () => {
             
             {error && <div className="text-red-500 mb-4">{error}</div>}
             
-            {selectedBridge && (
+            {bridge && (
               <div className="text-center mb-6">
-                <p className="mb-2">Bridge: {selectedBridge.name || `Hue Bridge (${selectedBridge.id})`}</p>
-                <p className="text-sm text-gray-600">{selectedBridge.ip}</p>
+                <p className="mb-2">Bridge: {bridge.name}</p>
+                <p className="text-sm text-gray-600">{bridge.ip}</p>
               </div>
             )}
             
@@ -260,11 +207,8 @@ const HueSettings: React.FC = () => {
               
               {isLoading ? (
                 <div className="text-center">
-                  <div className="flex justify-center my-6">
-                    <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
-                  </div>
-                  <p className="text-sm">Waiting for link button to be pressed...</p>
-                  <p className="text-xs text-gray-600 mt-2">Attempts: {linkAttempts}/30</p>
+                  <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+                  <p>Waiting for link button press...</p>
                 </div>
               ) : (
                 <div className="text-center">
@@ -282,10 +226,7 @@ const HueSettings: React.FC = () => {
             
             <div className="mt-8 flex justify-center">
               <button
-                onClick={() => {
-                  setSelectedBridge(null);
-                  setSetupStage('discovery');
-                }}
+                onClick={() => setSetupStage('connect')}
                 className="px-6 py-2 bg-gray-500 text-white rounded-full hover:bg-gray-600 transition-colors"
               >
                 Back
@@ -324,30 +265,11 @@ const HueSettings: React.FC = () => {
             ) : (
               <div className="text-center mb-6">
                 <p>No Entertainment Areas found.</p>
-                <p className="mt-2">You need to create one in the Hue app.</p>
-                <div className="mt-4">
-                  <button
-                    onClick={handleCreateGroup}
-                    className="px-6 py-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors"
-                  >
-                    Learn How to Create Area
-                  </button>
-                </div>
+                <p className="mt-2">You need to create one in the Hue app first.</p>
               </div>
             )}
             
-            <div className="mt-6 flex justify-center space-x-4">
-              <button
-                onClick={() => {
-                  if (selectedBridge && credentials) {
-                    fetchEntertainmentGroups(selectedBridge.ip, credentials.username, credentials.psk);
-                  }
-                }}
-                className="px-6 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
-                disabled={isLoading}
-              >
-                Refresh
-              </button>
+            <div className="mt-6 flex justify-center">
               <button
                 onClick={() => setSetupStage('link')}
                 className="px-6 py-2 bg-gray-500 text-white rounded-full hover:bg-gray-600 transition-colors"
@@ -417,17 +339,20 @@ const HueSettings: React.FC = () => {
               <h2 className="text-2xl font-bold mb-2">Setup Complete!</h2>
               <p className="mb-6">Your Phillips Hue lights are now ready to sync with your music.</p>
               
-              {selectedBridge && (
+              {bridge && (
                 <div className="mb-4">
                   <p className="font-semibold">Connected Bridge:</p>
-                  <p className="text-sm">{selectedBridge.name || `Hue Bridge (${selectedBridge.id})`}</p>
+                  <p className="text-sm">{bridge.name}</p>
+                  <p className="text-sm text-gray-600">{bridge.ip}</p>
                 </div>
               )}
               
-              <div className="mb-6">
-                <p className="font-semibold">Selected Entertainment Area:</p>
-                <p className="text-sm">{groups.find(g => g.id === selectedGroup)?.name || selectedGroup}</p>
-              </div>
+              {selectedGroup && groups.length > 0 && (
+                <div className="mb-6">
+                  <p className="font-semibold">Selected Entertainment Area:</p>
+                  <p className="text-sm">{groups.find(g => g.id === selectedGroup)?.name || selectedGroup}</p>
+                </div>
+              )}
               
               <div className="flex flex-col space-y-4">
                 <button

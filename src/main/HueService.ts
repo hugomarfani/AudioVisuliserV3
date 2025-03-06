@@ -1,15 +1,20 @@
 import { ipcMain } from 'electron';
 import * as Phea from 'phea';
 import axios from 'axios';
+import https from 'https';
 
-// Debug import verification
-console.log('PHEA IMPORT CHECK:', {
-  type: typeof Phea,
-  keys: Phea ? Object.keys(Phea) : 'undefined',
-  discover: typeof Phea?.discover,
-  register: typeof Phea?.register,
-  bridge: typeof Phea?.bridge
-});
+const httpsAgent = new https.Agent({ rejectUnauthorized: false });
+
+// Updated interface to include all required Phea options
+interface PheaOptions {
+  address: string;
+  username: string;
+  psk: string;
+  dtlsPort: number;
+  dtlsTimeoutMs: number;
+  dtlsUpdatesPerSecond: number;  // Made required
+  colorUpdatesPerSecond: number; // Made required
+}
 
 /**
  * HueService handles the communication with Phillips Hue bridges and lights
@@ -31,7 +36,6 @@ export default class HueService {
    * Register all IPC handlers for Hue-related functionality
    */
   private registerIpcHandlers(): void {
-    ipcMain.handle('hue-discover', this.handleDiscover);
     ipcMain.handle('hue-register', this.handleRegister);
     ipcMain.handle('hue-fetch-groups', this.handleFetchGroups);
     ipcMain.handle('hue-start-streaming', this.handleStartStreaming);
@@ -41,133 +45,74 @@ export default class HueService {
   }
 
   /**
-   * Alternative method to discover Hue bridges using the Hue discovery API
-   */
-  private async discoverBridgesViaHueApi(): Promise<any[]> {
-    try {
-      console.log('Attempting discovery via Hue NUPNP API...');
-      const response = await axios.get('https://discovery.meethue.com');
-      console.log('NUPNP API response:', response.data);
-      
-      if (Array.isArray(response.data)) {
-        return response.data.map(bridge => ({
-          name: `Philips Hue Bridge (${bridge.id})`,
-          id: bridge.id,
-          ip: bridge.internalipaddress,
-          mac: undefined
-        }));
-      }
-      
-      return [];
-    } catch (error) {
-      console.error('Error using NUPNP discovery:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Discovers Hue bridges on the local network
-   */
-  private handleDiscover = async (): Promise<any[]> => {
-    try {
-      console.log('Starting Hue bridge discovery...');
-      
-      // First try using Phea's discovery method
-      if (typeof Phea.discover === 'function') {
-        console.log('Trying Phea.discover()...');
-        try {
-          const bridges = await Promise.race([
-            Phea.discover(),
-            new Promise<any[]>((_, reject) => 
-              setTimeout(() => reject(new Error('Phea discovery timeout')), 5000)
-            )
-          ]) as any[];
-          
-          console.log('Discovered bridges via Phea:', bridges);
-          if (bridges && bridges.length > 0) {
-            return bridges;
-          }
-        } catch (err) {
-          console.warn('Phea.discover failed, falling back to API discovery:', err);
-        }
-      } else {
-        console.warn('Phea.discover is not a function, falling back to API discovery');
-      }
-      
-      // If Phea discovery fails or isn't available, fall back to Hue API discovery
-      const bridges = await this.discoverBridgesViaHueApi();
-      console.log('Discovered bridges via API:', bridges);
-      return bridges;
-    } catch (error) {
-      console.error('Failed to discover bridges. Error details:', error);
-      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack available');
-      return [];
-    }
-  };
-
-  /**
    * Registers with a Hue bridge (user must press link button first)
    */
   private handleRegister = async (_: any, ip: string): Promise<any> => {
     try {
-      console.log(`Registering with Hue bridge at ${ip}...`);
+      console.log(`Attempting to register with bridge at ${ip}`);
       
-      // First try with Phea's register method
-      if (typeof Phea.register === 'function') {
-        try {
-          const credentials = await Phea.register(ip);
-          console.log('Registration successful via Phea:', credentials);
-          return credentials;
-        } catch (err) {
-          console.warn('Phea.register failed, falling back to manual registration:', err);
-        }
-      }
-      
-      // If Phea registration fails, implement a basic registration mechanism
-      console.log('Attempting manual registration...');
+      // Try to register and get credentials
       const response = await axios.post(`http://${ip}/api`, {
-        devicetype: "audio_visualizer_app#macos",
+        devicetype: "audio_visualizer#app",
         generateclientkey: true
       });
       
-      console.log('Manual registration response:', response.data);
+      console.log('Registration response:', response.data);
       
-      if (response.data && response.data[0] && response.data[0].success) {
-        return response.data[0].success;
+      if (Array.isArray(response.data) && response.data[0]) {
+        if (response.data[0].error) {
+          // If there's an error (like button not pressed)
+          console.error('Registration error:', response.data[0].error);
+          throw new Error(response.data[0].error.description);
+        }
+        
+        if (response.data[0].success) {
+          const credentials = {
+            username: response.data[0].success.username,
+            clientkey: response.data[0].success.clientkey
+          };
+          
+          console.log('Registration successful, credentials obtained');
+          return credentials;
+        }
       }
       
-      return null;
+      throw new Error('Invalid response from bridge');
     } catch (error) {
       console.error('Registration failed:', error);
-      return null;
+      throw error;
     }
   };
 
   /**
-   * Fetches available entertainment groups from the Hue bridge
+   * Fetches available entertainment groups from the Hue bridge using CLIP v2 API
    */
-  private handleFetchGroups = async (_: any, { ip, username, psk }: { ip: string; username: string; psk: string }): Promise<any> => {
+  private handleFetchGroups = async (_: any, { ip, username }: { ip: string; username: string }): Promise<any> => {
     try {
-      console.log(`Fetching groups from Hue bridge at ${ip}...`);
+      console.log(`Fetching entertainment groups from bridge at ${ip}`);
       
-      // Create bridge instance
-      const options = {
-        address: ip,
-        username: username,
-        psk: psk,
-        dtlsUpdatesPerSecond: 50,
-        colorUpdatesPerSecond: 25,
-      };
+      const url = `https://${ip}/clip/v2/resource/entertainment_configuration`;
+      const response = await axios.get(url, {
+        headers: { 'hue-application-key': username },
+        httpsAgent
+      });
       
-      this.bridge = await Phea.bridge(options);
+      console.log('Entertainment groups response:', response.data);
       
-      // Get all groups
-      const groups = await this.bridge.getGroup(0);
-      console.log('Fetched groups:', groups);
-      return groups;
+      if (response.data && Array.isArray(response.data.data)) {
+        const groups = response.data.data.map((group: any) => ({
+          id: group.id,
+          name: group.metadata?.name || 'Unknown',
+          lights: group.light_services?.map((light: any) => light.rid) || []
+        }));
+        
+        return groups;
+      }
+      
+      return [];
     } catch (error) {
-      console.error('Error fetching groups:', error);
-      return {};
+      console.error('Error fetching entertainment groups:', error);
+      return [];
     }
   };
 
@@ -176,17 +121,19 @@ export default class HueService {
    */
   private handleStartStreaming = async (_: any, { ip, username, psk, groupId }: { ip: string; username: string; psk: string; groupId: string }): Promise<boolean> => {
     try {
-      console.log(`Starting Hue streaming to group ${groupId}...`);
+      console.log(`Starting streaming to group ${groupId}`);
       
       if (this.isStreaming) {
         await this.stopStreaming();
       }
       
-      // Create bridge instance
-      const options = {
+      // Create bridge instance with Phea
+      const options: PheaOptions = {
         address: ip,
         username: username,
         psk: psk,
+        dtlsPort: 2100,
+        dtlsTimeoutMs: 1000,
         dtlsUpdatesPerSecond: 50,
         colorUpdatesPerSecond: 25,
       };
@@ -208,15 +155,14 @@ export default class HueService {
         }
       });
       
-      // Keep connection alive by sending updates periodically
+      // Keep connection alive with type-safe error handling
       this.streamInterval = setInterval(() => {
         if (this.isStreaming && this.bridge) {
-          // Just send the current color again to keep connection alive
-          this.bridge.transition([0], [0, 0, 0], 0).catch(error => {
+          this.bridge.transition([0], [0, 0, 0], 0).catch((error: Error) => {
             console.error('Error in keepalive:', error);
           });
         }
-      }, 5000); // Every 5 seconds
+      }, 5000);
       
       console.log('Streaming started successfully');
       return true;
