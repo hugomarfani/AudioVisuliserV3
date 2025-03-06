@@ -1,0 +1,50 @@
+{
+    "audioPath": "audio/GibiNy4d4gc.mp3",
+    "background_prompts": [
+        ", animals: lion, zebra, giraffe, elephant, monkey, bird, landscape: rolling hills, tall grass, baobab tree, sky: bright blue, sun: shining brightly, mood: happy, playful, energetic.\n\ncolour:colourful, background:African savanna, suitable for children and family, animals:lion, zebra, giraffe, elephant, monkey, bird, landscape:rolling hills, tall grass, baobab tree, sky:bright blue, sun:shining brightly, mood:happy, playful, energetic \n\n\n",
+        ", soft lighting, ethereal, glowing orbs, floating platforms, winding paths, ancient ruins, mystical creatures, friendly, welcoming atmosphere, sense of wonder and discovery, sense of peace and tranquility.\n\nA spiritual or mystical realm, colourful background, suitable for children and family, soft lighting, ethereal, glowing orbs, floating platforms, winding paths, ancient ruins, mystical creatures, friendly, welcoming atmosphere, sense of wonder and discovery, sense of peace and tranquility \n\n\n",
+        ", instruments: electric guitar, bass guitar, drums, microphone, vocalist, stage lights, audience, energetic performance, smiling faces, vibrant colours, cartoon style, exaggerated features, wide shot, focus on the band, sense of joy and excitement.\n\ncolour: colourful background, suitable for children and family, instruments: electric guitar, bass guitar, drums, microphone, vocalist, stage lights, audience, energetic performance, smiling faces, vibrant colours, cartoon style, exaggerated features, wide shot, focus on the band, sense of joy and excitement \n\n\n"
+    ],
+    "backgrounds": [
+        "A fictional African Savanna$",
+        "A spiritual or mystical realm$",
+        "A musical performance or recording session$"
+    ],
+    "colours": [
+        "#9933CC",
+        "#FFD700",
+        "#008080",
+        "#800080",
+        "#FFFAF0",
+        "#9933CC",
+        "#FFD700",
+        "#008080",
+        "#800080",
+        "#FFFAF0"
+    ],
+    "colours_reason": [
+        "\n\n```\nColor 1: #9933CC\nColor 2: #FFD700\nColor 3: #008080\nColor 4: #800080\nColor 5: #FFFAF0\n```\n\nColor 1 reason:  \"sapphire sky\" strongly implies a deep blue-purple color, represented by #9933CC.\nColor 2 reason: \"sun rolling high\" suggests a bright, warm yellow, like #FFD700.\nColor 3:  \"endless round\" and \"circle of life\" evoke a sense of constant motion and the deep blue of the ocean, represented by #008080.\nColor 4: \"despair and hope\" could be represented by a mix of deep purple and blue, like #800080, symbolizing the complex emotions.\nColor 5: \"sunkening\" and \"planet\" suggest a soft, pale yellow, like #FFFAF0, representing the light of a new dawn. \n\n\n\n"
+    ],
+    "createdAt": "2025-02-23T15:04:38.903Z",
+    "id": "GibiNy4d4gc",
+    "images": [
+        "images/Circle of Life/lionking.jpg"
+    ],
+    "jacket": "images/Circle of Life/lionking.jpg",
+    "moods": [],
+    "object_prompts": [
+        "\n\n* **Song Title:** \"The Sound of Silence\" by Simon & Garfunkel\n* **Mood:** melancholic, introspective, haunting\n* **Setting:** a foggy, deserted city street at night, streetlights casting long, distorted shadows\n* **Characters:** a lone figure in a long coat, walking away from the viewer, head bowed\n* **Color Palette:** muted tones of blue, gray, and purple, with a hint of orange from the streetlights\n* **Style:** cinematic, film noir, with a touch of surrealism\n\n\nThe Sound of Silence, melancholic, introspective, haunting, a foggy, deserted city street at night, streetlights casting long, distorted shadows, a lone figure in a long coat, walking away from the viewer, head bowed, muted tones of blue, gray, and purple, with a hint of orange from the streetlights, cinematic, film noir, with a touch of surrealism \n",
+        "\n\n* **Song Title:** \"The Sound of Silence\" by Simon & Garfunkel\n* **Mood:** melancholic, introspective, haunting\n* **Setting:** a foggy, deserted city street at night, streetlights casting long, distorted shadows\n* **Characters:** two lone figures, silhouetted against the streetlights, walking away from each other\n* **Style:** dark, moody, cinematic, inspired by film noir\n* **Color Palette:** muted tones of blue, gray, and purple, with a hint of orange from the streetlights\n* **Details:** rain falling softly, cobblestone streets, a lone cat walking in the distance, a sense of isolation and loneliness\n\n\nThe Sound of Silence, melancholic, introspective, haunting, a foggy, deserted city street at night, streetlights casting long, distorted shadows, two lone figures, silhouetted against the streetlights, walking away from each other, dark, moody, cinematic, inspired by film noir, muted tones of blue, gray, and purple, with a hint of orange from the streetlights, rain falling softly, cobblestone streets, a lone cat walking in the distance, a sense of isolation and loneliness \n",
+        "\n\n* **Song Title:** \"The Sound of Silence\" by Simon & Garfunkel\n* **Mood:** melancholic, introspective, haunting\n* **Setting:** a foggy, deserted city street at night, streetlights casting long, distorted shadows\n* **Characters:** a lone figure in a long coat, head bowed, walking away from the viewer\n* **Color Palette:** muted tones of blue, gray, and purple, with a hint of orange from the streetlights\n* **Style:** cinematic, film noir, with a focus on atmosphere and mood\n\nThe Sound of Silence, melancholic, introspective, haunting, a foggy, deserted city street at night, streetlights casting long, distorted shadows, a lone figure in a long coat, head bowed, walking away from the viewer, muted tones of blue, gray, and purple, with a hint of orange from the streetlights, cinematic, film noir, with a focus on atmosphere and mood \n\n\n"
+    ],
+    "objects": [
+        "sun$",
+        "planet$",
+        "circle$"
+    ],
+    "particles": ["musicNotes", "stars", "crowns"],
+    "status": "Red",
+    "title": "Carmen Twillie, Lebo M. - Circle of Life (From \"The Lion King\")",
+    "updatedAt": "2025-02-23T15:04:38.905Z",
+    "uploader": "DisneyMusicVEVO"
+}
