@@ -9,6 +9,7 @@ import { sequelize } from '../config';
 import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
+import { getResourcePath } from '../../main/paths';
 
 interface SongModel
   extends Model<
@@ -143,7 +144,7 @@ const saveSongAsJson = async (song: SongModel) => {
     updatedAt: song.updatedAt,
   };
 
-  const songDataDir = path.join(app.getAppPath(), 'assets', 'songData');
+  const songDataDir = getResourcePath('assets', 'songData');
   if (!fs.existsSync(songDataDir)) {
     fs.mkdirSync(songDataDir, { recursive: true });
   }

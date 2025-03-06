@@ -61,12 +61,12 @@ const initDatabase = async () => {
     });
 
     // Add sample songs
-    console.log('Adding sample songs:', JSON.stringify(sampleSongs, null, 2));
+    // console.log('Adding sample songs:', JSON.stringify(sampleSongs, null, 2));
     const createdSongs = await Song.bulkCreate(sampleSongs);
 
     // Verify the songs were created
     const songs = await Song.findAll();
-    console.log('Songs in database:', JSON.stringify(songs, null, 2));
+    // console.log('Songs in database:', JSON.stringify(songs, null, 2));
 
     console.log('✅ Sample songs added successfully');
     console.log('✅ Database tables created successfully');

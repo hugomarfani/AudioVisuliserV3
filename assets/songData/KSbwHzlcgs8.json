@@ -6,7 +6,7 @@
   "jacket": "images/firework/firework.png",
   "images": [
     "images/firework/firework.gif",
-    "images/KSbwHzlcgs8/image_1741288142073.png"
+    "assets/images/KSbwHzlcgs8/image_1741287653000.png"
   ],
   "moods": [],
   "status": "Yellow",
@@ -20,5 +20,5 @@
   "backgrounds": [],
   "background_prompts": [],
   "createdAt": "2025-03-03T15:49:46.780Z",
-  "updatedAt": "2025-03-06T19:09:02.081Z"
+  "updatedAt": "2025-03-06T19:00:53.036Z"
 }

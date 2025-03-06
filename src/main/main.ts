@@ -9,7 +9,7 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import { exec, spawn } from 'child_process';
@@ -25,6 +25,7 @@ import {
   getYoutubeMetadata,
 } from '../youtube/youtubeToWav';
 import { mainPaths, getResourcePath } from './paths';
+import { registerImageHandlers } from './ipc/imageHandlers';
 
 class AppUpdater {
   constructor() {
@@ -38,6 +39,8 @@ let mainWindow: BrowserWindow | null = null;
 
 const ps1Path = mainPaths.ps1Path;
 const exePath = mainPaths.llmWhisperPath;
+
+registerImageHandlers();
 
 ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
@@ -70,12 +73,21 @@ ipcMain.handle('fetch-songs', async () => {
     const songs = await Song.findAll({
       order: [['createdAt', 'DESC']],
     });
-    console.log('Fetched songs:', JSON.stringify(songs, null, 2));
+    // console.log('Fetched songs:', JSON.stringify(songs, null, 2));
     return songs;
   } catch (error) {
     console.error('Error fetching songs:', error);
     throw error;
   }
+});
+
+// In your main.ts or preload.ts
+ipcMain.handle('open-file-dialog', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile'],
+    filters: [{ name: 'Images', extensions: ['jpg', 'png', 'gif', 'jpeg'] }]
+  });
+  return result;
 });
 
 ipcMain.handle('add-song', async (_event, songData) => {
@@ -98,7 +110,7 @@ ipcMain.handle('reload-songs', async () => {
     const songs = await Song.findAll({
       order: [['createdAt', 'DESC']],
     });
-    console.log('Reloaded songs:', JSON.stringify(songs, null, 2));
+    // console.log('Reloaded songs:', JSON.stringify(songs, null, 2));
     return songs;
   } catch (error) {
     console.error('Error reloading songs:', error);

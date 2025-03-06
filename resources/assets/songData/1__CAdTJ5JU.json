@@ -4,7 +4,10 @@
   "uploader": "Royal Music",
   "audioPath": "audio/1__CAdTJ5JU.mp3",
   "jacket": "images/Dance Monkey/monkey.jpg",
-  "images": ["images/Dance Monkey/monkey.gif"],
+  "images": [
+    "images/Dance Monkey/monkey.gif",
+    "images/1__CAdTJ5JU/image_1741288928506.png"
+  ],
   "moods": [],
   "status": "Yellow",
   "colours": [],
@@ -15,5 +18,5 @@
   "backgrounds": [],
   "background_prompts": [],
   "createdAt": "2025-03-03T15:47:20.135Z",
-  "updatedAt": "2025-03-03T15:47:20.135Z"
+  "updatedAt": "2025-03-06T19:22:08.527Z"
 }
