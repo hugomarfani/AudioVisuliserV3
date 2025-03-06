@@ -1,0 +1,30 @@
+diff --git a/node_modules/phea/build/hue-bridge.js b/node_modules/phea/build/hue-bridge.js
+index f2d3d52..83105cb 100644
+--- a/node_modules/phea/build/hue-bridge.js
++++ b/node_modules/phea/build/hue-bridge.js
+@@ -28,9 +28,9 @@ class HueBridge {
+             if (!Number.isInteger(Number(groupId))) {
+                 throw new Error("groupId must be int | string [0,16] inclusive.");
+             }
+-            else if (Number(groupId) < 0 || Number(groupId) > 16) {
+-                throw new Error("groupId must be int | string [0,16] inclusive.");
+-            }
++            // else if (Number(groupId) < 0 || Number(groupId) > 16) {
++            //     throw new Error("groupId must be int | string [0,16] inclusive.");
++            // }
+             group = yield hue_http_1.HueHttp.getGroup(this.opts.address, this.opts.username, groupId);
+             return group;
+         });
+@@ -40,9 +40,9 @@ class HueBridge {
+             if (!Number.isInteger(Number(groupId))) {
+                 throw new Error("GroupId must be in integer [0,31] inclusive as type string or empty string.");
+             }
+-            else if (Number(groupId) < 0 || Number(groupId) > 31) {
+-                throw new Error("GroupId must be in integer [0,31] inclusive as type string or empty string.");
+-            }
++            // else if (Number(groupId) < 0 || Number(groupId) > 255) {
++            //     throw new Error("GroupId must be in integer [0,255] inclusive as type string or empty string.");
++            // }
+             if (this.pheaEngine == null) {
+                 this.pheaEngine = new phea_engine_1.PheaEngine(this.opts);
+                 yield this.pheaEngine.start(groupId);
