@@ -1,32 +1,34 @@
 import { ipcMain } from 'electron';
-import * as Phea from 'phea';
 import axios from 'axios';
 import https from 'https';
+import dgram from 'dgram';
+// Fixed import for node-dtls-client
+var dtls = require("node-dtls-client");
 
 const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
-// Updated interface to include all required Phea options
-interface PheaOptions {
+// Interface for DTLS connection options
+interface DtlsOptions {
+  type: string;
   address: string;
-  username: string;
-  psk: string;
-  dtlsPort: number;
-  dtlsTimeoutMs: number;
-  dtlsUpdatesPerSecond: number;  // Made required
-  colorUpdatesPerSecond: number; // Made required
+  port: number;
+  psk: { [key: string]: Buffer };
+  timeout: number;
+  ciphers: string[];
 }
 
 /**
  * HueService handles the communication with Phillips Hue bridges and lights
- * using the Entertainment API via the phea package
+ * using the Entertainment API via direct DTLS communication
  */
 export default class HueService {
-  private bridge: any | null = null;
-  private connection: any | null = null;
+  private socket: any | null = null;
   private selectedGroup: string | null = null;
   private isStreaming = false;
   private streamInterval: NodeJS.Timeout | null = null;
   private groupIdMap: Map<string, string> = new Map(); // Map to store UUID to numeric ID mapping
+  private entertainmentId: string | null = null;
+  private sequenceNumber = 1;
 
   constructor() {
     this.registerIpcHandlers();
@@ -52,8 +54,9 @@ export default class HueService {
   private handleDiscover = async (): Promise<any[]> => {
     try {
       console.log('Discovering Hue bridges...');
-      // Using mDNS discovery would be better, but for now we'll just use the Hue discovery endpoint
+      // Using the Hue discovery endpoint
       const response = await axios.get('https://discovery.meethue.com/');
+      
       console.log('Discovery response:', response.data);
       return response.data.map((bridge: any) => ({
         id: bridge.id,
@@ -188,23 +191,177 @@ export default class HueService {
   };
 
   /**
-   * Gets information about the specified entertainment group
+   * Starts the entertainment group for streaming
+   * This needs to be done before establishing the DTLS connection
    */
-  private async getGroupInfo(bridge: any, groupId: number): Promise<any> {
+  private async startEntertainmentGroup(ip: string, username: string, entertainmentId: string): Promise<boolean> {
     try {
-      console.log(`Fetching info for entertainment group ${groupId}`);
-      const groupInfo = await bridge.getGroup(groupId);
-      console.log(`Group ${groupId} info:`, groupInfo);
-      console.log(`Number of lights in group: ${groupInfo.lights?.length || 'unknown'}`);
-      return groupInfo;
+      console.log(`Starting entertainment group ${entertainmentId}...`);
+      const response = await axios.put(
+        `https://${ip}/clip/v2/resource/entertainment_configuration/${entertainmentId}`,
+        { action: "start" },
+        {
+          headers: { 'hue-application-key': username },
+          httpsAgent
+        }
+      );
+      console.log('Start entertainment response:', response.status);
+      return true;
     } catch (error) {
-      console.error(`Failed to get group ${groupId} info:`, error);
-      return null;
+      console.error('Failed to start entertainment group:', error);
+      return false;
     }
   }
 
   /**
-   * Starts streaming to the selected entertainment group
+   * Stops the entertainment group streaming
+   */
+  private async stopEntertainmentGroup(ip: string, username: string, entertainmentId: string): Promise<boolean> {
+    if (!entertainmentId) return false;
+    
+    try {
+      console.log(`Stopping entertainment group ${entertainmentId}...`);
+      const response = await axios.put(
+        `https://${ip}/clip/v2/resource/entertainment_configuration/${entertainmentId}`,
+        { action: "stop" },
+        {
+          headers: { 'hue-application-key': username },
+          httpsAgent
+        }
+      );
+      console.log('Stop entertainment response:', response.status);
+      return true;
+    } catch (error) {
+      console.error('Failed to stop entertainment group:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Creates a DTLS connection to the Hue bridge
+   */
+  private createDtlsSocket(ip: string, username: string, clientkey: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      try {
+        console.log(`Creating DTLS connection to ${ip}:2100`);
+
+        // Convert clientkey from hex to Buffer
+        const pskBuffer = Buffer.from(clientkey, 'hex');
+        
+        // Create PSK lookup object - use Buffer value as specified in the documentation
+        const pskLookup = {};
+        pskLookup[username] = pskBuffer; // Use Buffer for PSK value instead of hex string
+        
+        // Debug output for PSK values
+        console.log(`Debug - PSK Username: ${username}`);
+        console.log(`Debug - PSK Value (hex): ${clientkey}`);
+        console.log(`Debug - PSK Buffer:`, pskBuffer);
+
+        // Create options object for DTLS connection
+        const options = {
+          type: "udp4",
+          address: ip,
+          port: 2100,
+          psk: pskLookup,
+          timeout: 10000,
+          // Specify cipher suite as per the docs
+          ciphers: ["TLS_PSK_WITH_AES_128_GCM_SHA256"]
+        };
+
+        console.log("DTLS options (full debug):", {
+          ...options,
+          psk: { [username]: `Buffer(${pskBuffer.length})` } // Show buffer length for readability
+        });
+        
+        // Check if the module structure exists
+        console.log("DTLS module structure:", Object.keys(dtls));
+        
+        // Attempt to create the socket with the proper structure
+        let client;
+        
+        if (dtls.dtls && typeof dtls.dtls.createSocket === 'function') {
+          console.log("Using dtls.dtls.createSocket");
+          client = dtls.dtls.createSocket(options);
+        } else if (typeof dtls.createSocket === 'function') {
+          console.log("Using dtls.createSocket");
+          client = dtls.createSocket(options);
+        } else {
+          throw new Error("Could not find createSocket method in the DTLS module");
+        }
+        
+        client.on("connected", () => {
+          console.log("DTLS connection established successfully");
+          resolve(client);
+        });
+        
+        client.on("error", (error) => {
+          console.error("DTLS connection error:", error);
+          reject(error);
+        });
+        
+        client.on("close", () => {
+          console.log("DTLS connection closed");
+          this.isStreaming = false;
+        });
+        
+        client.on("message", (message) => {
+          console.log("Received message from bridge:", message);
+        });
+        
+        // Note: connection should happen automatically with createSocket
+        
+      } catch (error) {
+        console.error("Error creating DTLS socket:", error);
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Creates a command buffer to send to the Hue bridge via DTLS
+   */
+  private createCommandBuffer(entertainmentId: string, lightCommands: { id: number, rgb: number[] }[]): Buffer {
+    // Static protocol name used by the API
+    const protocolName = Buffer.from("HueStream", "ascii");
+
+    // Format the header fields correctly (big-endian format)
+    const restOfHeader = Buffer.from([
+      0x02, 0x00, // Streaming API version 2.0
+      this.sequenceNumber & 0xFF, // sequence number (0-255)
+      0x00, 0x00, // Reserved - just fill with 0's
+      0x00, // specifies RGB color (set 0x01 for xy + brightness)
+      0x00, // Reserved - just fill with 0's
+    ]);
+
+    // Increment sequence number for next command
+    this.sequenceNumber = (this.sequenceNumber + 1) % 256;
+
+    // Entertainment area ID (36 bytes as a UUID)
+    const entertainmentConfigurationId = Buffer.from(entertainmentId, "ascii");
+
+    // Create light commands (7 bytes per light)
+    const lightBuffers = lightCommands.map(light => {
+      // Scale RGB values from 0-255 to 0-65535 for the Hue protocol
+      const r = Math.min(65535, Math.round((light.rgb[0] / 255) * 65535));
+      const g = Math.min(65535, Math.round((light.rgb[1] / 255) * 65535));
+      const b = Math.min(65535, Math.round((light.rgb[2] / 255) * 65535));
+
+      // Create buffer for this light channel
+      return Buffer.from([
+        light.id, // channel id (light id)
+        // For each color component, we need to convert to a 16-bit value (big-endian)
+        (r >> 8) & 0xFF, r & 0xFF, // red (16-bit)
+        (g >> 8) & 0xFF, g & 0xFF, // green (16-bit)
+        (b >> 8) & 0xFF, b & 0xFF, // blue (16-bit)
+      ]);
+    });
+
+    // Concat everything together to build the command
+    return Buffer.concat([protocolName, restOfHeader, entertainmentConfigurationId, ...lightBuffers]);
+  }
+
+  /**
+   * Starts streaming to the selected entertainment group using direct DTLS
    */
   private handleStartStreaming = async (_: any, { 
     ip, 
@@ -225,153 +382,42 @@ export default class HueService {
       // Make sure previous connections are closed
       await this.stopStreaming();
       
-      // Use provided numeric ID if available, otherwise look it up
-      let numericId = numericGroupId;
-      if (!numericId) {
-        numericId = this.groupIdMap.get(groupId);
-        if (!numericId) {
-          console.error(`No numeric ID found for group ${groupId}`);
-          
-          // Attempt to fetch groups to update our mapping
-          try {
-            await this.handleFetchGroups(null, { ip, username, psk });
-            numericId = this.groupIdMap.get(groupId);
-            if (!numericId) {
-              throw new Error(`Still no numeric ID for group ${groupId}`);
-            }
-          } catch (e) {
-            console.error('Could not fetch groups to find numeric ID:', e);
-            return false;
-          }
-        }
-      }
-      
-      console.log(`Using numeric group ID: ${numericId}`);
-      
-      // Create bridge instance with Phea
-      const options: PheaOptions = {
-        address: ip,
-        username: username,
-        psk: psk,
-        dtlsPort: 2100,
-        dtlsTimeoutMs: 1500, // Increase timeout a bit
-        dtlsUpdatesPerSecond: 50,
-        colorUpdatesPerSecond: 25,
-      };
-      
-      console.log('Creating bridge instance with options:', JSON.stringify(options, null, 2));
-      
-      // Create a clean bridge instance each time
-      try {
-        this.bridge = await Phea.bridge(options);
-      } catch (error) {
-        console.error('Failed to create bridge instance:', error);
-        return false;
-      }
-      
-      // Convert numeric ID to integer
-      const groupIdInt = parseInt(numericId, 10);
-      if (isNaN(groupIdInt)) {
-        console.error(`Invalid numeric group ID: ${numericId}`);
-        return false;
-      }
-      
-      // Get group info for validation
-      const groupInfo = await this.getGroupInfo(this.bridge, groupIdInt);
-      if (!groupInfo) {
-        console.error(`Could not get information for group ${groupIdInt}`);
-        return false;
-      }
-      
-      if (groupInfo.type !== 'Entertainment') {
-        console.error(`Group ${groupIdInt} is not an entertainment group`);
-        return false;
-      }
-      
-      if (!groupInfo.lights || groupInfo.lights.length === 0) {
-        console.error(`Group ${groupIdInt} has no lights`);
-        return false;
-      }
-      
-      // Prepare the entertainment group for streaming
-      try {
-        // First, ensure the entertainment group is not already active
-        const prepareUrl = `http://${ip}/api/${username}/groups/${groupIdInt}`;
-        await axios.put(prepareUrl, {
-          stream: { active: false }
-        });
-        
-        console.log(`Entertainment group ${groupIdInt} prepared for streaming`);
-      } catch (error) {
-        console.warn('Failed to prepare entertainment group:', error);
-        // Continue anyway as this might still work
-      }
-      
-      // Try starting the streaming session with various approaches
-      try {
-        console.log(`First attempt: Starting streaming with integer group ID: ${groupIdInt}`);
-        this.connection = await this.bridge.start(groupIdInt);
-      } catch (error) {
-        console.error('First attempt failed:', error);
-        
-        try {
-          console.log('Second attempt: Starting streaming with string group ID');
-          this.connection = await this.bridge.start(numericId);
-        } catch (error2) {
-          console.error('Second attempt failed:', error2);
-          
-          try {
-            console.log('Third attempt: Starting streaming with group ID 0');
-            this.connection = await this.bridge.start(0);
-          } catch (error3) {
-            console.error('Third attempt failed:', error3);
-            
-            try {
-              console.log('Final attempt: Starting streaming with empty string');
-              this.connection = await this.bridge.start('');
-            } catch (error4) {
-              console.error('All attempts failed:', error4);
-              throw new Error('Could not start streaming after multiple attempts');
-            }
-          }
-        }
-      }
-      
-      // Check if we got a connection object
-      if (!this.connection) {
-        console.error('Connection is null after start attempts');
-        throw new Error('Failed to establish connection');
-      }
-      
-      console.log('Connection established successfully:', this.connection);
+      // Store the entertainment UUID for later use
+      this.entertainmentId = groupId;
       this.selectedGroup = groupId;
+      
+      // First, start the entertainment group
+      const startSuccess = await this.startEntertainmentGroup(ip, username, groupId);
+      if (!startSuccess) {
+        console.error('Failed to start entertainment group');
+        return false;
+      }
+      
+      // Create a DTLS socket
+      try {
+        this.socket = await this.createDtlsSocket(ip, username, psk);
+      } catch (error) {
+        console.error('Failed to create DTLS socket:', error);
+        // Stop entertainment group that we started
+        await this.stopEntertainmentGroup(ip, username, groupId);
+        return false;
+      }
+      
+      // Connection was established successfully
       this.isStreaming = true;
       
-      // Set up event handlers for the connection
-      if (typeof this.connection.on === 'function') {
-        this.connection.on("close", () => {
-          console.log("Hue connection closed");
-          this.isStreaming = false;
-          if (this.streamInterval) {
-            clearInterval(this.streamInterval);
-            this.streamInterval = null;
-          }
-        });
-        
-        this.connection.on("error", (err: Error) => {
-          console.error("Hue connection error:", err);
-        });
-      } else {
-        console.log("Connection object doesn't have expected 'on' method, assuming connection is still good");
-      }
-      
-      // Keep the connection alive with periodic updates
+      // Start a keepalive interval to keep the connection alive
       this.streamInterval = setInterval(() => {
-        if (this.isStreaming && this.bridge) {
+        if (this.isStreaming && this.socket && this.entertainmentId) {
           try {
-            // Send a black color to light 0 as a keepalive
-            this.bridge.transition([0], [0, 0, 0], 0).catch((error: Error) => {
-              console.error('Error in keepalive:', error);
+            // Send a black color to all lights as a keepalive
+            const keepaliveCommand = this.createCommandBuffer(
+              this.entertainmentId,
+              [{ id: 0, rgb: [0, 0, 0] }]
+            );
+            
+            this.socket.send(keepaliveCommand, (error) => {
+              if (error) console.error('Error sending keepalive:', error);
             });
           } catch (error) {
             console.error('Error in keepalive interval:', error);
@@ -379,13 +425,20 @@ export default class HueService {
         }
       }, 5000);
       
-      // Verify the streaming is active by sending a test color
-      try {
-        await this.bridge.transition([0], [255, 0, 0], 100);
-        console.log('Successfully sent test color to lights');
-      } catch (error) {
-        console.error('Failed to send test color:', error);
-        // Don't fail here, the connection might still be working
+      // Send a test color to verify the connection
+      if (this.socket && this.entertainmentId) {
+        const testCommand = this.createCommandBuffer(
+          this.entertainmentId,
+          [{ id: 0, rgb: [255, 0, 0] }] // Red color
+        );
+        
+        this.socket.send(testCommand, (error) => {
+          if (error) {
+            console.error('Failed to send test color:', error);
+          } else {
+            console.log('Successfully sent test color to lights');
+          }
+        });
       }
       
       console.log('Streaming started successfully');
@@ -393,7 +446,7 @@ export default class HueService {
     } catch (error) {
       console.error('Failed to start streaming:', error);
       this.isStreaming = false;
-      this.connection = null;
+      this.socket = null;
       return false;
     }
   };
@@ -416,8 +469,8 @@ export default class HueService {
    */
   private handleSetColor = async (_: any, { lightIds, rgb, transitionTime }: { lightIds: number[]; rgb: number[]; transitionTime: number }): Promise<boolean> => {
     try {
-      if (!this.isStreaming || !this.bridge) {
-        console.log('Cannot set color - not streaming or no bridge');
+      if (!this.isStreaming || !this.socket || !this.entertainmentId) {
+        console.log('Cannot set color - not streaming or no socket connection');
         return false;
       }
       
@@ -427,8 +480,22 @@ export default class HueService {
       // Add more debugging
       console.log(`Setting colors for lights ${lightIds.join(', ')}: RGB(${validRgb.join(', ')}), transition: ${transitionTime}ms`);
       
-      await this.bridge.transition(lightIds, validRgb, transitionTime);
-      return true;
+      // Create commands for each light
+      const lightCommands = lightIds.map(id => ({ id, rgb: validRgb }));
+      
+      // Create and send the command buffer
+      const commandBuffer = this.createCommandBuffer(this.entertainmentId, lightCommands);
+      
+      return new Promise((resolve) => {
+        this.socket!.send(commandBuffer, (error) => {
+          if (error) {
+            console.error('Error setting light color:', error);
+            resolve(false);
+          } else {
+            resolve(true);
+          }
+        });
+      });
     } catch (error) {
       console.error('Error setting light color:', error);
       return false;
@@ -439,7 +506,7 @@ export default class HueService {
    * Internal helper to stop streaming and clean up
    */
   private async stopStreaming(): Promise<void> {
-    if (this.isStreaming && this.bridge) {
+    if (this.isStreaming && this.socket) {
       console.log('Stopping Hue streaming...');
       
       // Clear keepalive interval
@@ -448,18 +515,41 @@ export default class HueService {
         this.streamInterval = null;
       }
       
-      // Try to gracefully stop the bridge
+      // Close the DTLS connection
       try {
-        await this.bridge.stop();
-        console.log('Bridge stopped successfully');
+        if (typeof this.socket.close === 'function') {
+          this.socket.close();
+          console.log('DTLS connection closed successfully');
+        } else if (typeof this.socket.end === 'function') {
+          this.socket.end();
+          console.log('DTLS connection ended successfully');
+        } else {
+          console.warn('Could not find appropriate method to close DTLS connection');
+        }
       } catch (error) {
-        console.error('Error stopping bridge:', error);
+        console.error('Error closing DTLS connection:', error);
+      }
+      
+      // Stop the entertainment group if we have an ID and it's still active
+      if (this.entertainmentId) {
+        // Get the IP and username from the socket options if available
+        const socketAny = this.socket as any;
+        const options = socketAny.options || {};
+        const ip = options.address;
+        const username = Object.keys(options.psk || {})[0];
+        
+        if (ip && username) {
+          try {
+            await this.stopEntertainmentGroup(ip, username, this.entertainmentId);
+          } catch (error) {
+            console.error('Failed to stop entertainment group:', error);
+          }
+        }
       }
       
       // Reset state
       this.isStreaming = false;
-      this.connection = null;
-      this.bridge = null;
+      this.socket = null;
       console.log('Streaming stopped and resources cleaned up');
     }
   }
