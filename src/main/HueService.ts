@@ -480,6 +480,7 @@ export default class HueService {
 
   /**
    * Sets the color for specific lights or all lights
+   * Updated to support longer transition times
    */
   private handleSetColor = async (_: any, { lightIds, rgb, transitionTime }: { lightIds: number[]; rgb: number[]; transitionTime: number }): Promise<boolean> => {
     try {
@@ -494,6 +495,13 @@ export default class HueService {
       // Add more debugging
       console.log(`Setting colors for lights ${lightIds.join(', ')}: RGB(${validRgb.join(', ')}), transition: ${transitionTime}ms`);
       
+      // For longer transitions, we need to stream multiple commands over time
+      if (transitionTime > 100) {
+        await this.streamTransition(lightIds, validRgb, transitionTime);
+        return true;
+      }
+      
+      // For quick transitions, just send a single command
       // Create commands for each light
       const lightCommands = lightIds.map(id => ({ id, rgb: validRgb }));
       
@@ -517,9 +525,91 @@ export default class HueService {
   };
 
   /**
+   * Stream a smooth transition from current color to target color
+   * This creates a proper fade effect using multiple steps
+   */
+  private async streamTransition(
+    lightIds: number[],
+    targetRgb: number[],
+    transitionTime: number,
+    startRgb: number[] = [255, 255, 255] // Default starting from white
+  ): Promise<void> {
+    console.log(`Creating smooth transition from RGB(${startRgb.join(',')}) to RGB(${targetRgb.join(',')}) over ${transitionTime}ms`);
+    
+    // Create more steps for smoother transition
+    const steps = Math.max(Math.floor(transitionTime / 30), 30); // At least 30 steps
+    const stepInterval = Math.floor(transitionTime / steps);
+    const frameRate = 60; // Hz - higher frame rate for smoother animation
+    
+    return new Promise((resolve) => {
+      let currentStep = 0;
+      
+      // Calculate step size for each color component
+      const stepSize = [
+        (targetRgb[0] - startRgb[0]) / steps,
+        (targetRgb[1] - startRgb[1]) / steps,
+        (targetRgb[2] - startRgb[2]) / steps
+      ];
+      
+      console.log(`Step sizes: R: ${stepSize[0]}, G: ${stepSize[1]}, B: ${stepSize[2]}`);
+      
+      // Create interval to send commands at specified frame rate
+      const interval = setInterval(() => {
+        currentStep++;
+        
+        // Calculate current color
+        const currentRgb = [
+          Math.round(startRgb[0] + (stepSize[0] * currentStep)),
+          Math.round(startRgb[1] + (stepSize[1] * currentStep)),
+          Math.round(startRgb[2] + (stepSize[2] * currentStep))
+        ];
+        
+        // Clamp values between 0-255
+        const clampedRgb = currentRgb.map(val => Math.max(0, Math.min(255, val)));
+        
+        // Log every few steps to reduce console output
+        if (currentStep % 5 === 0 || currentStep === steps) {
+          console.log(`Transition step ${currentStep}/${steps}: RGB(${clampedRgb.join(',')})`);
+        }
+        
+        // Create commands for each light
+        const lightCommands = lightIds.map(id => ({ id, rgb: clampedRgb }));
+        
+        // Create and send the command buffer
+        try {
+          const commandBuffer = this.createCommandBuffer(this.entertainmentId!, lightCommands);
+          this.socket!.send(commandBuffer, (error) => {
+            if (error) {
+              console.error('Error in transition step:', error);
+            }
+          });
+        } catch (error) {
+          console.error('Error creating command buffer:', error);
+        }
+        
+        // Check if we've reached the end
+        if (currentStep >= steps) {
+          clearInterval(interval);
+          console.log('Transition complete');
+          
+          // Send one final command with exact target color for precision
+          try {
+            const finalCommands = lightIds.map(id => ({ id, rgb: targetRgb }));
+            const finalBuffer = this.createCommandBuffer(this.entertainmentId!, finalCommands);
+            this.socket!.send(finalBuffer);
+          } catch (error) {
+            console.error('Error sending final color:', error);
+          }
+          
+          resolve();
+        }
+      }, Math.floor(1000 / frameRate));
+    });
+  }
+
+  /**
    * Performs a test sequence on all lights in the entertainment group
-   * Shows a sequence of colors to verify the setup is working
-   * Uses high-frequency streaming to ensure commands are not lost
+   * Shows a sequence of dynamic effects to verify the setup is working
    */
   private handleTestLights = async (_: any, { lightIds }: { lightIds?: number[] }): Promise<boolean> => {
     try {
@@ -533,47 +623,144 @@ export default class HueService {
         ? lightIds 
         : [0]; // Default to just light 0 if no lights specified
       
-      console.log(`====== STARTING LIGHT TEST SEQUENCE ======`);
+      console.log(`====== STARTING ENHANCED LIGHT TEST SEQUENCE ======`);
       console.log(`Target lights: ${targetLightIds.length}`);
       console.log(`Light IDs: ${targetLightIds.join(', ')}`);
       console.log(`Entertainment ID: ${this.entertainmentId}`);
       
-      // Define test colors
-      const colors = [
+      // Reset all lights to black first
+      await this.streamColorWithHighFrequency([0, 0, 0], targetLightIds, 300, 30);
+      
+      // 1. Quick RGB flash sequence (very fast color changes)
+      console.log("Effect: Quick RGB flashes");
+      const flashColors = [[255,0,0], [0,255,0], [0,0,255]];
+      for (let i = 0; i < 3; i++) {
+        for (const color of flashColors) {
+          await this.streamColorWithHighFrequency(color, targetLightIds, 150, 60);
+        }
+      }
+      
+      // Brief pause
+      await this.streamColorWithHighFrequency([0, 0, 0], targetLightIds, 300, 30);
+      
+      // 2. Wave effect - lights turn on one after another
+      if (targetLightIds.length > 1) {
+        console.log("Effect: Wave pattern");
+        for (let repeat = 0; repeat < 2; repeat++) {
+          // Forward wave (red)
+          for (const lightId of targetLightIds) {
+            await this.streamColorWithHighFrequency([255, 0, 0], [lightId], 80, 60);
+          }
+          // Backward wave (blue)
+          for (let i = targetLightIds.length - 1; i >= 0; i--) {
+            await this.streamColorWithHighFrequency([0, 0, 255], [targetLightIds[i]], 80, 60);
+          }
+        }
+        
+        // All lights together
+        await this.streamColorWithHighFrequency([255, 255, 255], targetLightIds, 300, 60);
+      }
+      
+      // 3. Rainbow effect - smooth color transitions
+      console.log("Effect: Rainbow transition");
+      const rainbowColors = [
         [255, 0, 0],    // Red
+        [255, 127, 0],  // Orange
+        [255, 255, 0],  // Yellow
         [0, 255, 0],    // Green
         [0, 0, 255],    // Blue
+        [75, 0, 130],   // Indigo
+        [148, 0, 211]   // Violet
+      ];
+      
+      for (const color of rainbowColors) {
+        await this.streamColorWithHighFrequency(color, targetLightIds, 300, 60);
+      }
+      
+      // 4. Strobe effect - rapid white flashes
+      console.log("Effect: Strobe effect");
+      for (let i = 0; i < 10; i++) {
+        const color = i % 2 === 0 ? [255, 255, 255] : [0, 0, 0];
+        await this.streamColorWithHighFrequency(color, targetLightIds, 100, 60);
+      }
+      
+      // 5. Theater chase effect (if multiple lights)
+      if (targetLightIds.length > 2) {
+        console.log("Effect: Theater chase pattern");
+        // Divide lights into 3 groups
+        const group1 = targetLightIds.filter((_, i) => i % 3 === 0);
+        const group2 = targetLightIds.filter((_, i) => i % 3 === 1);
+        const group3 = targetLightIds.filter((_, i) => i % 3 === 2);
+        
+        // Chase pattern
+        for (let repeat = 0; repeat < 5; repeat++) {
+          await this.streamColorWithHighFrequency([255, 0, 0], group1, 150, 60);
+          await this.streamColorWithHighFrequency([0, 255, 0], group2, 150, 60);
+          await this.streamColorWithHighFrequency([0, 0, 255], group3, 150, 60);
+        }
+      }
+      
+      // 6. Pulse effect - brightness pulsing
+      console.log("Effect: Breathing/pulsing effect");
+      for (let pulse = 0; pulse < 3; pulse++) {
+        // Increasing brightness
+        for (let i = 0; i <= 5; i++) {
+          const brightness = i * 51; // 0, 51, 102, 153, 204, 255
+          await this.streamColorWithHighFrequency(
+            [brightness, brightness, brightness], 
+            targetLightIds, 
+            120, 
+            60
+          );
+        }
+        
+        // Decreasing brightness
+        for (let i = 5; i >= 0; i--) {
+          const brightness = i * 51;
+          await this.streamColorWithHighFrequency(
+            [brightness, brightness, brightness], 
+            targetLightIds, 
+            120, 
+            60
+          );
+        }
+      }
+      
+      // Final effect: All lights color explosion
+      console.log("Effect: Color explosion finale");
+      const finaleColors = [
+        [255, 0, 0],    // Red
         [255, 255, 0],  // Yellow
-        [255, 0, 255],  // Purple
+        [0, 255, 0],    // Green
         [0, 255, 255],  // Cyan
+        [0, 0, 255],    // Blue
+        [255, 0, 255],  // Purple
         [255, 255, 255] // White
       ];
       
-      // Make sure all lights are initially set to black/off for clean start
-      console.log('Setting all lights to black for clean start');
-      await this.streamColorWithHighFrequency([0, 0, 0], targetLightIds, 500, 30);
-      
-      // Test individual lights first - try each light with red color
-      console.log('Testing each light individually with red color');
-      for (const lightId of targetLightIds) {
-        console.log(`Testing light ${lightId} with RED color individually`);
-        await this.streamColorWithHighFrequency([255, 0, 0], [lightId], 500, 30);
-        // Short pause between lights
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-
-      // Test each color with all lights together
-      console.log('Testing all lights together with each color');
-      for (const color of colors) {
-        console.log(`Testing all lights with color: RGB(${color.join(', ')})`);
-        await this.streamColorWithHighFrequency(color, targetLightIds, 1500, 50);
+      // Rapid finale
+      for (const color of finaleColors) {
+        await this.streamColorWithHighFrequency(color, targetLightIds, 200, 60);
       }
       
-      // Final cleanup - set all lights to black/off
-      console.log('Final cleanup - setting lights to black');
-      await this.streamColorWithHighFrequency([0, 0, 0], targetLightIds, 500, 30);
+      // End with a much smoother fade to black using a longer transition
+      console.log("Effect: Smooth fade to black finale");
       
-      console.log('====== LIGHT TEST SEQUENCE COMPLETED ======');
+      // First set to bright white
+      await this.streamColorWithHighFrequency([255, 255, 255], targetLightIds, 800, 60);
+      
+      // Then gradually fade to black using our enhanced transition method
+      await this.streamTransition(
+        targetLightIds,     // Target light IDs
+        [0, 0, 0],          // Target color (black)
+        4000,               // Longer transition time (4 seconds)
+        [255, 255, 255]     // Starting color (white)
+      );
+      
+      // Wait a moment at black to make the effect clear
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log('====== ENHANCED LIGHT TEST SEQUENCE COMPLETED ======');
       return true;
     } catch (error) {
       console.error('Error during light test sequence:', error);
@@ -582,8 +769,8 @@ export default class HueService {
   };
 
   /**
-   * Stream a single color to all specified lights with high frequency 
-   * to ensure commands are not lost due to UDP packet loss
+   * Stream a single color to all specified lights with high frequency
+   * Modified to support higher frame rates for smoother transitions
    */
   private async streamColorWithHighFrequency(
     rgb: number[], 
@@ -595,36 +782,9 @@ export default class HueService {
       throw new Error('Streaming not active');
     }
     
-    console.log(`==== STARTING HIGH FREQUENCY COLOR STREAM ====`);
-    console.log(`Color: RGB(${rgb.join(',')})`);
-    console.log(`Target Light IDs (${lightIds.length}): ${lightIds.join(', ')}`);
-    console.log(`Duration: ${durationMs}ms at ${frequencyHz}Hz`);
-    
-    // Try an experimental approach - send each light individually first
-    try {
-      for (const lightId of lightIds) {
-        const singleLightCmd = this.createCommandBuffer(
-          this.entertainmentId, 
-          [{ id: lightId, rgb }]
-        );
-        await new Promise<void>((resolve, reject) => {
-          this.socket!.send(singleLightCmd, (error) => {
-            if (error) {
-              console.error(`Error setting individual light ${lightId}:`, error);
-              reject(error);
-            } else {
-              console.log(`Successfully sent command to light ${lightId}`);
-              resolve();
-            }
-          });
-        });
-        // Small delay between individual light commands
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-      console.log("Finished individual light setup, proceeding to group streaming");
-    } catch (err) {
-      console.warn("Error during individual light setup:", err);
-      // Continue with group streaming regardless
+    // Only log color changes that last more than 200ms to reduce console spam
+    if (durationMs > 200) {
+      console.log(`Color: RGB(${rgb.join(',')}) to ${lightIds.length} lights for ${durationMs}ms`);
     }
     
     return new Promise((resolve, reject) => {
@@ -634,16 +794,12 @@ export default class HueService {
       // Create light commands once
       const lightCommands = lightIds.map(id => ({ id, rgb }));
       
-      console.log(`Creating command buffer for all ${lightIds.length} lights...`);
       // Create command buffer once
       const commandBuffer = this.createCommandBuffer(this.entertainmentId!, lightCommands);
       
       let elapsedTime = 0;
       let errorOccurred = false;
       let commandsSent = 0;
-      let commandsSucceeded = 0;
-      
-      console.log(`Starting ${frequencyHz}Hz streaming interval...`);
       
       // Create interval to send commands at specified frequency
       const interval = setInterval(() => {
@@ -657,22 +813,12 @@ export default class HueService {
             errorOccurred = true;
             clearInterval(interval);
             reject(error);
-          } else {
-            commandsSucceeded++;
           }
         });
-        
-        // Every 10 commands, log progress
-        if (commandsSent % 10 === 0) {
-          console.log(`Streaming progress: ${elapsedTime}/${durationMs}ms, ${commandsSucceeded}/${commandsSent} commands succeeded`);
-        }
         
         // Check if we've reached the duration
         if (elapsedTime >= durationMs && !errorOccurred) {
           clearInterval(interval);
-          console.log(`==== COMPLETED COLOR STREAM ====`);
-          console.log(`Streamed RGB(${rgb.join(',')}) for ${durationMs}ms at ${frequencyHz}Hz`);
-          console.log(`Sent ${commandsSent} commands, ${commandsSucceeded} succeeded`);
           resolve();
         }
       }, intervalMs);
@@ -681,10 +827,9 @@ export default class HueService {
       setTimeout(() => {
         clearInterval(interval);
         if (!errorOccurred) {
-          console.log(`Safety timeout reached after ${durationMs + 200}ms`);
           resolve();
         }
-      }, durationMs + 200);
+      }, durationMs + 100);
     });
   }
 
