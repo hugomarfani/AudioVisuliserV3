@@ -14,10 +14,12 @@
   "objects": [],
   "object_prompts": [],
   "particles": [
-    "fireworks"
+    "fireworks",
+    "musicNotes",
+    "raindrops"
   ],
   "backgrounds": [],
   "background_prompts": [],
   "createdAt": "2025-03-03T15:49:46.780Z",
-  "updatedAt": "2025-03-06T20:03:03.933Z"
+  "updatedAt": "2025-03-07T13:22:15.351Z"
 }
