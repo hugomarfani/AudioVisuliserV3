@@ -673,9 +673,32 @@ export default class HueService {
         [148, 0, 211]   // Violet
       ];
       
-      for (const color of rainbowColors) {
-        await this.streamColorWithHighFrequency(color, targetLightIds, 300, 60);
+      // Instead of discrete colors, use smooth transitions between each rainbow color
+      console.log("Starting smooth rainbow transitions...");
+      for (let i = 0; i < rainbowColors.length - 1; i++) {
+        const startColor = rainbowColors[i];
+        const endColor = rainbowColors[i + 1];
+        console.log(`Rainbow transition: ${startColor.join(',')} → ${endColor.join(',')}`);
+        
+        // Use the transition method with longer duration for smoother effect
+        await this.streamTransition(
+          targetLightIds,
+          endColor,       // Target color
+          800,            // Longer transition time
+          startColor      // Starting color
+        );
       }
+      
+      // Complete the rainbow circle by transitioning back to red
+      await this.streamTransition(
+        targetLightIds,
+        rainbowColors[0],      // Back to red
+        800,                   // Transition time
+        rainbowColors[rainbowColors.length - 1]  // From violet
+      );
+      
+      // Brief pause with lights off
+      await this.streamColorWithHighFrequency([0, 0, 0], targetLightIds, 300, 30);
       
       // 4. Strobe effect - rapid white flashes
       console.log("Effect: Strobe effect");
@@ -692,38 +715,56 @@ export default class HueService {
         const group2 = targetLightIds.filter((_, i) => i % 3 === 1);
         const group3 = targetLightIds.filter((_, i) => i % 3 === 2);
         
-        // Chase pattern
+        console.log(`Chase groups: Group1[${group1.join(',')}], Group2[${group2.join(',')}], Group3[${group3.join(',')}]`);
+        
+        // Chase pattern - fixed to illuminate groups simultaneously with different colors
         for (let repeat = 0; repeat < 5; repeat++) {
+          // Create commands for all lights, with different colors per group
+          const lightCommands = [];
+          
+          // Set all lights to black first
+          await this.streamColorWithHighFrequency([0, 0, 0], targetLightIds, 30, 60);
+          
+          // Group 1 red, others off
           await this.streamColorWithHighFrequency([255, 0, 0], group1, 150, 60);
+          await this.streamColorWithHighFrequency([0, 0, 0], group1, 30, 60);
+          
+          // Group 2 green, others off
           await this.streamColorWithHighFrequency([0, 255, 0], group2, 150, 60);
+          await this.streamColorWithHighFrequency([0, 0, 0], group2, 30, 60);
+          
+          // Group 3 blue, others off
           await this.streamColorWithHighFrequency([0, 0, 255], group3, 150, 60);
+          await this.streamColorWithHighFrequency([0, 0, 0], group3, 30, 60);
         }
       }
       
-      // 6. Pulse effect - brightness pulsing
-      console.log("Effect: Breathing/pulsing effect");
+      // 6. Pulse effect - brightness pulsing with smooth transitions
+      console.log("Effect: Smooth breathing/pulsing effect");
       for (let pulse = 0; pulse < 3; pulse++) {
-        // Increasing brightness
-        for (let i = 0; i <= 5; i++) {
-          const brightness = i * 51; // 0, 51, 102, 153, 204, 255
-          await this.streamColorWithHighFrequency(
-            [brightness, brightness, brightness], 
-            targetLightIds, 
-            120, 
-            60
-          );
-        }
+        console.log(`Pulse cycle ${pulse + 1}/3`);
         
-        // Decreasing brightness
-        for (let i = 5; i >= 0; i--) {
-          const brightness = i * 51;
-          await this.streamColorWithHighFrequency(
-            [brightness, brightness, brightness], 
-            targetLightIds, 
-            120, 
-            60
-          );
-        }
+        // Instead of discrete steps, create smooth fade up
+        await this.streamTransition(
+          targetLightIds,
+          [255, 255, 255],  // To full white
+          1500,             // Longer fade up
+          [0, 0, 0]         // From black
+        );
+        
+        // Hold the brightness briefly
+        await this.streamColorWithHighFrequency([255, 255, 255], targetLightIds, 200, 60);
+        
+        // Then smooth fade down
+        await this.streamTransition(
+          targetLightIds,
+          [0, 0, 0],         // To black
+          1500,              // Longer fade down
+          [255, 255, 255]    // From white
+        );
+        
+        // Hold the darkness briefly
+        await this.streamColorWithHighFrequency([0, 0, 0], targetLightIds, 200, 60);
       }
       
       // Final effect: All lights color explosion
