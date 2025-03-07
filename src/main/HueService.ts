@@ -322,6 +322,13 @@ export default class HueService {
    * Creates a command buffer to send to the Hue bridge via DTLS
    */
   private createCommandBuffer(entertainmentId: string, lightCommands: { id: number, rgb: number[] }[]): Buffer {
+    // Detailed logging of light commands
+    console.log(`Creating command for entertainment ID: ${entertainmentId}`);
+    console.log(`Light commands (${lightCommands.length} lights):`);
+    lightCommands.forEach(cmd => {
+      console.log(`  Light ID: ${cmd.id}, Color: RGB(${cmd.rgb.join(',')})`);
+    });
+    
     // Static protocol name used by the API
     const protocolName = Buffer.from("HueStream", "ascii");
 
@@ -334,6 +341,9 @@ export default class HueService {
       0x00, // Reserved - just fill with 0's
     ]);
 
+    // Log sequence number for debugging
+    console.log(`Using sequence number: ${this.sequenceNumber}`);
+    
     // Increment sequence number for next command
     this.sequenceNumber = (this.sequenceNumber + 1) % 256;
 
@@ -358,7 +368,10 @@ export default class HueService {
     });
 
     // Concat everything together to build the command
-    return Buffer.concat([protocolName, restOfHeader, entertainmentConfigurationId, ...lightBuffers]);
+    const finalBuffer = Buffer.concat([protocolName, restOfHeader, entertainmentConfigurationId, ...lightBuffers]);
+    console.log(`Command buffer created, total length: ${finalBuffer.length} bytes`);
+    
+    return finalBuffer;
   }
 
   /**
@@ -506,6 +519,7 @@ export default class HueService {
   /**
    * Performs a test sequence on all lights in the entertainment group
    * Shows a sequence of colors to verify the setup is working
+   * Uses high-frequency streaming to ensure commands are not lost
    */
   private handleTestLights = async (_: any, { lightCount = 10 }: { lightCount?: number }): Promise<boolean> => {
     try {
@@ -514,7 +528,10 @@ export default class HueService {
         return false;
       }
 
-      console.log(`Starting light test sequence with ${lightCount} lights`);
+      console.log(`====== STARTING LIGHT TEST SEQUENCE ======`);
+      console.log(`Target light count: ${lightCount}`);
+      console.log(`Entertainment ID: ${this.entertainmentId}`);
+      console.log(`Socket connected: ${!!this.socket}`);
       
       // Define test colors
       const colors = [
@@ -529,34 +546,33 @@ export default class HueService {
 
       // Create an array of all possible light IDs (0 to lightCount-1)
       const allLightIds = Array.from({ length: lightCount }, (_, i) => i);
+      console.log(`Testing lights with IDs: ${allLightIds.join(', ')}`);
       
-      // Test each color
+      // Make sure all lights are initially set to black/off for clean start
+      console.log('Setting all lights to black for clean start');
+      await this.streamColorWithHighFrequency([0, 0, 0], allLightIds, 500, 30);
+      
+      // Test individual lights first - try each light with red color
+      console.log('Testing each light individually with red color');
+      for (const lightId of allLightIds) {
+        console.log(`Testing light ${lightId} with RED color individually`);
+        await this.streamColorWithHighFrequency([255, 0, 0], [lightId], 500, 30);
+        // Short pause between lights
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+
+      // Test each color with all lights together
+      console.log('Testing all lights together with each color');
       for (const color of colors) {
-        console.log(`Testing color: RGB(${color.join(', ')})`);
-        
-        // Create commands for all lights
-        const lightCommands = allLightIds.map(id => ({ id, rgb: color }));
-        
-        // Create and send the command buffer
-        const commandBuffer = this.createCommandBuffer(this.entertainmentId, lightCommands);
-        
-        // Send the color command
-        await new Promise<void>((resolve, reject) => {
-          this.socket!.send(commandBuffer, (error) => {
-            if (error) {
-              console.error('Error setting test color:', error);
-              reject(error);
-            } else {
-              resolve();
-            }
-          });
-        });
-        
-        // Wait 1.5 seconds to show this color
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        console.log(`Testing all lights with color: RGB(${color.join(', ')})`);
+        await this.streamColorWithHighFrequency(color, allLightIds, 1500, 50);
       }
       
-      console.log('Light test sequence completed successfully');
+      // Final cleanup - set all lights to black/off
+      console.log('Final cleanup - setting lights to black');
+      await this.streamColorWithHighFrequency([0, 0, 0], allLightIds, 500, 30);
+      
+      console.log('====== LIGHT TEST SEQUENCE COMPLETED ======');
       return true;
     } catch (error) {
       console.error('Error during light test sequence:', error);
@@ -564,6 +580,113 @@ export default class HueService {
     }
   };
   
+  /**
+   * Stream a single color to all specified lights with high frequency 
+   * to ensure commands are not lost due to UDP packet loss
+   */
+  private async streamColorWithHighFrequency(
+    rgb: number[], 
+    lightIds: number[], 
+    durationMs: number = 1000, 
+    frequencyHz: number = 50
+  ): Promise<void> {
+    if (!this.isStreaming || !this.socket || !this.entertainmentId) {
+      throw new Error('Streaming not active');
+    }
+    
+    console.log(`==== STARTING HIGH FREQUENCY COLOR STREAM ====`);
+    console.log(`Color: RGB(${rgb.join(',')})`);
+    console.log(`Target Light IDs (${lightIds.length}): ${lightIds.join(', ')}`);
+    console.log(`Duration: ${durationMs}ms at ${frequencyHz}Hz`);
+    
+    // Try an experimental approach - send each light individually first
+    try {
+      for (const lightId of lightIds) {
+        const singleLightCmd = this.createCommandBuffer(
+          this.entertainmentId, 
+          [{ id: lightId, rgb }]
+        );
+        await new Promise<void>((resolve, reject) => {
+          this.socket!.send(singleLightCmd, (error) => {
+            if (error) {
+              console.error(`Error setting individual light ${lightId}:`, error);
+              reject(error);
+            } else {
+              console.log(`Successfully sent command to light ${lightId}`);
+              resolve();
+            }
+          });
+        });
+        // Small delay between individual light commands
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      console.log("Finished individual light setup, proceeding to group streaming");
+    } catch (err) {
+      console.warn("Error during individual light setup:", err);
+      // Continue with group streaming regardless
+    }
+    
+    return new Promise((resolve, reject) => {
+      // Calculate interval time based on frequency (ms)
+      const intervalMs = Math.floor(1000 / frequencyHz);
+      
+      // Create light commands once
+      const lightCommands = lightIds.map(id => ({ id, rgb }));
+      
+      console.log(`Creating command buffer for all ${lightIds.length} lights...`);
+      // Create command buffer once
+      const commandBuffer = this.createCommandBuffer(this.entertainmentId!, lightCommands);
+      
+      let elapsedTime = 0;
+      let errorOccurred = false;
+      let commandsSent = 0;
+      let commandsSucceeded = 0;
+      
+      console.log(`Starting ${frequencyHz}Hz streaming interval...`);
+      
+      // Create interval to send commands at specified frequency
+      const interval = setInterval(() => {
+        elapsedTime += intervalMs;
+        commandsSent++;
+        
+        // Send the command
+        this.socket!.send(commandBuffer, (error) => {
+          if (error) {
+            console.error('Error sending color command:', error);
+            errorOccurred = true;
+            clearInterval(interval);
+            reject(error);
+          } else {
+            commandsSucceeded++;
+          }
+        });
+        
+        // Every 10 commands, log progress
+        if (commandsSent % 10 === 0) {
+          console.log(`Streaming progress: ${elapsedTime}/${durationMs}ms, ${commandsSucceeded}/${commandsSent} commands succeeded`);
+        }
+        
+        // Check if we've reached the duration
+        if (elapsedTime >= durationMs && !errorOccurred) {
+          clearInterval(interval);
+          console.log(`==== COMPLETED COLOR STREAM ====`);
+          console.log(`Streamed RGB(${rgb.join(',')}) for ${durationMs}ms at ${frequencyHz}Hz`);
+          console.log(`Sent ${commandsSent} commands, ${commandsSucceeded} succeeded`);
+          resolve();
+        }
+      }, intervalMs);
+      
+      // Safety timeout to ensure the promise resolves
+      setTimeout(() => {
+        clearInterval(interval);
+        if (!errorOccurred) {
+          console.log(`Safety timeout reached after ${durationMs + 200}ms`);
+          resolve();
+        }
+      }, durationMs + 200);
+    });
+  }
+
   /**
    * Internal helper to stop streaming and clean up
    */
