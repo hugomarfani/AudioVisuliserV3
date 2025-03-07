@@ -172,7 +172,8 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
     stopHueStreaming, 
     setLightColor, 
     saveHueSettings, 
-    resetHueSettings 
+    resetHueSettings,
+    testLights // Use the new testLights function
   } = useHue();
   
   const [activeStep, setActiveStep] = useState(isConfigured ? 3 : 0);
@@ -184,7 +185,6 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
   const [credentials, setCredentials] = useState<HueCredentials | null>(null);
   const [groups, setGroups] = useState<EntertainmentGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<string>('');
-  const [isStreaming, setIsStreaming] = useState(false);
   const [toast, setToast] = useState<ToastMessage>({
     message: '',
     type: 'info',
@@ -308,102 +308,29 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
     showToast('Entertainment area selected successfully!', 'success');
   };
 
-  const testLights = async () => {
-    if (!isStreaming) return;
-    
-    const colors = [
-      [255, 0, 0],    // Red
-      [0, 255, 0],    // Green
-      [0, 0, 255],    // Blue
-      [255, 255, 0],  // Yellow
-      [255, 0, 255],  // Purple
-      [0, 255, 255]   // Cyan
-    ];
-    
-    try {
-      // Find the selected group to get its lights
-      const selectedGroupObj = groups.find(group => group.id === selectedGroup);
-      
-      if (selectedGroupObj && selectedGroupObj.lights && selectedGroupObj.lights.length > 0) {
-        console.log(`Testing ${selectedGroupObj.lights.length} lights in group "${selectedGroupObj.name}"`);
-        
-        // Create an array of indices for all lights in the group
-        const lightIndices = Array.from({ length: selectedGroupObj.lights.length }, (_, i) => i);
-        
-        // Cycle through all colors - IMPORTANT: using for-of with await to ensure sequential execution
-        for (let i = 0; i < colors.length; i++) {
-          const color = colors[i];
-          console.log(`Setting lights to color ${i+1}/${colors.length}: RGB(${color[0]}, ${color[1]}, ${color[2]})`);
-          
-          // Important: Make sure to AWAIT setLightColor to ensure it completes before moving on
-          await setLightColor(lightIndices, color, 1000);
-          // Wait a bit to show this color
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-        
-        // Finish with white light
-        await setLightColor(lightIndices, [255, 255, 255], 1000);
-      } else {
-        console.log('No lights found in selected group or group not found, using default light (0)');
-        // Fallback to using just one light if group info isn't available
-        for (const color of colors) {
-          await setLightColor([0], color, 1000);
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
-    } catch (error) {
-      console.error('Error during light testing:', error);
-      showToast('Error during light testing', 'error');
-    }
-    
-    // IMPORTANT: Only stop streaming once all light commands are completed
-    console.log('Test sequence complete, stopping streaming...');
-  };
-
+  // Simplified function to handle light testing
   const handleStartTest = async () => {
     setIsLoading(true);
     
     try {
-      // First make sure any existing streaming is stopped
-      await stopHueStreaming();
-      setIsStreaming(false);
+      // Get light count from selected group if available
+      const selectedGroupObj = groups.find(group => group.id === selectedGroup);
+      const lightCount = selectedGroupObj?.lights?.length || 10;
       
-      // Wait a brief moment to ensure clean state
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Show toast that we're starting the test
+      showToast('Testing lights...', 'info');
       
-      // Start new streaming session
-      const success = await startHueStreaming();
+      // Call the testLights function which handles everything
+      const success = await testLights(lightCount);
       
       if (success) {
-        setIsStreaming(true);
-        showToast('Testing lights...', 'info');
-        
-        // Give the streaming connection a moment to fully establish
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Run the test sequence
-        await testLights();
-        
-        // IMPORTANT: Explicitly stop streaming after test completes
-        console.log('Test complete, stopping streaming...');
-        await stopHueStreaming();
-        setIsStreaming(false);
-        showToast('Light test completed', 'success');
+        showToast('Light test completed successfully', 'success');
       } else {
-        showToast('Failed to start streaming connection', 'error', 'Test Failed');
+        showToast('Light test failed', 'error', 'Test Failed');
       }
     } catch (error) {
-      console.error('Error in test sequence:', error);
-      showToast('Error during test sequence', 'error');
-      
-      // Make sure streaming is stopped even if there was an error
-      try {
-        await stopHueStreaming();
-      } catch (err) {
-        console.error('Error stopping stream after failure:', err);
-      }
-      
-      setIsStreaming(false);
+      console.error('Error during light test:', error);
+      showToast('Error testing lights', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -697,7 +624,7 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
               <AppleButton
                 variant="outlined"
                 onClick={handleStartTest}
-                disabled={isLoading || isStreaming}
+                disabled={isLoading}
                 startIcon={isLoading ? <CircularProgress size={16} /> : <LightModeRoundedIcon />}
               >
                 {isLoading ? 'Testing...' : 'Test Lights'}

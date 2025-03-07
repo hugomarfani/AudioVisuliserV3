@@ -45,6 +45,7 @@ export default class HueService {
     ipcMain.handle('hue-start-streaming', this.handleStartStreaming);
     ipcMain.handle('hue-stop-streaming', this.handleStopStreaming);
     ipcMain.handle('hue-set-color', this.handleSetColor);
+    ipcMain.handle('hue-test-lights', this.handleTestLights); // Add new handler
     console.log('Registered Hue IPC handlers');
   }
 
@@ -502,6 +503,67 @@ export default class HueService {
     }
   };
 
+  /**
+   * Performs a test sequence on all lights in the entertainment group
+   * Shows a sequence of colors to verify the setup is working
+   */
+  private handleTestLights = async (_: any, { lightCount = 10 }: { lightCount?: number }): Promise<boolean> => {
+    try {
+      if (!this.isStreaming || !this.socket || !this.entertainmentId) {
+        console.log('Cannot test lights - not streaming');
+        return false;
+      }
+
+      console.log(`Starting light test sequence with ${lightCount} lights`);
+      
+      // Define test colors
+      const colors = [
+        [255, 0, 0],    // Red
+        [0, 255, 0],    // Green
+        [0, 0, 255],    // Blue
+        [255, 255, 0],  // Yellow
+        [255, 0, 255],  // Purple
+        [0, 255, 255],  // Cyan
+        [255, 255, 255] // White
+      ];
+
+      // Create an array of all possible light IDs (0 to lightCount-1)
+      const allLightIds = Array.from({ length: lightCount }, (_, i) => i);
+      
+      // Test each color
+      for (const color of colors) {
+        console.log(`Testing color: RGB(${color.join(', ')})`);
+        
+        // Create commands for all lights
+        const lightCommands = allLightIds.map(id => ({ id, rgb: color }));
+        
+        // Create and send the command buffer
+        const commandBuffer = this.createCommandBuffer(this.entertainmentId, lightCommands);
+        
+        // Send the color command
+        await new Promise<void>((resolve, reject) => {
+          this.socket!.send(commandBuffer, (error) => {
+            if (error) {
+              console.error('Error setting test color:', error);
+              reject(error);
+            } else {
+              resolve();
+            }
+          });
+        });
+        
+        // Wait 1.5 seconds to show this color
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      }
+      
+      console.log('Light test sequence completed successfully');
+      return true;
+    } catch (error) {
+      console.error('Error during light test sequence:', error);
+      return false;
+    }
+  };
+  
   /**
    * Internal helper to stop streaming and clean up
    */

@@ -16,7 +16,8 @@ export type Channels =
   | 'hue-fetch-groups'
   | 'hue-start-streaming'
   | 'hue-stop-streaming'
-  | 'hue-set-color';
+  | 'hue-set-color'
+  | 'hue-test-lights'; // Add the new channel
 
 const electronHandler = {
   ipcRenderer: {
@@ -73,6 +74,8 @@ const electronHandler = {
     stopStreaming: () => ipcRenderer.invoke('hue-stop-streaming'),
     setColor: (data: { lightIds: number[]; rgb: number[]; transitionTime: number }) => 
       ipcRenderer.invoke('hue-set-color', data),
+    testLights: (data?: { lightCount?: number }) => 
+      ipcRenderer.invoke('hue-test-lights', data), // Add new method
   },
 };
 

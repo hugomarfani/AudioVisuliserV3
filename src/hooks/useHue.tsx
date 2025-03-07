@@ -20,6 +20,7 @@ export interface HueContextType {
   setLightColor: (lightIds: number[], rgb: number[], transitionTime: number) => Promise<boolean>;
   saveHueSettings: (settings: HueSettings, numericId?: string) => void;
   resetHueSettings: () => void;
+  testLights: (lightCount?: number) => Promise<boolean>; // Add new function
 }
 
 // Create the context with default values
@@ -34,6 +35,7 @@ const HueContext = createContext<HueContextType>({
   setLightColor: async () => false,
   saveHueSettings: () => {},
   resetHueSettings: () => {},
+  testLights: async () => false, // Add default value
 });
 
 // Hook to use the Hue context
@@ -173,6 +175,45 @@ export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setIsStreamingActive(false);
   }, []);
 
+  // Add test lights function
+  const testLights = useCallback(async (lightCount?: number): Promise<boolean> => {
+    try {
+      // First make sure streaming is active
+      if (!isStreamingActive) {
+        if (!hueSettings) return false;
+        const success = await window.electron.hue.startStreaming({
+          ip: hueSettings.bridge.ip,
+          username: hueSettings.credentials.username,
+          psk: hueSettings.credentials.clientkey,
+          groupId: hueSettings.selectedGroup,
+          numericGroupId: hueSettings.numericGroupId
+        });
+        
+        if (!success) {
+          console.error('Failed to start streaming for light test');
+          return false;
+        }
+        
+        setIsStreamingActive(true);
+      }
+      
+      // Run the light test
+      const testResult = await window.electron.hue.testLights({ lightCount });
+      
+      // Stop streaming when done
+      await window.electron.hue.stopStreaming();
+      setIsStreamingActive(false);
+      
+      return testResult;
+    } catch (error) {
+      console.error('Error during light test:', error);
+      // Make sure we stop streaming on error
+      await window.electron.hue.stopStreaming();
+      setIsStreamingActive(false);
+      return false;
+    }
+  }, [hueSettings, isStreamingActive]);
+
   // Cleanup streaming on unmount
   useEffect(() => {
     return () => {
@@ -193,7 +234,8 @@ export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     stopHueStreaming,
     setLightColor,
     saveHueSettings,
-    resetHueSettings
+    resetHueSettings,
+    testLights // Add new function to context
   };
 
   return <HueContext.Provider value={value}>{children}</HueContext.Provider>;
