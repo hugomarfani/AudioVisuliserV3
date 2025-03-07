@@ -308,20 +308,6 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
     showToast('Entertainment area selected successfully!', 'success');
   };
 
-  const handleStartTest = async () => {
-    setIsLoading(true);
-    const success = await startHueStreaming();
-    if (success) {
-      setIsStreaming(true);
-      showToast('Testing lights...', 'info');
-      // Test sequence
-      await testLights();
-    } else {
-      showToast('Failed to start streaming', 'error', 'Test Failed');
-    }
-    setIsLoading(false);
-  };
-
   const testLights = async () => {
     if (!isStreaming) return;
     
@@ -333,14 +319,94 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
       [255, 0, 255],  // Purple
       [0, 255, 255]   // Cyan
     ];
-
-    for (const color of colors) {
-      await setLightColor([0], color, 500);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    try {
+      // Find the selected group to get its lights
+      const selectedGroupObj = groups.find(group => group.id === selectedGroup);
+      
+      if (selectedGroupObj && selectedGroupObj.lights && selectedGroupObj.lights.length > 0) {
+        console.log(`Testing ${selectedGroupObj.lights.length} lights in group "${selectedGroupObj.name}"`);
+        
+        // Create an array of indices for all lights in the group
+        const lightIndices = Array.from({ length: selectedGroupObj.lights.length }, (_, i) => i);
+        
+        // Cycle through all colors - IMPORTANT: using for-of with await to ensure sequential execution
+        for (let i = 0; i < colors.length; i++) {
+          const color = colors[i];
+          console.log(`Setting lights to color ${i+1}/${colors.length}: RGB(${color[0]}, ${color[1]}, ${color[2]})`);
+          
+          // Important: Make sure to AWAIT setLightColor to ensure it completes before moving on
+          await setLightColor(lightIndices, color, 1000);
+          // Wait a bit to show this color
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
+        // Finish with white light
+        await setLightColor(lightIndices, [255, 255, 255], 1000);
+      } else {
+        console.log('No lights found in selected group or group not found, using default light (0)');
+        // Fallback to using just one light if group info isn't available
+        for (const color of colors) {
+          await setLightColor([0], color, 1000);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+    } catch (error) {
+      console.error('Error during light testing:', error);
+      showToast('Error during light testing', 'error');
     }
     
-    await stopHueStreaming();
-    setIsStreaming(false);
+    // IMPORTANT: Only stop streaming once all light commands are completed
+    console.log('Test sequence complete, stopping streaming...');
+  };
+
+  const handleStartTest = async () => {
+    setIsLoading(true);
+    
+    try {
+      // First make sure any existing streaming is stopped
+      await stopHueStreaming();
+      setIsStreaming(false);
+      
+      // Wait a brief moment to ensure clean state
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Start new streaming session
+      const success = await startHueStreaming();
+      
+      if (success) {
+        setIsStreaming(true);
+        showToast('Testing lights...', 'info');
+        
+        // Give the streaming connection a moment to fully establish
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Run the test sequence
+        await testLights();
+        
+        // IMPORTANT: Explicitly stop streaming after test completes
+        console.log('Test complete, stopping streaming...');
+        await stopHueStreaming();
+        setIsStreaming(false);
+        showToast('Light test completed', 'success');
+      } else {
+        showToast('Failed to start streaming connection', 'error', 'Test Failed');
+      }
+    } catch (error) {
+      console.error('Error in test sequence:', error);
+      showToast('Error during test sequence', 'error');
+      
+      // Make sure streaming is stopped even if there was an error
+      try {
+        await stopHueStreaming();
+      } catch (err) {
+        console.error('Error stopping stream after failure:', err);
+      }
+      
+      setIsStreaming(false);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleReset = () => {
