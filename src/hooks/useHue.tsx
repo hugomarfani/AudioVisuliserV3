@@ -20,7 +20,7 @@ export interface HueContextType {
   setLightColor: (lightIds: number[], rgb: number[], transitionTime: number) => Promise<boolean>;
   saveHueSettings: (settings: HueSettings, numericId?: string) => void;
   resetHueSettings: () => void;
-  testLights: (lightCount?: number) => Promise<boolean>; // Add new function
+  testLights: (lightIds?: number[]) => Promise<boolean>; // Updated to accept specific light IDs
 }
 
 // Create the context with default values
@@ -35,7 +35,7 @@ const HueContext = createContext<HueContextType>({
   setLightColor: async () => false,
   saveHueSettings: () => {},
   resetHueSettings: () => {},
-  testLights: async () => false, // Add default value
+  testLights: async () => false,
 });
 
 // Hook to use the Hue context
@@ -175,8 +175,8 @@ export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setIsStreamingActive(false);
   }, []);
 
-  // Add test lights function
-  const testLights = useCallback(async (lightCount?: number): Promise<boolean> => {
+  // Modified test lights function to accept specific light IDs
+  const testLights = useCallback(async (lightIds?: number[]): Promise<boolean> => {
     try {
       // First make sure streaming is active
       if (!isStreamingActive) {
@@ -197,8 +197,8 @@ export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setIsStreamingActive(true);
       }
       
-      // Run the light test
-      const testResult = await window.electron.hue.testLights({ lightCount });
+      // Run the light test with specific light IDs
+      const testResult = await window.electron.hue.testLights({ lightIds });
       
       // Stop streaming when done
       await window.electron.hue.stopStreaming();

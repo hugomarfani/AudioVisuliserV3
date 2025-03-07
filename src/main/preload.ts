@@ -74,8 +74,8 @@ const electronHandler = {
     stopStreaming: () => ipcRenderer.invoke('hue-stop-streaming'),
     setColor: (data: { lightIds: number[]; rgb: number[]; transitionTime: number }) => 
       ipcRenderer.invoke('hue-set-color', data),
-    testLights: (data?: { lightCount?: number }) => 
-      ipcRenderer.invoke('hue-test-lights', data), // Add new method
+    testLights: (data?: { lightIds?: number[] }) => 
+      ipcRenderer.invoke('hue-test-lights', data), // Updated to accept lightIds
   },
 };
 

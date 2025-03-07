@@ -313,15 +313,24 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
     setIsLoading(true);
     
     try {
-      // Get light count from selected group if available
+      // Get actual light IDs from the selected group
       const selectedGroupObj = groups.find(group => group.id === selectedGroup);
-      const lightCount = selectedGroupObj?.lights?.length || 10;
       
-      // Show toast that we're starting the test
-      showToast('Testing lights...', 'info');
+      if (!selectedGroupObj || !selectedGroupObj.lights || selectedGroupObj.lights.length === 0) {
+        showToast('No lights found in the selected entertainment area', 'error');
+        setIsLoading(false);
+        return;
+      }
       
-      // Call the testLights function which handles everything
-      const success = await testLights(lightCount);
+      // Convert light IDs - in Hue Entertainment API, lights are typically indexed from 0
+      // We'll simply use indices 0 to N-1 where N is the number of lights
+      const lightIndices = Array.from({ length: selectedGroupObj.lights.length }, (_, i) => i);
+      
+      console.log(`Testing entertainment area "${selectedGroupObj.name}" with ${lightIndices.length} lights`);
+      showToast(`Testing ${lightIndices.length} lights...`, 'info');
+      
+      // Call the testLights function with the specific light indices
+      const success = await testLights(lightIndices);
       
       if (success) {
         showToast('Light test completed successfully', 'success');

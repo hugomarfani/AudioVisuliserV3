@@ -521,17 +521,22 @@ export default class HueService {
    * Shows a sequence of colors to verify the setup is working
    * Uses high-frequency streaming to ensure commands are not lost
    */
-  private handleTestLights = async (_: any, { lightCount = 10 }: { lightCount?: number }): Promise<boolean> => {
+  private handleTestLights = async (_: any, { lightIds }: { lightIds?: number[] }): Promise<boolean> => {
     try {
       if (!this.isStreaming || !this.socket || !this.entertainmentId) {
         console.log('Cannot test lights - not streaming');
         return false;
       }
 
+      // Use the provided light IDs, or fall back to a single light if none provided
+      const targetLightIds = lightIds && lightIds.length > 0 
+        ? lightIds 
+        : [0]; // Default to just light 0 if no lights specified
+      
       console.log(`====== STARTING LIGHT TEST SEQUENCE ======`);
-      console.log(`Target light count: ${lightCount}`);
+      console.log(`Target lights: ${targetLightIds.length}`);
+      console.log(`Light IDs: ${targetLightIds.join(', ')}`);
       console.log(`Entertainment ID: ${this.entertainmentId}`);
-      console.log(`Socket connected: ${!!this.socket}`);
       
       // Define test colors
       const colors = [
@@ -543,18 +548,14 @@ export default class HueService {
         [0, 255, 255],  // Cyan
         [255, 255, 255] // White
       ];
-
-      // Create an array of all possible light IDs (0 to lightCount-1)
-      const allLightIds = Array.from({ length: lightCount }, (_, i) => i);
-      console.log(`Testing lights with IDs: ${allLightIds.join(', ')}`);
       
       // Make sure all lights are initially set to black/off for clean start
       console.log('Setting all lights to black for clean start');
-      await this.streamColorWithHighFrequency([0, 0, 0], allLightIds, 500, 30);
+      await this.streamColorWithHighFrequency([0, 0, 0], targetLightIds, 500, 30);
       
       // Test individual lights first - try each light with red color
       console.log('Testing each light individually with red color');
-      for (const lightId of allLightIds) {
+      for (const lightId of targetLightIds) {
         console.log(`Testing light ${lightId} with RED color individually`);
         await this.streamColorWithHighFrequency([255, 0, 0], [lightId], 500, 30);
         // Short pause between lights
@@ -565,12 +566,12 @@ export default class HueService {
       console.log('Testing all lights together with each color');
       for (const color of colors) {
         console.log(`Testing all lights with color: RGB(${color.join(', ')})`);
-        await this.streamColorWithHighFrequency(color, allLightIds, 1500, 50);
+        await this.streamColorWithHighFrequency(color, targetLightIds, 1500, 50);
       }
       
       // Final cleanup - set all lights to black/off
       console.log('Final cleanup - setting lights to black');
-      await this.streamColorWithHighFrequency([0, 0, 0], allLightIds, 500, 30);
+      await this.streamColorWithHighFrequency([0, 0, 0], targetLightIds, 500, 30);
       
       console.log('====== LIGHT TEST SEQUENCE COMPLETED ======');
       return true;
@@ -579,7 +580,7 @@ export default class HueService {
       return false;
     }
   };
-  
+
   /**
    * Stream a single color to all specified lights with high frequency 
    * to ensure commands are not lost due to UDP packet loss
