@@ -239,8 +239,23 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
       setCredentials(hueSettings.credentials);
       setSelectedGroup(hueSettings.selectedGroup);
       setActiveStep(3);
+      
+      // Fetch the entertainment groups when the modal opens if already configured
+      if (hueSettings.bridge && hueSettings.credentials) {
+        // Load the entertainment groups to ensure we have the data for the test function
+        fetchGroups(
+          hueSettings.bridge.ip,
+          hueSettings.credentials.username,
+          hueSettings.credentials.clientkey
+        ).then(fetchedGroups => {
+          setGroups(fetchedGroups);
+          console.log('Loaded entertainment groups for configured bridge:', fetchedGroups);
+        }).catch(err => {
+          console.error('Failed to load entertainment groups:', err);
+        });
+      }
     }
-  }, [isConfigured, hueSettings]);
+  }, [isConfigured, hueSettings, fetchGroups]);
 
   const handleBridgeConnect = async () => {
     if (!isIpValid) return;
@@ -317,9 +332,41 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
       const selectedGroupObj = groups.find(group => group.id === selectedGroup);
       
       if (!selectedGroupObj || !selectedGroupObj.lights || selectedGroupObj.lights.length === 0) {
-        showToast('No lights found in the selected entertainment area', 'error');
-        setIsLoading(false);
-        return;
+        // If no group is found in loaded groups, try to reload them
+        if (bridge && credentials) {
+          console.log('No group found - attempting to reload entertainment groups');
+          const reloadedGroups = await fetchGroups(bridge.ip, credentials.username, credentials.clientkey);
+          setGroups(reloadedGroups);
+          
+          // Find the group in the newly loaded list
+          const reloadedGroup = reloadedGroups.find(group => group.id === selectedGroup);
+          
+          if (!reloadedGroup || !reloadedGroup.lights || reloadedGroup.lights.length === 0) {
+            showToast('No lights found in the selected entertainment area', 'error');
+            setIsLoading(false);
+            return;
+          }
+          
+          // Continue with the reloaded group
+          const lightIndices = Array.from({ length: reloadedGroup.lights.length }, (_, i) => i);
+          console.log(`Testing entertainment area "${reloadedGroup.name}" with ${lightIndices.length} lights`);
+          showToast(`Testing ${lightIndices.length} lights...`, 'info');
+          
+          const success = await testLights(lightIndices);
+          
+          if (success) {
+            showToast('Light test completed successfully', 'success');
+          } else {
+            showToast('Light test failed', 'error', 'Test Failed');
+          }
+          
+          setIsLoading(false);
+          return;
+        } else {
+          showToast('No lights found in the selected entertainment area', 'error');
+          setIsLoading(false);
+          return;
+        }
       }
       
       // Convert light IDs - in Hue Entertainment API, lights are typically indexed from 0
