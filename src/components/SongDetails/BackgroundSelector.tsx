@@ -10,22 +10,22 @@ interface BackgroundSelectorProps {
 }
 
 const BackgroundSelector: React.FC<BackgroundSelectorProps> = ({ song, songId, refetch }) => {
-  const [gemmaStatus, setGemmaStatus] = useState<string>('');
+//   const [gemmaStatus, setGemmaStatus] = useState<string>('');
   const [sdStatus, setSDStatus] = useState<string>('');
 
-  const handleRunGemma = async () => {
-    setGemmaStatus('Running Gemma...');
-    try {
-      const result = await window.electron.ipcRenderer.invoke(
-        'run-gemma',
-        songId,
-      );
-      setGemmaStatus(`Gemma running ... ${result}`);
-      refetch();
-    } catch (error) {
-      setGemmaStatus(`Error: ${error.message || 'Unknown error occurred'}`);
-    }
-  };
+//   const handleRunGemma = async () => {
+//     setGemmaStatus('Running Gemma...');
+//     try {
+//       const result = await window.electron.ipcRenderer.invoke(
+//         'run-gemma',
+//         songId,
+//       );
+//       setGemmaStatus(`Gemma running ... ${result}`);
+//       refetch();
+//     } catch (error) {
+//       setGemmaStatus(`Error: ${error.message || 'Unknown error occurred'}`);
+//     }
+//   };
 
   const handleRunStableDiffusion = async () => {
     // Check if backgrounds are empty
@@ -99,7 +99,7 @@ const BackgroundSelector: React.FC<BackgroundSelectorProps> = ({ song, songId, r
         marginTop: '1rem',
         flexWrap: 'wrap'
       }}>
-        <button
+        {/* <button
           onClick={handleRunGemma}
           style={{
             display: 'flex',
@@ -115,7 +115,7 @@ const BackgroundSelector: React.FC<BackgroundSelectorProps> = ({ song, songId, r
         >
           <FaPlay style={{ marginRight: '0.5rem' }} />
           Run Gemma
-        </button>
+        </button> */}
         
         <button
           onClick={handleRunStableDiffusion}
@@ -136,13 +136,13 @@ const BackgroundSelector: React.FC<BackgroundSelectorProps> = ({ song, songId, r
         </button>
       </div>
       
-      {gemmaStatus && (
+      {/* {gemmaStatus && (
         <p
           style={{ fontSize: '1rem', color: colors.grey2, marginTop: '1rem' }}
         >
           {gemmaStatus}
         </p>
-      )}
+      )} */}
       
       {sdStatus && (
         <p

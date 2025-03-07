@@ -190,6 +190,23 @@ ipcMain.handle('run-whisper', (event, songId) => {
   });
 });
 
+// Add the function to build Gemma command with options
+function buildGemmaCommand(songId: string, options: Record<string, boolean>) {
+  let command = `${exePath} -l -s ${songId}`;
+  
+  // Add flags based on options
+  if (options.extractColour) command += ' -c';
+  if (options.extractParticle) command += ' -p';
+  if (options.extractObject) command += ' -o';
+  if (options.extractBackground) command += ' -b';
+  if (options.generateObjectPrompts) command += ' --generateObjectPrompts';
+  if (options.generateBackgroundPrompts) command += ' --generateBackgroundPrompts';
+  if (options.all) command += ' --all';
+  
+  return command;
+}
+
+// Keep the existing simple Gemma handler (without options) for backward compatibility
 ipcMain.handle('run-gemma', (event, songId: string) => {
   console.log('Running Gemma with songId:', songId);
   const process = spawn('powershell', [
@@ -208,6 +225,36 @@ ipcMain.handle('run-gemma', (event, songId: string) => {
     console.log(`✅ Process exited with code ${code}`);
     return code;
   });
+});
+
+// Add new handler with options
+ipcMain.handle('run-gemma-with-options', (event, { songId, options }) => {
+  console.log('Running Gemma with options:', songId, options);
+  
+  const command = buildGemmaCommand(songId, options);
+  
+  const process = spawn('powershell', [
+    '-ExecutionPolicy',
+    'Bypass',
+    '-Command',
+    `& { . '${ps1Path}'; & ${command}; }`,
+  ]);
+  
+  process.stdout.on('data', (data) => {
+    console.log(`📜 stdout: ${data.toString()}`);
+  });
+  
+  process.stderr.on('data', (data) => {
+    console.error(`⚠️ stderr: ${data.toString()}`);
+  });
+  
+  process.on('close', (code) => {
+    console.log(`✅ Process exited with code ${code}`);
+    return code;
+  });
+  
+  // Return a message indicating the command is running
+  return `Command: ${command}`;
 });
 
 // Add the Stable Diffusion handler

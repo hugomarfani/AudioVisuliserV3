@@ -5,6 +5,7 @@ import colors from '../../theme/colors';
 import ParticleSelector from './ParticleSelector';
 import BackgroundSelector from './BackgroundSelector';
 import ImageGallery from './ImageGallery';
+import LLMRunner from './LLMRunner';
 
 interface SongDetailsProps {
   onClose: () => void;
@@ -130,6 +131,15 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
         <p style={{ fontSize: '1rem', color: colors.grey2 }}>
           Backgrounds: {song.dataValues.backgrounds.join(', ')}
         </p>
+        
+        {/* LLM Runner component - add this before BackgroundSelector */}
+        <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>
+          <LLMRunner 
+            song={song} 
+            songId={songId} 
+            refetch={refetch}
+          />
+        </div>
         
         {/* Background selection component */}
         <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>

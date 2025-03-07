@@ -10,7 +10,14 @@ export type Channels =
   | 'download-mp3'
   | 'run-whisper'
   | 'run-gemma'
-  | 'run-gemma-reply';
+  | 'run-gemma-reply'
+  | 'run-stable-diffusion'
+  | 'update-song'
+  | 'save-song-as-json'
+  | 'save-image'
+  | 'open-file-dialog'
+  | 'delete-image';
+
 
 const electronHandler = {
   ipcRenderer: {
