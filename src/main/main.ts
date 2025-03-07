@@ -159,6 +159,9 @@ ipcMain.handle('download-wav', async (_, url) => {
       backgrounds: [],
       background_prompts: [],
       particles: [],
+      particleColour: ["255", "255", "255"],
+      shaderBackground: 'assets/shader/background/'+ id + '.jpg',
+      shaderTexture: 'assets/shader/texture/'+ id + '.jpg',
     });
     saveSongAsJson(song);
     console.log('Song entry created:', song);
@@ -170,12 +173,12 @@ ipcMain.handle('download-wav', async (_, url) => {
 });
 
 ipcMain.handle('run-whisper', (event, songId) => {
-  console.log('Running whisper with songId:', songId);
+  console.log('Running whisper with songId:', songId, "with exePath:", exePath);
   const process = spawn('powershell', [
     '-ExecutionPolicy',
     'Bypass',
     '-Command',
-    `& { . '${ps1Path}'; & ${exePath} -w --song ${songId}; }`,
+    `& { . '${ps1Path}'; & ${exePath} -e -w --song ${songId}; }`,
   ]);
   process.stdout.on('data', (data) => {
     console.log(`📜 stdout: ${data.toString()}`);
@@ -192,7 +195,7 @@ ipcMain.handle('run-whisper', (event, songId) => {
 
 // Add the function to build Gemma command with options
 function buildGemmaCommand(songId: string, options: Record<string, boolean>) {
-  let command = `${exePath} -l -s ${songId}`;
+  let command = `${exePath} -e -l -s ${songId}`;
   
   // Add flags based on options
   if (options.extractColour) command += ' -c';
@@ -203,6 +206,7 @@ function buildGemmaCommand(songId: string, options: Record<string, boolean>) {
   if (options.generateBackgroundPrompts) command += ' --generateBackgroundPrompts';
   if (options.all) command += ' --all';
   
+  if (options.rerunWhisper) command = `${exePath} -e -w -s ${songId}`;
   return command;
 }
 
@@ -213,7 +217,7 @@ ipcMain.handle('run-gemma', (event, songId: string) => {
     '-ExecutionPolicy',
     'Bypass',
     '-Command',
-    `& { . '${ps1Path}'; & ${exePath} -l -s ${songId} --all; }`,
+    `& { . '${ps1Path}'; & ${exePath} -e -l -s ${songId} --all; }`,
   ]);
   process.stdout.on('data', (data) => {
     console.log(`📜 stdout: ${data.toString()}`);
@@ -265,7 +269,7 @@ ipcMain.handle('run-stable-diffusion', (event, songId: string) => {
     '-ExecutionPolicy',
     'Bypass',
     '-Command',
-    `& { . '${ps1Path}'; & ${sdPathStr} --songId ${songId}; }`,
+    `& { . '${ps1Path}'; & ${sdPathStr} -e --songId ${songId}; }`,
   ]);
   process.stdout.on('data', (data) => {
     console.log(`📜 SD stdout: ${data.toString()}`);
@@ -282,7 +286,7 @@ ipcMain.handle('run-stable-diffusion', (event, songId: string) => {
 ipcMain.on('run-gemma-test', (event) => {
   console.log(`Running Gemma test with ${ps1Path} and ${exePath}`);
 
-  const gemmaCommand = `${exePath} -l --all `;
+  const gemmaCommand = `${exePath} -e -l --all `;
 
   // running using spawn -> real time output
   const process = spawn('powershell', [

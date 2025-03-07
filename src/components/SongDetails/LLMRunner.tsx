@@ -69,6 +69,12 @@ const LLMRunner: React.FC<LLMRunnerProps> = ({ song, songId, refetch }) => {
       disabledReason: 'Requires extracted backgrounds'
     },
     { 
+      key: 'rerunWhisper',
+      label: 'Rerun Lyrics Generation',
+      flag: '-w',
+      description: 'Rerun Whisper speech-to-text on audio (note: usually does not change output)'
+    },
+    { 
       key: 'all',
       label: 'Run All Features',
       flag: '--all',

@@ -106,23 +106,51 @@ std::string backgroundSettings =
 
 // ----------------- paths -----------------
 std::filesystem::path currentDirectory = std::filesystem::current_path();
-std::string gemmaModelPath =
-    (currentDirectory / "AiResources" / "gemma-2-9b-it-int4-ov").string();
+std::string gemmaModelPath;
+std::string stableDiffusionModelPath;
+std::filesystem::path whisperModelPath;
+std::filesystem::path songDataPath;
+std::string particleListFilePath;
+std::string logPath;
+std::filesystem::path lyricsDirPath;
+std::filesystem::path wavDirPath;
+std::filesystem::path imageDirPath;
+
+void setPaths() {
+  gemmaModelPath =
+      (currentDirectory / "AiResources" / "gemma-2-9b-it-int4-ov").string();
+  stableDiffusionModelPath =
+      (currentDirectory / "AiResources" / "dreamlike_anime_1_0_ov" / "FP16")
+          .string();
+  whisperModelPath =
+      (currentDirectory / "AiResources" / "distil-whisper-large-v3-int8-ov");
+  songDataPath = (currentDirectory / "assets" / "songData");
+  particleListFilePath =
+      (currentDirectory / "assets" / "particleList.json").string();
+  logPath = (currentDirectory / "assets" / "aiLog.txt").string();
+  lyricsDirPath = (currentDirectory / "assets" / "lyrics");
+  wavDirPath = (currentDirectory / "assets" / "audio");
+  imageDirPath = (currentDirectory / "assets" / "images");
+}
+
+
+// std::string gemmaModelPath =
+//     (currentDirectory / "AiResources" / "gemma-2-9b-it-int4-ov").string();
+// // std::string stableDiffusionModelPath =
+// //     (currentDirectory / "AiResources" / "FLUX.1-schnell-int8-ov").string();
 // std::string stableDiffusionModelPath =
-//     (currentDirectory / "AiResources" / "FLUX.1-schnell-int8-ov").string();
-std::string stableDiffusionModelPath =
-    (currentDirectory / "AiResources" / "dreamlike_anime_1_0_ov" / "FP16")
-        .string();
-// using whisper path again after this so needs to be filesystem::path
-std::filesystem::path whisperModelPath =
-    (currentDirectory / "AiResources" / "distil-whisper-large-v3-int8-ov");
-std::filesystem::path songDataPath = (currentDirectory / "assets" / "songData");
-std::string particleListFilePath =
-    (currentDirectory / "assets" / "particleList.json").string();
-std::string logPath = (currentDirectory / "assets" / "aiLog.txt").string();
-std::filesystem::path lyricsDirPath = (currentDirectory / "assets" / "lyrics");
-std::filesystem::path wavDirPath = (currentDirectory / "assets" / "audio");
-std::filesystem::path imageDirPath = (currentDirectory / "assets" / "images");
+//     (currentDirectory / "AiResources" / "dreamlike_anime_1_0_ov" / "FP16")
+//         .string();
+// // using whisper path again after this so needs to be filesystem::path
+// std::filesystem::path whisperModelPath =
+//     (currentDirectory / "AiResources" / "distil-whisper-large-v3-int8-ov");
+// std::filesystem::path songDataPath = (currentDirectory / "assets" / "songData");
+// std::string particleListFilePath =
+//     (currentDirectory / "assets" / "particleList.json").string();
+// std::string logPath = (currentDirectory / "assets" / "aiLog.txt").string();
+// std::filesystem::path lyricsDirPath = (currentDirectory / "assets" / "lyrics");
+// std::filesystem::path wavDirPath = (currentDirectory / "assets" / "audio");
+// std::filesystem::path imageDirPath = (currentDirectory / "assets" / "images");
 
 // ----------------- Temp ONNX Paths -----------------
 // std::filesystem::path sdPath =
@@ -286,7 +314,10 @@ enum LLMOutputType {
   OBJECTS,
   BACKGROUNDS,
   OBJECT_PROMPTS,
-  BACKGROUND_PROMPTS
+  BACKGROUND_PROMPTS,
+  SHADER_BACKGROUND,
+  SHADER_TEXTURE,
+  PARTICLE_COLOUR
 };
 
 const std::unordered_map<LLMOutputType, std::string> outputTypeMap = {
@@ -306,7 +337,11 @@ const std::unordered_map<LLMOutputType, std::string> outputTypeMap = {
     {OBJECTS, "objects"},
     {BACKGROUNDS, "backgrounds"},
     {OBJECT_PROMPTS, "object_prompts"},
-    {BACKGROUND_PROMPTS, "background_prompts"}};
+    {BACKGROUND_PROMPTS, "background_prompts"},
+    {SHADER_BACKGROUND, "shaderBackground"},
+    {SHADER_TEXTURE, "shaderTexture"},
+    {PARTICLE_COLOUR, "particleColour"}
+  };
 
 const std::unordered_map<std::string, LLMOutputType> outputTypeMapReverse = {
     {"id", ID},
@@ -325,7 +360,11 @@ const std::unordered_map<std::string, LLMOutputType> outputTypeMapReverse = {
     {"objects", OBJECTS},
     {"backgrounds", BACKGROUNDS},
     {"object_prompts", OBJECT_PROMPTS},
-    {"background_prompts", BACKGROUND_PROMPTS}};
+    {"background_prompts", BACKGROUND_PROMPTS},
+    {"shaderBackground", SHADER_BACKGROUND},
+    {"shaderTexture", SHADER_TEXTURE},
+    {"particleColour", PARTICLE_COLOUR}
+  };
 
 const std::unordered_map<LLMOutputType, bool> outputTypeIsVector = {
     {ID, false},
@@ -344,7 +383,11 @@ const std::unordered_map<LLMOutputType, bool> outputTypeIsVector = {
     {OBJECTS, true},
     {BACKGROUNDS, true},
     {OBJECT_PROMPTS, true},
-    {BACKGROUND_PROMPTS, true}};
+    {BACKGROUND_PROMPTS, true},
+    {SHADER_BACKGROUND, false},
+    {SHADER_TEXTURE, false},
+    {PARTICLE_COLOUR, true}
+  };
 
 // ----------------- LLM Class -----------------
 class LLM {
@@ -617,7 +660,7 @@ class Whisper {
     config.return_timestamps = true;
 
     // obtain raw speech input
-    std::cout << "Obtaining mp3 as raw input" << std::endl;
+    std::cout << "Obtaining wav as raw input" << std::endl;
     ov::genai::RawSpeechInput rawSpeech = utils::audio::read_wav(wavPath);
 
     std::string lyrics = pipe.generate(rawSpeech, config);
@@ -689,6 +732,7 @@ int main(int argc, char *argv[]) {
   -s, --song: specify song id
   --text_log: enable text logging
   -m, --model: specify model name
+  -e, --electron: enable electron mode, exe is run from Super Happy Space
 
   Whisper only options
     --fixSampleRate: fix sample rate of audio file to 16kHz
@@ -706,13 +750,16 @@ int main(int argc, char *argv[]) {
     --all: extract all llm features
   */
   po::options_description general_options("Allowed options");
-  general_options.add_options()("help,h", "produce help message")(
-      "debug,d", "enable debug mode")("whisper,w", "use whisper mode")(
-      "llm,l", "use llm mode")("stable-diffusion,S",
-                               "use stable diffusion mode")(
-      "song,s", po::value<std::string>(), "specify song id")(
-      "text_log", "enable text logging")("model,m", po::value<std::string>(),
-                                         "specify model name");
+  general_options.add_options()
+      ("help,h", "produce help message")
+      ("debug,d", "enable debug mode")
+      ("whisper,w", "use whisper mode")
+      ("llm,l", "use llm mode")
+      ("stable-diffusion,S","use stable diffusion mode")
+      ("song,s", po::value<std::string>(), "specify song id")
+      ("text_log", "enable text logging")
+      ("model,m", po::value<std::string>(), "specify model name")
+      ("electron,e", "enable electron mode");
 
   po::options_description stable_diffusion_options(
       "Stable Diffusion only options");
@@ -756,6 +803,17 @@ int main(int argc, char *argv[]) {
     std::cout << llm_options << std::endl;
     return 0;
   }
+
+  if (vm.count("electron")) {
+    std::cout << "Running in electron mode" << std::endl;
+    // set current directory to electron directory
+    currentDirectory = (currentDirectory / "resources");
+  }
+
+  // set paths -> after current directory is set
+  setPaths();
+
+  std::cout << "Current Directory: " << currentDirectory << std::endl;
 
   /* ----------------- Check Flag Errors -----------------
   Checking flags for any errors before we go to main program
@@ -856,6 +914,9 @@ int main(int argc, char *argv[]) {
       try {
         Whisper whisper(songId, debug);
         whisper.generateLyrics();
+        // delete wav file after lyrics have been generated
+        std::string wavPath = (wavDirPath / (songId + ".wav")).string();
+        std::filesystem::remove(wavPath);
       } catch (const std::exception &e) {
         std::cerr << "Error: " << e.what() << std::endl;
         cleanup();
