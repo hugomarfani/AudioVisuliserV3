@@ -62,7 +62,7 @@ std::string statusPrompt =
     "4. Green: calm and happy emotions";
 
 std::string particleSelectionPrompt =
-    "Analyze the lyrics of the song provided and choose 1 particle effect from "
+    "Analyze the lyrics of the song provided and choose 1-3 particle effect from "
     "the following list,"
     "that best fits the mood and theme of the song. Output the name of the "
     "selected particle effect and no other word. Here is the list of particle "
@@ -93,16 +93,16 @@ std::string imageSetup =
     "to generate an image of the song. There is no need to add more settings, "
     "only the prompt is required. The prompt should be in a text format and "
     "have no markdown or HTML tags. The prompt should be detailed and "
-    "specific, with each detail separated by a comma.";
+    "specific, with each detail separated by a comma. The maximum number of words is 55, do not go over that limit";
 
 std::string imageSettings =
     ". The prompt should include the following settings:";
 
-std::string objectSettings = "colour: black object with white background";
+std::string objectSettings = "black very simple object image with white background, minimalistic";
 
 std::string backgroundSettings =
     "colour: colourful background, "
-    "suitable for children and family";
+    "suitable for children and family, light pastel colours";
 
 // ----------------- paths -----------------
 std::filesystem::path currentDirectory = std::filesystem::current_path();

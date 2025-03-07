@@ -10,7 +10,7 @@ function getResourcePath(...subPath: string[]): string {
 }
 
 const mainPaths = {
-    llmWhisperPath: getResourcePath('test.exe'),
+    llmWhisperPath: getResourcePath('cppVer.exe'),
     SDPath: getResourcePath('SD.exe'),
     ps1Path: getResourcePath('AiResources', 'openvino_2025', 'setupvars.ps1'),
     ffmpegPath: getResourcePath('ffmpeg', 'bin', 'ffmpeg.exe'),
