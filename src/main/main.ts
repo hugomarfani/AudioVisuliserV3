@@ -131,6 +131,11 @@ function runAIProcessWithTracking(
   });
 }
 
+ipcMain.on('reload-window', (event) => {
+  const win = BrowserWindow.getFocusedWindow();
+  if (win) win.reload();
+});
+
 ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
   console.log(msgTemplate(arg));

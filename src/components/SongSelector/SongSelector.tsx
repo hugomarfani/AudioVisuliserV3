@@ -42,10 +42,15 @@ const SongSelector: React.FC<SongSelectorProps> = ({
   const { songs, loading, error, refetch } = useSongs();
   const [currentPage, setCurrentPage] = useState(1);
   const songsPerPage = 8;
-  const [visualMode, setVisualMode] = useState(useShader); // Track the visualization mode
   const navigate = useNavigate(); // Add navigation hook
   const [showParticleManager, setShowParticleManager] = useState<boolean>(false);
   const [selectedParticleSong, setSelectedParticleSong] = useState<string | null>(null);
+
+  // Initialize visualMode from localStorage or fall back to the prop
+  const [visualMode, setVisualMode] = useState(() => {
+    const savedMode = localStorage.getItem('visualizationMode');
+    return savedMode !== null ? savedMode === 'true' : useShader;
+  });
 
   const toggleFilter = (color: 'Blue' | 'Green' | 'Yellow' | 'Red') => {
     setSelectedFilters((prevFilters) => {
@@ -139,6 +144,11 @@ const SongSelector: React.FC<SongSelectorProps> = ({
     setCurrentPage(1);
   }, [selectedFilters, searchTerm]);
 
+  // Save visualization mode to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('visualizationMode', visualMode.toString());
+  }, [visualMode]);
+
   // Modified song selection handler to navigate based on the visual mode
   const handleSongSelect = (uri: string) => {
     // Find the song details
@@ -162,6 +172,12 @@ const SongSelector: React.FC<SongSelectorProps> = ({
       }
     }
   };
+
+  // Replace this function
+  function reload() {
+    // Don't directly require electron
+    window.electron.ipcRenderer.sendMessage('reload-window');
+  }
 
   return (
     <div
@@ -206,6 +222,26 @@ const SongSelector: React.FC<SongSelectorProps> = ({
       )}{' '} */}
       {/* Render Database component when isDatabaseOpen */}
       {/* Library Button */}
+      <button
+        style={{
+          position: 'absolute',
+          top: '1rem',
+          right: '12rem',
+          backgroundColor: colors.grey2,
+          color: colors.white,
+          border: 'none',
+          borderRadius: '9999px', // Change to pill shape
+          padding: '0.5rem 1rem', // Adjust padding for pill shape
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 'clamp(0.75rem, 1vw, 1rem)', // Responsive font size
+        }}
+        onClick={reload} // Changed from setIsLibraryOpen(true) to reload
+      >
+        <span style={{ marginLeft: '0.5rem' }}>Reload</span>
+      </button>
       <button
         style={{
           position: 'absolute',
