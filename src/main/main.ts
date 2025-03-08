@@ -57,7 +57,13 @@ const progressSteps = {
   backgroundExtraction: 'Finished Background Extraction',
   objectPrompts: 'Finished Object Prompts',
   backgroundPrompts: 'Finished Background Prompts',
-  jsonStorage: 'Finished Json Storage'
+  jsonStorage: 'Finished Json Storage',
+  imageBack1: 'Finished background_prompts_1',
+  imageBack2: 'Finished background_prompts_2',
+  imageBack3: 'Finished background_prompts_3',
+  imageObj1: 'Finished object_prompts_1',
+  imageObj2: 'Finished object_prompts_2',
+  imageObj3: 'Finished object_prompts_3',
 };
 
 // Helper function to parse stdout and track progress
@@ -418,7 +424,9 @@ ipcMain.handle('run-stable-diffusion', (event, songId: string, operationId = nul
   const actualOperationId = operationId || `sd-${songId}-${Date.now()}`;
   console.log(`Using operationId: ${actualOperationId}`);
   
-  const expectedSteps = ['stableDiffusion', 'jsonStorage'];
+  // const expectedSteps = ['stableDiffusion', 'jsonStorage'];
+  const expectedSteps = ['aiSetup', 'imageBack1', 'imageBack2', 'imageBack3', 
+    'imageObj1', 'imageObj2', 'imageObj3', 'stableDiffusion'];
   
   runAIProcessWithTracking(
     'powershell',
@@ -426,7 +434,7 @@ ipcMain.handle('run-stable-diffusion', (event, songId: string, operationId = nul
       '-ExecutionPolicy',
       'Bypass',
       '-Command',
-      `& { . '${ps1Path}'; & ${sdPathStr} -e --songId ${songId}; }`,
+      `& { . '${ps1Path}'; & ${sdPathStr} --songId ${songId}; }`,
     ],
     event.sender,
     actualOperationId,

@@ -43,8 +43,10 @@ const BackgroundSelector: React.FC<BackgroundSelectorProps> = ({ song, songId, r
       setSDStatus(`Stable Diffusion running ... ${result}`);
       if (result){
         //update the databse with the new images
-        const new_images = ["background_prompts_1.png", "background_prompts_2.png", "background_prompts_3.png",
+        const pathBefore = "images/"+songId+"/";
+        let new_images = ["background_prompts_1.png", "background_prompts_2.png", "background_prompts_3.png",
           "object_prompts_1.png", "object_prompts_2.png", "object_prompts_3.png"];
+        new_images = new_images.map((image) => pathBefore + image);
         await window.electron.ipcRenderer.invoke('update-song', {
           id: songId,
           images: new_images
