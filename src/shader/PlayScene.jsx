@@ -23,10 +23,10 @@ const PlayScene = () => {
         artist: songDetail.uploader,
         albumArt: await findCompletePath(songDetail.jacket),
         // background: await findCompletePath(songDetail.shaderBackground),
-        background: await findCompletePath(`shader/background/25QyCxVkXwQ.jpg`),
+        background: await findCompletePath(`shader/background/${songDetail.id}.jpg`),
         audioPath: await findCompletePath(songDetail.audioPath),
         // texture: await findCompletePath(songDetail.shaderTexture),
-        texture: await findCompletePath(`shader/texture/25QyCxVkXwQ.jpg`),
+        texture: await findCompletePath(`shader/texture/${songDetail.id}.jpg`),
         textureColor: textureColor
       });
       console.log('set track', track);

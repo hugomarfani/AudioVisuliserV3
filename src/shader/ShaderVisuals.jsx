@@ -7,13 +7,6 @@ import { AiOutlineForward, AiOutlineBackward } from 'react-icons/ai';
 import { FaPlay, FaPause } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 
-// Kimi stuff
-const findCompletePath = async (path) => {
-  const response =
-    await window.electron.fileSystem.mergeAssetPath(path);
-  return response;
-};
-
 const loadImage = (path) => {
   return new Promise((resolve, reject) => {
     const img = new Image();
