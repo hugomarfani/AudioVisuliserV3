@@ -1,0 +1,26 @@
+{
+  "id": "qjlVAsvQLM8",
+  "title": "Backstreet Boys - I Want It That Way (Lyrics)",
+  "uploader": "7clouds",
+  "audioPath": "audio/qjlVAsvQLM8.mp3",
+  "jacket": "icon.png",
+  "images": [],
+  "moods": [],
+  "status": "Yellow",
+  "colours": [],
+  "colours_reason": [],
+  "objects": [],
+  "object_prompts": [],
+  "particles": [],
+  "backgrounds": [],
+  "background_prompts": [],
+  "shaderBackground": "assets/shader/background/qjlVAsvQLM8.jpg",
+  "shaderTexture": "assets/shader/texture/qjlVAsvQLM8.jpg",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ],
+  "createdAt": "2025-03-08T15:25:14.736Z",
+  "updatedAt": "2025-03-08T15:29:03.680Z"
+}
