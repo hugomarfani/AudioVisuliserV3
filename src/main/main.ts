@@ -261,10 +261,13 @@ ipcMain.handle('download-wav', async (_, url) => {
 });
 
 // Replace existing run-whisper handler
-ipcMain.handle('run-whisper', (event, songId) => {
+ipcMain.handle('run-whisper', (event, songId, operationId = null) => {
   console.log('Running whisper with songId:', songId, "with exePath:", exePath);
   
-  const operationId = `whisper-${songId}-${Date.now()}`;
+  // Use the provided operationId or generate one if not provided
+  const actualOperationId = operationId || `whisper-${songId}-${Date.now()}`;
+  console.log(`Using operationId: ${actualOperationId}`);
+  
   const expectedSteps = ['aiSetup', 'whisper'];
   
   runAIProcessWithTracking(
@@ -276,11 +279,11 @@ ipcMain.handle('run-whisper', (event, songId) => {
       `& { . '${ps1Path}'; & ${exePath} -e -w --song ${songId}; }`,
     ],
     event.sender,
-    operationId,
+    actualOperationId,
     expectedSteps
   );
   
-  return operationId;
+  return actualOperationId;
 });
 
 // Add the function to build Gemma command with options
@@ -301,10 +304,13 @@ function buildGemmaCommand(songId: string, options: Record<string, boolean>) {
 }
 
 // Keep the existing simple Gemma handler (without options) for backward compatibility
-ipcMain.handle('run-gemma', (event, songId: string) => {
+ipcMain.handle('run-gemma', (event, songId, operationId = null) => {
   console.log('Running Gemma with songId:', songId);
   
-  const operationId = `gemma-${songId}-${Date.now()}`;
+  // Use the provided operationId or generate one if not provided
+  const actualOperationId = operationId || `gemma-${songId}-${Date.now()}`;
+  console.log(`Using operationId: ${actualOperationId}`);
+  
   const expectedSteps = [
     'aiSetup', 
     'statusExtraction', 'colourExtraction', 'particleExtraction', 
@@ -322,19 +328,22 @@ ipcMain.handle('run-gemma', (event, songId: string) => {
       `& { . '${ps1Path}'; & ${exePath} -e -l -s ${songId} --all; }`,
     ],
     event.sender,
-    operationId,
+    actualOperationId,
     expectedSteps
   );
   
-  return operationId;
+  return actualOperationId;
 });
 
 // Add new handler with options
-ipcMain.handle('run-gemma-with-options', (event, { songId, options }) => {
+ipcMain.handle('run-gemma-with-options', (event, { songId, options, operationId = null }) => {
   console.log('Running Gemma with options:', songId, options);
   
   const command = buildGemmaCommand(songId, options);
-  const operationId = `gemma-options-${songId}-${Date.now()}`;
+  
+  // Use the provided operationId or generate one if not provided
+  const actualOperationId = operationId || `gemma-options-${songId}-${Date.now()}`;
+  console.log(`Using operationId: ${actualOperationId}`);
   
   // Determine which steps to expect based on the options
   const expectedSteps = ['aiSetup'];
@@ -376,19 +385,23 @@ ipcMain.handle('run-gemma-with-options', (event, { songId, options }) => {
       `& { . '${ps1Path}'; & ${command}; }`,
     ],
     event.sender,
-    operationId,
+    actualOperationId,
     expectedSteps
   );
   
-  return operationId;
+  return actualOperationId;
 });
 
 // Add the Stable Diffusion handler
-ipcMain.handle('run-stable-diffusion', (event, songId: string) => {
+ipcMain.handle('run-stable-diffusion', (event, songId: string, operationId = null) => {
   console.log('Running Stable Diffusion with songId:', songId);
   
   const sdPathStr = SDPath.toString();
-  const operationId = `sd-${songId}-${Date.now()}`;
+  
+  // Use the provided operationId or generate one if not provided
+  const actualOperationId = operationId || `sd-${songId}-${Date.now()}`;
+  console.log(`Using operationId: ${actualOperationId}`);
+  
   const expectedSteps = ['stableDiffusion', 'jsonStorage'];
   
   runAIProcessWithTracking(
@@ -400,11 +413,11 @@ ipcMain.handle('run-stable-diffusion', (event, songId: string) => {
       `& { . '${ps1Path}'; & ${sdPathStr} -e --songId ${songId}; }`,
     ],
     event.sender,
-    operationId,
+    actualOperationId,
     expectedSteps
   );
   
-  return operationId;
+  return actualOperationId;
 });
 
 ipcMain.on('run-gemma-test', (event) => {

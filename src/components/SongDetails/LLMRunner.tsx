@@ -115,25 +115,30 @@ const LLMRunner: React.FC<LLMRunnerProps> = ({ song, songId, refetch }) => {
 
   // Set up listeners for AI progress events
   useEffect(() => {
+    // Create references to store removal functions
+    let removeProgressListener: (() => void) | undefined;
+    let removeErrorListener: (() => void) | undefined;
+    let removeCompleteListener: (() => void) | undefined;
+    
     const progressListener = (data: any) => {
       console.log("Progress update received in component:", data);
       if (data && data.operationId === currentOperationId) {
-        setProgressSteps(prev => {
-          // Find if the step is already in our list
-          const stepIndex = prev.findIndex(step => step.key === data.step);
+        // Force a more direct state update by creating a completely new array each time
+        setProgressSteps(prevSteps => {
+          const stepIndex = prevSteps.findIndex(step => step.key === data.step);
           
+          let newSteps;
           if (stepIndex >= 0) {
-            // Update existing step
-            const updatedSteps = [...prev];
-            updatedSteps[stepIndex] = {
-              ...updatedSteps[stepIndex],
+            // Create a new array with the updated step
+            newSteps = [...prevSteps];
+            newSteps[stepIndex] = {
+              ...newSteps[stepIndex],
               completed: data.completed
             };
-            return updatedSteps;
           } else {
-            // Add new step
-            return [
-              ...prev,
+            // Add new step to the array
+            newSteps = [
+              ...prevSteps,
               {
                 key: data.step,
                 label: progressLabels[data.step] || data.step,
@@ -141,6 +146,9 @@ const LLMRunner: React.FC<LLMRunnerProps> = ({ song, songId, refetch }) => {
               }
             ];
           }
+          
+          console.log("Updating progress steps:", newSteps);
+          return newSteps;
         });
       }
     };
@@ -150,6 +158,12 @@ const LLMRunner: React.FC<LLMRunnerProps> = ({ song, songId, refetch }) => {
       if (data && data.operationId === currentOperationId) {
         setGemmaStatus(`Error: ${data.error}`);
         setIsProcessing(false);
+        
+        // Clean up listeners when error occurs
+        console.log("Cleaning up event listeners due to error");
+        if (removeProgressListener) removeProgressListener();
+        if (removeErrorListener) removeErrorListener();
+        if (removeCompleteListener) removeCompleteListener();
       }
     };
 
@@ -159,16 +173,24 @@ const LLMRunner: React.FC<LLMRunnerProps> = ({ song, songId, refetch }) => {
         setIsProcessing(false);
         setGemmaStatus(`Process completed with code: ${data.exitCode}`);
         refetch();
+        
+        // Clean up listeners when process completes
+        console.log("Cleaning up event listeners due to completion");
+        if (removeProgressListener) removeProgressListener();
+        if (removeErrorListener) removeErrorListener();
+        if (removeCompleteListener) removeCompleteListener();
       }
     };
 
     // Set up listeners
-    const removeProgressListener = window.electron.ipcRenderer.on('ai-progress-update', progressListener);
-    const removeErrorListener = window.electron.ipcRenderer.on('ai-error', errorListener);
-    const removeCompleteListener = window.electron.ipcRenderer.on('ai-process-complete', completeListener);
+    console.log("Setting up event listeners for operation:", currentOperationId);
+    removeProgressListener = window.electron.ipcRenderer.on('ai-progress-update', progressListener);
+    removeErrorListener = window.electron.ipcRenderer.on('ai-error', errorListener);
+    removeCompleteListener = window.electron.ipcRenderer.on('ai-process-complete', completeListener);
 
     return () => {
-      // Properly cleanup by calling the removal functions returned by `on`
+      // This cleanup function will run when the component unmounts or when currentOperationId changes
+      console.log("Cleaning up event listeners on unmount/change");
       if (removeProgressListener) removeProgressListener();
       if (removeErrorListener) removeErrorListener();
       if (removeCompleteListener) removeCompleteListener();
@@ -223,11 +245,14 @@ const LLMRunner: React.FC<LLMRunnerProps> = ({ song, songId, refetch }) => {
 
     // Generate operation ID locally
     const operationId = `gemma-${songId}-${Date.now()}`;
-    setCurrentOperationId(operationId);
     
-    setGemmaStatus('Running Gemma...');
-    setIsProcessing(true);
+    // Clear any previous progress steps and set processing state first
     setProgressSteps([]);
+    setIsProcessing(true);
+    setGemmaStatus('Running Gemma...');
+    
+    // Set operation ID after clearing progress steps to ensure clean state
+    setCurrentOperationId(operationId);
     
     try {
       // Prepare the options to send to main process
@@ -263,6 +288,7 @@ const LLMRunner: React.FC<LLMRunnerProps> = ({ song, songId, refetch }) => {
       setGemmaStatus(`Gemma running with operation ID: ${operationId}`);
     } catch (error) {
       setIsProcessing(false);
+      setCurrentOperationId(null); // Clear operation ID on error
       setGemmaStatus(`Error: ${error.message || 'Unknown error occurred'}`);
     }
   };
@@ -424,7 +450,7 @@ const LLMRunner: React.FC<LLMRunnerProps> = ({ song, songId, refetch }) => {
       )}
       
       {/* Progress Checklist */}
-      {isProcessing && progressSteps.length > 0 && (
+      {isProcessing && (
         <div style={{ 
           backgroundColor: colors.grey5, 
           borderRadius: '12px', 
@@ -432,37 +458,51 @@ const LLMRunner: React.FC<LLMRunnerProps> = ({ song, songId, refetch }) => {
           marginBottom: '1rem'
         }}>
           <h4 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Processing Status:</h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {progressSteps.map((step) => (
-              <div 
-                key={step.key} 
+          
+          {progressSteps.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {progressSteps.map((step) => (
+                <div 
+                  key={step.key} 
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center',
+                    padding: '0.5rem',
+                    borderRadius: '8px',
+                    backgroundColor: step.completed ? 'rgba(52, 199, 89, 0.1)' : 'transparent'
+                  }}
+                >
+                  {step.completed ? (
+                    <FaCheck style={{ marginRight: '0.5rem', color: '#34C759' }} />
+                  ) : (
+                    <FaSpinner 
+                      style={{ 
+                        marginRight: '0.5rem', 
+                        color: colors.blue,
+                        animation: 'spin 1s linear infinite'
+                      }} 
+                    />
+                  )}
+                  <span style={{ 
+                    color: step.completed ? '#34C759' : colors.white,
+                  }}>
+                    {step.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ padding: '0.5rem' }}>
+              <FaSpinner 
                 style={{ 
-                  display: 'flex', 
-                  alignItems: 'center',
-                  padding: '0.5rem',
-                  borderRadius: '8px',
-                  backgroundColor: step.completed ? 'rgba(52, 199, 89, 0.1)' : 'transparent'
-                }}
-              >
-                {step.completed ? (
-                  <FaCheck style={{ marginRight: '0.5rem', color: '#34C759' }} />
-                ) : (
-                  <FaSpinner 
-                    style={{ 
-                      marginRight: '0.5rem', 
-                      color: colors.blue,
-                      animation: 'spin 1s linear infinite'
-                    }} 
-                  />
-                )}
-                <span style={{ 
-                  color: step.completed ? '#34C759' : colors.white,
-                }}>
-                  {step.label}
-                </span>
-              </div>
-            ))}
-          </div>
+                  marginRight: '0.5rem', 
+                  color: colors.blue,
+                  animation: 'spin 1s linear infinite'
+                }} 
+              />
+              <span>Initializing process...</span>
+            </div>
+          )}
         </div>
       )}
       
