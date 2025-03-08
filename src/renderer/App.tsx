@@ -9,6 +9,7 @@ import Login from '../components/Spotify/auth/Login';
 import SongDetails from '../components/SongDetails/SongDetails';
 import Particles from '../components/Particles/Particles';
 import ShaderVisuals from '../shader/ShaderVisuals';
+import PlayScene from '../shader/PlayScene';
 
 const App: FC = () => {
   const [accessToken, setAccessToken] = useState<string>('');
@@ -54,7 +55,7 @@ const App: FC = () => {
             />
             <Route path="/song-details/:id" element={<SongDetails />} />
             <Route path="/particles/:id" element={<Particles />} />
-            <Route path="/aiden/:id" element={<ShaderVisuals />} />
+            <Route path="/aiden/:id" element={<PlayScene />} />
             {/* or something like:
             <Route
               path="/aiden/:id"

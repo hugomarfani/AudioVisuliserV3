@@ -2,39 +2,24 @@ import React, { useState, Component, useEffect } from 'react';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import * as THREE from 'three';
 
-import texture from './Assets/bg.jpg';
-// import t1 from './Assets/texture.png';
 import { lerp } from 'three/src/math/MathUtils';
-
-import LIG from '../../assets/audio/frozen_let_it_go.wav';
 
 import { AiOutlineForward, AiOutlineBackward } from 'react-icons/ai';
 import { FaPlay, FaPause } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 
-const songList = [
-  {
-    title: 'Let it go',
-    artist: 'Idina Menzel',
-    albumArt:
-      'https://cdn-images.dzcdn.net/images/cover/f669aa7623ad8af5fbeb5a196346013a/500x500.jpg',
-    path: LIG,
-    background: texture,
-  },
-];
-
 // Kimi stuff
-const findImagePath = async () => {
-  const response = await window.electron.fileSystem.mergeAssetPath('Tests.png');
+const findCompletePath = async (path) => {
+  const response =
+    await window.electron.fileSystem.mergeAssetPath(path);
   return response;
 };
-let t1;
+
+let t1 = 'texture/Snowflake.png';
 (async () => {
-  t1 = await findImagePath();
+  t1 = await findCompletePath(t1);
   console.log('t1: ', t1);
 })();
-// const t1 =
-//   'C:\Users\billy\Documents\coding\AudioVisuliserV3\assets\texture.png';
 
 const loadImage = (path) => {
   return new Promise((resolve, reject) => {
@@ -50,19 +35,16 @@ class ShaderVisuals extends Component {
   constructor(props) {
     super(props);
     this.requestID = null;
-    this.track = songList[0];
-    console.log(this.track);
     this.mountRef = React.createRef();
     this.audio = null;
     this.clock = new THREE.Clock();
-
-    console.log(location.state?.songDetails);
 
     this.state = {
       isPlaying: true,
       rotation: 0,
       progress: 0,
       hoverProgress: 0,
+      track: props.track
     };
 
     this.togglePlayPause = this.togglePlayPause.bind(this);
@@ -72,10 +54,18 @@ class ShaderVisuals extends Component {
     this.handleProgressClick = this.handleProgressClick.bind(this);
     this.handleProgressMouseLeave = this.handleProgressMouseLeave.bind(this);
     this.handleBack = this.handleBack.bind(this);
+    this.handleForwardButton = this.handleForwardButton.bind(this);
+  }
+
+  handleForwardButton(){
+    this.audio.stop();
+    this.audio.offset = 20;
+    this.setState({progress:80})
+    this.audio.play();
   }
 
   handleBack() {
-    // setTimeout(() => this.state.navigate('/'), 300);
+    this.audio.stop();
   }
 
   handleProgressMouseLeave() {
@@ -95,21 +85,21 @@ class ShaderVisuals extends Component {
     if (!e) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
+    const clickX =e.clientX - rect.left;
     const clickProgress = (clickX / rect.width) * 100;
 
-    this.setState(() => ({ progress: clickProgress }));
     if (this.state.isPlaying) {
-      this.togglePlayPause();
+      this.togglePlayPause()
     }
     this.audio.offset = (clickProgress * this.audio.buffer.duration) / 100;
+    this.setState({ progress: clickProgress });
   }
 
   updateProgress() {
     const currentProgress = (this.dtime / this.audio.buffer.duration) * 100;
     if (this.state.progress + currentProgress >= 100) {
-      this.setState(() => ({ progress: 0 }));
-      this.setState(() => ({ isPlaying: false }));
+      this.setState({ progress: 0 });
+      this.setState({ isPlaying: false });
     } else {
       this.setState((prev) => ({ progress: prev.progress + currentProgress }));
       // console.log("is updating", this.state.progress)
@@ -134,7 +124,7 @@ class ShaderVisuals extends Component {
     }
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     // Set number of particles
     this.size = 128;
     this.number = this.size * this.size;
@@ -156,7 +146,9 @@ class ShaderVisuals extends Component {
 
     // Load background texture
     const loader = new THREE.TextureLoader();
-    loader.load(this.track.background, (texture) => {
+
+    loader.load(this.state.track.background, (texture) => {
+      console.log(this.state.track)
       this.scene.background = texture;
     });
 
@@ -181,10 +173,10 @@ class ShaderVisuals extends Component {
     this.dtime = 0;
 
     // Load textures and then add objects to the scene
-    Promise.all([this.getPixelDataFromImage(t1)]).then((textures) => {
+    Promise.all([this.getPixelDataFromImage(this.state.track.texture)]).then((textures) => {
       this.textures = textures;
       this.data1 = textures[0];
-      this.getPixelDataFromImage(t1);
+      this.getPixelDataFromImage(this.state.track.texture);
       this.setupFBO();
       this.mouseEvents();
       this.visualiseMusic();
@@ -197,6 +189,7 @@ class ShaderVisuals extends Component {
 
   async getPixelDataFromImage(url) {
     let img = await loadImage(url);
+    console.log("img", img)
     let canvas = document.createElement('canvas');
     canvas.width = img.width;
     canvas.height = img.height;
@@ -208,7 +201,7 @@ class ShaderVisuals extends Component {
     for (let i = 0; i < canvasData.length; i += 4) {
       let x = (i / 4) % img.width;
       let y = Math.floor(i / 4 / img.width);
-      if (canvasData[i] < 20) {
+      if (canvasData[i] < 50) {
         pixels.push({ x: x / canvas.width - 0.5, y: 0.5 - y / canvas.height });
       }
     }
@@ -387,10 +380,12 @@ class ShaderVisuals extends Component {
 
     const sound = new THREE.Audio(listeners);
     const audioLoader = new THREE.AudioLoader();
-    audioLoader.load('../../assets/audio/frozen_let_it_go.wav', (buffer) => {
+    console.log('state before playing', this.state)
+
+    audioLoader.load(this.state.track.audioPath, (buffer) => {
       sound.setBuffer(buffer);
       sound.setLoop(false);
-      sound.setVolume(0.5);
+      sound.setVolume(1);
       sound.play();
       this.audio = sound;
     });
@@ -464,7 +459,7 @@ class ShaderVisuals extends Component {
         // gl_FragColor = color;
         // Create gradient blue color
 
-        gl_FragColor = vec4(.5, .8 , 1., 1.);
+        gl_FragColor = vec4(1. , 1. , 1., 1.);
       }
     `;
 
@@ -550,10 +545,7 @@ class ShaderVisuals extends Component {
             boxShadow: '0 2px 5px rgba(0, 0, 0, 0.2)',
             color: 'black',
           }}
-          onClick={() => {
-            this.audio.stop();
-            this.audio = null;
-          }}
+          onClick={this.handleBack}
         >
           Back
         </Link>
@@ -627,8 +619,9 @@ class ShaderVisuals extends Component {
                 }}
               >
                 <img
-                  src={this.track.albumArt}
-                  alt={this.track.title}
+                  // src={'E:\\Developer\\AudioVisuliserV3\\assets\\images\\perfect\\perfect.png'}
+                  src = {this.state.track.albumArt}
+                  alt={this.state.track.title}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               </div>
@@ -646,10 +639,10 @@ class ShaderVisuals extends Component {
                   <h3
                     style={{ margin: 0, fontSize: '1rem', fontWeight: 'bold' }}
                   >
-                    {this.track.title}
+                    {this.state.track.title}
                   </h3>
                   <p style={{ margin: 0, fontSize: '0.875rem', color: '#555' }}>
-                    {this.track.artist}
+                    {this.state.track.artist}
                   </p>
                 </div>
 
@@ -708,7 +701,7 @@ class ShaderVisuals extends Component {
                 <button onClick={this.togglePlayPause} style={iconButtonStyle}>
                   {this.state.isPlaying ? <FaPause /> : <FaPlay />}
                 </button>
-                <button style={iconButtonStyle}>
+                <button onClick={this.handleForwardButton} style={iconButtonStyle}>
                   <AiOutlineForward />
                 </button>
                 <button style={iconButtonStyle}>Options</button>
