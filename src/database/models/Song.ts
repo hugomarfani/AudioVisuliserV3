@@ -9,6 +9,7 @@ import { sequelize } from '../config';
 import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
+import { getResourcePath } from '../../main/paths';
 
 interface SongModel
   extends Model<
@@ -30,6 +31,9 @@ interface SongModel
   particles: string[];
   backgrounds: string[];
   background_prompts: string[];
+  shaderBackground: string;
+  shaderTexture: string;
+  particleColour: string[];
   createdAt: CreationOptional<Date>;
   updatedAt: CreationOptional<Date>;
 }
@@ -107,6 +111,21 @@ const Song = sequelize.define<SongModel>('Song', {
     allowNull: true,
     defaultValue: [],
   },
+  shaderBackground: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: '',
+  },
+  shaderTexture: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: '',
+  },
+  particleColour: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: ["255", "255", "255"],
+  },
   createdAt: {
     type: DataTypes.DATE,
     allowNull: false,
@@ -139,11 +158,14 @@ const saveSongAsJson = async (song: SongModel) => {
     particles: song.particles,
     backgrounds: song.backgrounds,
     background_prompts: song.background_prompts,
+    shaderBackground: song.shaderBackground,
+    shaderTexture: song.shaderTexture,
+    particleColour: song.particleColour,
     createdAt: song.createdAt,
     updatedAt: song.updatedAt,
   };
 
-  const songDataDir = path.join(app.getAppPath(), 'assets', 'songData');
+  const songDataDir = getResourcePath('assets', 'songData');
   if (!fs.existsSync(songDataDir)) {
     fs.mkdirSync(songDataDir, { recursive: true });
   }

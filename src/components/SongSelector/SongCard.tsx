@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FaInfoCircle } from 'react-icons/fa';
+import { FaInfoCircle, FaStar } from 'react-icons/fa';
 import colors from '../../theme/colors';
 import { SongModel } from '../../database/models/Song';
 import { useNavigate } from 'react-router-dom';
@@ -12,6 +12,7 @@ type SongCardProps = {
   selectedDevice: string | null;
   onDetailsClick: (songID: string) => void;
   useShader: boolean; // Whether to use shader or particles
+  onParticleClick?: (songId: string) => void;
 };
 
 const statusMap: Record<string, string> = {
@@ -27,6 +28,7 @@ function SongCard({
   onSelect,
   onDetailsClick,
   useShader,
+  onParticleClick,
 }: SongCardProps): JSX.Element {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
