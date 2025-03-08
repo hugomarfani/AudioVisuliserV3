@@ -2,6 +2,7 @@ const ytdlp = require('yt-dlp-exec');
 const ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
 const { app } = require('electron');
 const { mainPaths, getResourcePath} = require('../main/paths');
 
@@ -95,15 +96,55 @@ const getYoutubeMetadata = async (url) => {
       preferFreeFormats: true,
       verbose: true,
     });
-
+    console.log('Metadata:', metadata);
     const title = metadata.title;
     const artist = metadata.uploader;
-    // console.log('Metadata:', metadata);
+    const thumbnailUrl = metadata.thumbnail; // Get the thumbnail URL
+    
+    // Extract video ID from the URL
+    const videoId = url.match(/(v=)([^&]*)/)[2];
+    
+    // Create directory for the thumbnail
+    const thumbnailDir = getResourcePath('assets', 'images', videoId);
+    const thumbnailPath = path.join(thumbnailDir, 'jacket.png');
+    
+    if (!fs.existsSync(thumbnailDir)) {
+      fs.mkdirSync(thumbnailDir, { recursive: true });
+    }
+    
+    // Download the thumbnail
+    await new Promise((resolve, reject) => {
+      https.get(thumbnailUrl, (response) => {
+        if (response.statusCode !== 200) {
+          reject(new Error(`Failed to download thumbnail: ${response.statusCode}`));
+          return;
+        }
+        
+        const fileStream = fs.createWriteStream(thumbnailPath);
+        response.pipe(fileStream);
+        
+        fileStream.on('finish', () => {
+          fileStream.close();
+          resolve();
+        });
+        
+        fileStream.on('error', (err) => {
+          fs.unlinkSync(thumbnailPath);
+          reject(err);
+        });
+      }).on('error', reject);
+    });
 
     console.log('Title:', title);
     console.log('Artist:', artist);
+    console.log('Thumbnail saved to:', thumbnailPath);
 
-    return { title, artist };
+    // Return the relative path to be stored in the database
+    return { 
+      title, 
+      artist, 
+      thumbnailPath: `images/${videoId}/jacket.png` 
+    };
   } catch (error) {
     console.error('Error fetching metadata:', error);
     throw error;

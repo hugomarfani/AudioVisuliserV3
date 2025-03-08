@@ -1,0 +1,28 @@
+{
+  "id": "uh4dTLJ9q9o",
+  "title": "Disney Music - Lava (Official Lyric Video from \"Lava\")",
+  "uploader": "DisneyMusicVEVO",
+  "audioPath": "audio/uh4dTLJ9q9o.mp3",
+  "jacket": "images/uh4dTLJ9q9o/jacket.png",
+  "images": [
+    "images/uh4dTLJ9q9o/image_1741452206160.png"
+  ],
+  "moods": [],
+  "status": "Yellow",
+  "colours": [],
+  "colours_reason": [],
+  "objects": [],
+  "object_prompts": [],
+  "particles": [],
+  "backgrounds": [],
+  "background_prompts": [],
+  "shaderBackground": "assets/shader/background/uh4dTLJ9q9o.jpg",
+  "shaderTexture": "assets/shader/texture/uh4dTLJ9q9o.jpg",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ],
+  "createdAt": "2025-03-08T16:28:14.226Z",
+  "updatedAt": "2025-03-08T16:43:26.167Z"
+}

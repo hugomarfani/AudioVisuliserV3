@@ -16,6 +16,7 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
   const { songs, refetch } = useSongs();
   const [song, setSong] = useState<SongModel | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [jacketImage, setJacketImage] = useState<string>("");
 
   const findImagePath = async (P: string) => {
     const response = await window.electron.fileSystem.mergeAssetPath(P);
@@ -40,7 +41,15 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
       }
     };
 
+    const loadJacketImage = async () => {
+      if (song) {
+        const jacketImagePath = await findImagePath(song.dataValues.jacket);
+        setJacketImage(jacketImagePath);
+      }
+    };
+
     loadSong();
+    loadJacketImage();
   }, [songs, songId]);
 
   if (song === null) {
@@ -107,7 +116,7 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
           {song.dataValues.uploader}
         </h2>
         <img
-          src={song.dataValues.jacket}
+          src={jacketImage}
           alt={song.dataValues.title}
           style={{
             width: '100%',

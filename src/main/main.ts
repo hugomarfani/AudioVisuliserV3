@@ -236,9 +236,9 @@ ipcMain.handle('reload-songs', async () => {
 ipcMain.handle('download-wav', async (_, url) => {
   try {
     const id = await downloadYoutubeAudioWav(url);
-    const { title, artist } = await getYoutubeMetadata(url);
+    const { title, artist, thumbnailPath } = await getYoutubeMetadata(url);
     console.log(
-      `Downloaded WAV with id: ${id}, title: ${title}, artist: ${artist}`,
+      `Downloaded WAV with id: ${id}, title: ${title}, artist: ${artist}, thumbnail: ${thumbnailPath}`,
     );
     // create song entry in database
     // temporarily assign random status
@@ -252,8 +252,8 @@ ipcMain.handle('download-wav', async (_, url) => {
       title: title,
       uploader: artist,
       audioPath: 'audio/' + id + '.mp3',
-      jacket: 'icon.png',
-      images: [],
+      jacket: thumbnailPath, // Use the downloaded thumbnail path instead of icon.png
+      images: [thumbnailPath],
       moods: [],
       status: randomStatus,
       colours: [],

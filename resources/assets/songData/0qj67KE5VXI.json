@@ -1,0 +1,28 @@
+{
+  "id": "0qj67KE5VXI",
+  "title": "Troy, Gabriella - Breaking Free (From \"High School Musical\")",
+  "uploader": "DisneyMusicVEVO",
+  "audioPath": "audio/0qj67KE5VXI.mp3",
+  "jacket": "images/0qj67KE5VXI/jacket.png",
+  "images": [
+    "images/0qj67KE5VXI/image_1741452244800.png"
+  ],
+  "moods": [],
+  "status": "Yellow",
+  "colours": [],
+  "colours_reason": [],
+  "objects": [],
+  "object_prompts": [],
+  "particles": [],
+  "backgrounds": [],
+  "background_prompts": [],
+  "shaderBackground": "assets/shader/background/0qj67KE5VXI.jpg",
+  "shaderTexture": "assets/shader/texture/0qj67KE5VXI.jpg",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ],
+  "createdAt": "2025-03-08T16:24:33.537Z",
+  "updatedAt": "2025-03-08T16:44:04.806Z"
+}
