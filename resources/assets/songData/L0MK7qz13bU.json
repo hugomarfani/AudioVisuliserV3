@@ -1,15 +1,20 @@
 {
+  "id": "L0MK7qz13bU",
+  "title": "FROZEN | Let It Go Sing-along | Official Disney UK",
+  "uploader": "Disney UK",
   "audioPath": "audio/L0MK7qz13bU.mp3",
-  "background_prompts": [
-    ", style: anime, character: a lone wolf, howling at the moon, setting: a snowy mountain peak, mood: melancholic, feeling: longing, details: glowing eyes, sharp teeth, fur covered in snow, snowflakes falling around the wolf, full moon in the sky, stars twinkling, distant lights of a village.\n\n\nA Kingdom of Isolation$, colourful background, suitable for children and family, anime style, a lone wolf, howling at the moon, snowy mountain peak, melancholic mood, feeling of longing, glowing eyes, sharp teeth, fur covered in snow, snowflakes falling around the wolf, full moon in the sky, stars twinkling, distant lights of a village \n",
-    ", swirling storm clouds, bright lightning bolts, a smiling sun peeking through the clouds, a rainbow arching over the storm, a small village nestled in the valley below the storm, houses with colourful roofs, smoke rising from chimneys, happy villagers waving from their windows, a path leading up to the village, a clear blue sky above the storm, a feeling of hope and joy, whimsical, magical, cartoon style, high resolution, 8k.\n\n\nA Swirling Storm Inside$, colourful background, suitable for children and family, swirling storm clouds, bright lightning bolts, a smiling sun peeking through the clouds, a rainbow arching over the storm, a small village nestled in the valley below the storm, houses with colourful roofs, smoke rising from chimneys, happy villagers waving from their windows, a path leading up to the village, a clear blue sky above the storm, a feeling of hope and joy, whimsical, magical, cartoon style, high resolution, 8k \n",
-    ", style: intricate, detailed, magical, surreal, composition: central focus on a snowflake, surrounding by smaller snowflakes, swirling patterns, glowing lines, ethereal light, mood: peaceful, serene, whimsical.\n\nFrozen Fractals$, colourful background, suitable for children and family, intricate, detailed, magical, surreal, central focus on a snowflake, surrounding by smaller snowflakes, swirling patterns, glowing lines, ethereal light, peaceful, serene, whimsical \n\n\n"
+  "jacket": "images/L0MK7qz13bU/letitgo.jpg",
+  "images": [
+    "images/L0MK7qz13bU/background_prompts_0.png",
+    "images/L0MK7qz13bU/background_prompts_1.png",
+    "images/L0MK7qz13bU/background_prompts_2.png",
+    "images/L0MK7qz13bU/object_prompts_0.png",
+    "images/L0MK7qz13bU/object_prompts_1.png",
+    "images/L0MK7qz13bU/object_prompts_2.png",
+    "images/L0MK7qz13bU/letitgo.jpg"
   ],
-  "backgrounds": [
-    "A Kingdom of Isolation$",
-    "A Swirling Storm Inside$",
-    "Frozen Fractals$"
-  ],
+  "moods": [],
+  "status": "Red",
   "colours": [
     "#FFD700",
     "#800080",
@@ -24,20 +29,36 @@
   "colours_reason": [
     "\n\n```\nColor 1: #FFD700\nColor 2: #800080\nColor 3: #00FFFF\nColor 4: #FFA500\nColor 5: #008000\n```\n\nColor 1 reason:  The \"snow glows white on the mountain night\" implies a bright, almost golden yellow light reflecting off the snow.\nColor 2: #800080 reason: The \"swirling storm inside\" and the \"wind is howling\" evoke a sense of dark purple, often associated with stormy weather.\nColor 3: #00FFFF reason: The line \"My power flurries through the air into the ground\" suggests a vibrant turquoise, representing the magical energy and control the character possesses.\nColor 4: #FFA500 reason: The \"storm rage on\" and the character's defiance against the world are reminiscent of a fiery orange, symbolizing passion and rebellion.\nColor 5: #008000 reason: The line \"I'm one with the wind and sky\" implies a connection to nature, specifically the lush green of the surrounding environment.\n\n\n\n"
   ],
-  "createdAt": "2025-02-24T17:17:00.569Z",
-  "id": "L0MK7qz13bU",
-  "images": ["images/L0MK7qz13bU/letitgo.jpg"],
-  "jacket": "images/L0MK7qz13bU/letitgo.jpg",
-  "moods": [],
+  "objects": [
+    "Frozen fractals$",
+    "Storm$",
+    "Kingdom$"
+  ],
   "object_prompts": [
     "\n\n* **Subject:** A frozen lake, covered in intricate, crystalline ice formations.\n* **Style:** Photorealistic, with a focus on capturing the delicate details of the ice.\n* **Lighting:** Soft, diffused sunlight filtering through the trees, casting long shadows across the ice.\n* **Atmosphere:** Serene, peaceful, and slightly magical.\n* **Color Palette:** Icy blues, whites, and silvers, with hints of warm gold from the sunlight.\n* **Composition:** A wide-angle shot, showcasing the vastness of the frozen lake and the intricate details of the ice formations.\n\n\n\nA frozen lake, covered in intricate, crystalline ice formations, photorealistic, soft, diffused sunlight filtering through the trees, casting long shadows across the ice, serene, peaceful, icy blues, whites, and silvers, with hints of warm gold from the sunlight, wide-angle shot, showcasing the vastness of the frozen lake and the intricate details of the ice formations. \n",
     "\n\n* **Song Title:** \"The Sound of Silence\" by Simon & Garfunkel\n* **Mood:** melancholic, introspective, haunting\n* **Setting:** a foggy, deserted city street at night, streetlights casting long, distorted shadows\n* **Characters:** a lone figure in a long coat, walking away from the viewer, head bowed\n* **Color Palette:** muted tones of blue, gray, and purple, with a hint of orange from the streetlights\n* **Style:** cinematic, film noir, with a touch of surrealism\n\n\nThe Sound of Silence, melancholic, introspective, haunting, a foggy, deserted city street at night, streetlights casting long, distorted shadows, a lone figure in a long coat, walking away from the viewer, head bowed, muted tones of blue, gray, and purple, with a hint of orange from the streetlights, cinematic, film noir, with a touch of surrealism \n",
     "\n\n* **Song Title:** \"The Sound of Silence\" by Simon & Garfunkel\n* **Style:** Surreal, dreamlike, psychedelic\n* **Color Palette:** Muted tones, dusty blues, faded oranges, hints of purple\n* **Composition:** Two figures, silhouetted against a swirling, abstract background, holding hands\n* **Mood:** Melancholy, introspective, yearning\n* **Details:** One figure wears a long, flowing robe, the other a simple, worn jacket. The background features swirling patterns reminiscent of smoke or clouds, with faint, glowing orbs scattered throughout.\n\n\nThe Sound of Silence, surreal, dreamlike, psychedelic, muted tones, dusty blues, faded oranges, hints of purple, two figures, silhouetted against a swirling, abstract background, holding hands, melancholy, introspective, yearning, one figure wears a long, flowing robe, the other a simple, worn jacket, the background features swirling patterns reminiscent of smoke or clouds, with faint, glowing orbs scattered throughout. \n"
   ],
-  "objects": ["Frozen fractals$", "Storm$", "Kingdom$"],
-  "particles": ["snowflakes"],
-  "status": "Red",
-  "title": "FROZEN | Let It Go Sing-along | Official Disney UK",
-  "updatedAt": "2025-02-24T17:17:00.569Z",
-  "uploader": "Disney UK"
+  "particles": [
+    "snowflakes"
+  ],
+  "backgrounds": [
+    "A Kingdom of Isolation$",
+    "A Swirling Storm Inside$",
+    "Frozen Fractals$"
+  ],
+  "background_prompts": [
+    ", style: anime, character: a lone wolf, howling at the moon, setting: a snowy mountain peak, mood: melancholic, feeling: longing, details: glowing eyes, sharp teeth, fur covered in snow, snowflakes falling around the wolf, full moon in the sky, stars twinkling, distant lights of a village.\n\n\nA Kingdom of Isolation$, colourful background, suitable for children and family, anime style, a lone wolf, howling at the moon, snowy mountain peak, melancholic mood, feeling of longing, glowing eyes, sharp teeth, fur covered in snow, snowflakes falling around the wolf, full moon in the sky, stars twinkling, distant lights of a village \n",
+    ", swirling storm clouds, bright lightning bolts, a smiling sun peeking through the clouds, a rainbow arching over the storm, a small village nestled in the valley below the storm, houses with colourful roofs, smoke rising from chimneys, happy villagers waving from their windows, a path leading up to the village, a clear blue sky above the storm, a feeling of hope and joy, whimsical, magical, cartoon style, high resolution, 8k.\n\n\nA Swirling Storm Inside$, colourful background, suitable for children and family, swirling storm clouds, bright lightning bolts, a smiling sun peeking through the clouds, a rainbow arching over the storm, a small village nestled in the valley below the storm, houses with colourful roofs, smoke rising from chimneys, happy villagers waving from their windows, a path leading up to the village, a clear blue sky above the storm, a feeling of hope and joy, whimsical, magical, cartoon style, high resolution, 8k \n",
+    ", style: intricate, detailed, magical, surreal, composition: central focus on a snowflake, surrounding by smaller snowflakes, swirling patterns, glowing lines, ethereal light, mood: peaceful, serene, whimsical.\n\nFrozen Fractals$, colourful background, suitable for children and family, intricate, detailed, magical, surreal, central focus on a snowflake, surrounding by smaller snowflakes, swirling patterns, glowing lines, ethereal light, peaceful, serene, whimsical \n\n\n"
+  ],
+  "shaderBackground": "",
+  "shaderTexture": "",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ],
+  "createdAt": "2025-02-24T17:17:00.569Z",
+  "updatedAt": "2025-03-08T21:16:43.446Z"
 }

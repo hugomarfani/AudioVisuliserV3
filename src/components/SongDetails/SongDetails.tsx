@@ -6,6 +6,7 @@ import ParticleSelector from './ParticleSelector';
 import BackgroundSelector from './BackgroundSelector';
 import ImageGallery from './ImageGallery';
 import LLMRunner from './LLMRunner';
+import WhisperRunner from './WhisperRunner';
 
 interface SongDetailsProps {
   onClose: () => void;
@@ -140,6 +141,21 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
         <p style={{ fontSize: '1rem', color: colors.grey2 }}>
           Backgrounds: {song.dataValues.backgrounds.join(', ')}
         </p>
+        
+        {/* 
+        
+        DEPRECATED WARNING -> WHISPER NOW DELETES THE WAV FILE AFTER PROCESSING SO NO NEED TO RERUN WHISPER
+        HOWEVER, LEAVING THIS COMMENTED OUT IN CASE WE NEED TO REVERT BACK TO THIS
+        THIS WOULD REQUIRE SD.EXE BEING UPDATED WITH THE NEW WHISPER COMMANDS
+
+        Whisper Runner component - add this before LLM Runner
+        <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>
+          <WhisperRunner 
+            song={song} 
+            songId={songId} 
+            refetch={refetch}
+          />
+        </div> */}
         
         {/* LLM Runner component - add this before BackgroundSelector */}
         <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>

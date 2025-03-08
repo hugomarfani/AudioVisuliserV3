@@ -434,7 +434,7 @@ ipcMain.handle('run-stable-diffusion', (event, songId: string, operationId = nul
       '-ExecutionPolicy',
       'Bypass',
       '-Command',
-      `& { . '${ps1Path}'; & ${sdPathStr} --songId ${songId}; }`,
+      `& { . '${ps1Path}'; & ${sdPathStr} -e --songId ${songId}; }`,
     ],
     event.sender,
     actualOperationId,
