@@ -12,7 +12,8 @@ import path from 'path';
 import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
-import { exec, spawn } from 'child_process';
+import { exec, spawn, execSync } from 'child_process';
+import os from 'os';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 import initDatabase from '../database/init';
@@ -80,7 +81,10 @@ function trackProgressFromStdout(data: Buffer, sender: Electron.WebContents, ope
   });
 }
 
-// General purpose function to run AI processes with progress tracking
+// Track active child processes
+const activeProcesses: { [key: string]: ReturnType<typeof spawn> } = {};
+
+// General purpose function to run AI processes with tracking
 function runAIProcessWithTracking(
   command: string,
   args: string[],
@@ -103,6 +107,9 @@ function runAIProcessWithTracking(
 
   // Start the process
   const process = spawn(command, args);
+  
+  // Store the process with its operationId
+  activeProcesses[operationId] = process;
   
   process.stdout.on('data', (data) => {
     trackProgressFromStdout(data, sender, operationId);
@@ -127,6 +134,10 @@ function runAIProcessWithTracking(
     };
     console.log("Sending process complete:", completeData);
     sender.send('ai-process-complete', completeData);
+    
+    // Remove from active processes when done
+    delete activeProcesses[operationId];
+    
     return code;
   });
 }
@@ -452,6 +463,206 @@ ipcMain.on('run-gemma-test', (event) => {
   });
 });
 
+// Common ports used by the application
+const appPorts = [
+  1212 
+];
+
+// Function to terminate all active processes
+function terminateAllProcesses() {
+  // First kill all tracked child processes
+  Object.entries(activeProcesses).forEach(([id, process]) => {
+    console.log(`Terminating process: ${id}`);
+    try {
+      if (process.killed === false) {
+        // Force kill to ensure termination
+        if (process.platform === 'win32') {
+          // On Windows, use taskkill to forcefully terminate
+          try {
+            execSync(`taskkill /pid ${process.pid} /T /F`, { stdio: 'ignore' });
+          } catch (e) {
+            // If taskkill fails, try the standard kill
+            process.kill('SIGKILL');
+          }
+        } else {
+          // On Unix-like systems
+          process.kill('SIGKILL');
+        }
+      }
+    } catch (err) {
+      console.error(`Error killing process ${id}:`, err);
+    }
+  });
+  
+  // Clean up ports used by the application
+  cleanupPorts();
+}
+
+// Function to clean up ports
+function cleanupPorts() {
+  console.log('Cleaning up ports...');
+  
+  try {
+    if (process.platform === 'win32') {
+      // Windows
+      appPorts.forEach(port => {
+        try {
+          console.log(`Checking port ${port}...`);
+          // Find process using this port
+          const findCmd = `netstat -ano | findstr :${port}`;
+          let output;
+          
+          try {
+            output = execSync(findCmd, { encoding: 'utf8' });
+          } catch (e) {
+            // No process using this port, which is fine
+            return;
+          }
+          
+          if (output) {
+            const lines = output.split('\n');
+            const pids = new Set();
+            
+            lines.forEach(line => {
+              const parts = line.trim().split(/\s+/);
+              if (parts.length > 4) {
+                const pid = parts[4];
+                if (/^\d+$/.test(pid)) {
+                  pids.add(pid);
+                }
+              }
+            });
+            
+            // Kill each process found
+            pids.forEach(pid => {
+              console.log(`Killing process ${pid} using port ${port}`);
+              try {
+                execSync(`taskkill /F /PID ${pid}`, { stdio: 'ignore' });
+                console.log(`Successfully terminated PID ${pid}`);
+              } catch (killError) {
+                console.error(`Failed to kill process ${pid}:`, killError);
+              }
+            });
+          }
+        } catch (error) {
+          console.error(`Error checking port ${port}:`, error);
+        }
+      });
+    } else if (process.platform === 'darwin') {
+      // macOS
+      appPorts.forEach(port => {
+        try {
+          console.log(`Checking port ${port}...`);
+          // Find process using this port
+          const cmd = `lsof -i :${port} -t`;
+          let pids;
+          
+          try {
+            pids = execSync(cmd, { encoding: 'utf8' }).trim();
+          } catch (e) {
+            // No process using this port
+            return;
+          }
+          
+          if (pids) {
+            pids.split('\n').forEach(pid => {
+              if (pid) {
+                console.log(`Killing process ${pid} using port ${port}`);
+                try {
+                  execSync(`kill -9 ${pid}`, { stdio: 'ignore' });
+                  console.log(`Successfully terminated PID ${pid}`);
+                } catch (killError) {
+                  console.error(`Failed to kill process ${pid}:`, killError);
+                }
+              }
+            });
+          }
+        } catch (error) {
+          console.error(`Error checking port ${port}:`, error);
+        }
+      });
+    } else {
+      // Linux
+      appPorts.forEach(port => {
+        try {
+          console.log(`Checking port ${port}...`);
+          // Find process using this port
+          const cmd = `fuser -n tcp ${port} 2>/dev/null`;
+          let pids;
+          
+          try {
+            pids = execSync(cmd, { encoding: 'utf8' }).trim();
+          } catch (e) {
+            // No process using this port
+            return;
+          }
+          
+          if (pids) {
+            pids.split(' ').forEach(pid => {
+              if (pid) {
+                console.log(`Killing process ${pid} using port ${port}`);
+                try {
+                  execSync(`kill -9 ${pid}`, { stdio: 'ignore' });
+                  console.log(`Successfully terminated PID ${pid}`);
+                } catch (killError) {
+                  console.error(`Failed to kill process ${pid}:`, killError);
+                }
+              }
+            });
+          }
+        } catch (error) {
+          console.error(`Error checking port ${port}:`, error);
+        }
+      });
+    }
+    
+    console.log('Port cleanup completed.');
+  } catch (error) {
+    console.error('Error in port cleanup:', error);
+  }
+}
+
+// Add window control handlers
+ipcMain.on('window-control', (_, command) => {
+  if (!mainWindow) return;
+
+  switch (command) {
+    case 'minimize':
+      mainWindow.minimize();
+      break;
+    case 'toggle-fullscreen':
+      if (mainWindow.isFullScreen()) {
+        mainWindow.setFullScreen(false);
+      } else {
+        mainWindow.setFullScreen(true);
+      }
+      break;
+    case 'close':
+      console.log('Close button clicked. Beginning shutdown sequence...');
+      
+      // Terminate all processes and release ports
+      terminateAllProcesses();
+      
+      // Close database connections
+      db.close((err) => {
+        if (err) {
+          console.error('Error closing database:', err);
+        } else {
+          console.log('Database connection closed');
+        }
+        
+        setTimeout(() => {
+          // Force exit after a short delay to ensure cleanup completes
+          console.log('Forcing application exit...');
+          app.exit(0);
+        }, 500);
+      });
+      break;
+    default:
+      console.log(`Unknown window command: ${command}`);
+  }
+});
+
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
   sourceMapSupport.install();
@@ -572,6 +783,10 @@ app
   .catch(console.log);
 
 app.on('before-quit', () => {
+  console.log('Application is about to quit...');
+  // Make sure to terminate any running processes and release ports
+  terminateAllProcesses();
+  
   db.close((err) => {
     if (err) {
       console.error('Error closing database:', err);

@@ -1,5 +1,6 @@
 import React from 'react';
 import '../../styles.css';
+import WindowControls from '../UI/WindowControls';
 
 const MeshGradientBackground: React.FC = ({ children }) => {
   return (
@@ -16,6 +17,9 @@ const MeshGradientBackground: React.FC = ({ children }) => {
         overflow: 'hidden',
       }}
     >
+      {/* Window control buttons */}
+      <WindowControls />
+      
       {/* Background using ::before pseudo-element */}
       <div
         style={{

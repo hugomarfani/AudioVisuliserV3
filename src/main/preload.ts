@@ -62,7 +62,8 @@ const electronHandler = {
       const validChannels: Channels[] = [
         'ai-progress-update',
         'ai-error',
-        'ai-process-complete'
+        'ai-process-complete',
+        'window-control',
       ] as Channels[];
       
       if (validChannels.includes(channel)) {
