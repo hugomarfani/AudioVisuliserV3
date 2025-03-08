@@ -11,6 +11,8 @@ let mouseVelY = 0;
 let currentMood = 'happy'; // Can be updated based on AI input
 let allowedParticles: string[] = ['musicNote']; // Default particle
 let isActive = true;
+let isMouseOnCanvas = true; // Always show overlay by default
+let overlayAlwaysVisible = true; // New flag to control overlay visibility behavior
 
 export const initializeSketch = (particleTypes: string[], active: boolean) => {
   console.log('Initializing sketch with particle types:', particleTypes);
@@ -41,7 +43,22 @@ const sketch = (p: p5) => {
     // Add window resize handler
     window.addEventListener('resize', () => {
       p.resizeCanvas(window.innerWidth, window.innerHeight);
-    }); 
+    });
+
+    // Simplified event listeners that don't affect overlay visibility
+    const canvasElement = document.querySelector('canvas');
+    if (canvasElement) {
+      // Only track when mouse leaves the window completely
+      window.addEventListener('mouseleave', () => {
+        if (!overlayAlwaysVisible) {
+          isMouseOnCanvas = false;
+        }
+      });
+      
+      window.addEventListener('mouseenter', () => {
+        isMouseOnCanvas = true;
+      });
+    }
   };
 
   p.draw = () => {
@@ -68,14 +85,40 @@ const sketch = (p: p5) => {
         let randomX = p.random(p.width);
         let randomY = p.random(p.height);
         const newParticle = particleSystem.addParticle(randomX, randomY, randomType);
-        if (newParticle) {
-          console.log('Particle created successfully');
-        }
+        console.log('Particle created successfully');
       }
+    }
+
+    // Always draw the cursor overlay when in active mode
+    if (isActive) {
+      drawCursorOverlay(p, p.mouseX, p.mouseY);
     }
   };
 
+  // Function to draw a circular overlay around the cursor/touch point
+  const drawCursorOverlay = (p: p5, x: number, y: number) => {
+    const radius = 15; // Match the collision radius in handleMouseCollision
+    
+    p.push();
+    
+    // Draw outer circle
+    p.noFill();
+    p.stroke(255, 255, 255, 100); // Semi-transparent white
+    p.strokeWeight(2);
+    p.circle(x, y, radius * 2);
+    
+    // Draw inner circle
+    p.fill(255, 255, 255, 20); // Very transparent white
+    p.noStroke();
+    p.circle(x, y, radius * 2 - 4);
+    
+    p.pop();
+  };
+
   p.mousePressed = async () => {
+    // Always ensure overlay is visible during interaction
+    isMouseOnCanvas = true;
+    
     // Guard clause to prevent execution if particleSystem is not initialized
     if (!particleSystem || !isActive) return;
 
@@ -109,6 +152,23 @@ const sketch = (p: p5) => {
 
   // Remove existing mouseMoved handler as we're handling mouse interaction in the particle system
   p.mouseMoved = () => {};
+
+  // Update touch support to always keep overlay visible
+  p.touchStarted = () => {
+    isMouseOnCanvas = true;
+    return false; // Prevents default
+  };
+  
+  p.touchMoved = () => {
+    isMouseOnCanvas = true;
+    return false; // Prevents default
+  };
+  
+  p.touchEnded = () => {
+    // Keep overlay always visible
+    isMouseOnCanvas = true;
+    return false; // Prevents default
+  };
 };
 
 // Remove the direct p5 initialization since we'll do it from the React component

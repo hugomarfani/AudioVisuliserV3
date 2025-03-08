@@ -456,7 +456,7 @@ const isDebug =
   process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
 
 if (isDebug) {
-  require('electron-debug')();
+  require('electron-debug')({ showDevTools: false }); // this is to not show dev tools when app starts
 }
 
 const installExtensions = async () => {
@@ -491,6 +491,7 @@ const createWindow = async () => {
     height: 728,
     icon: getAssetPath('icon.png'),
     title: 'App (Database: Initializing...)',
+    fullscreen: true, // set to fullscreen
     webPreferences: {
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')

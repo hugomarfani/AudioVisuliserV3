@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { FaInfoCircle, FaStar } from 'react-icons/fa';
 import colors from '../../theme/colors';
 import { SongModel } from '../../database/models/Song';
 import { useNavigate } from 'react-router-dom';
-import { encode } from 'node:punycode';
 
 type SongCardProps = {
   uri: string;
@@ -12,6 +11,7 @@ type SongCardProps = {
   accessToken: string;
   selectedDevice: string | null;
   onDetailsClick: (songID: string) => void;
+  useShader: boolean; // Whether to use shader or particles
   onParticleClick?: (songId: string) => void;
 };
 
@@ -27,47 +27,45 @@ function SongCard({
   songDetails,
   onSelect,
   onDetailsClick,
+  useShader,
   onParticleClick,
 }: SongCardProps): JSX.Element {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
+  const [isTitleOverflowing, setIsTitleOverflowing] = useState(false);
+  const [titleWidth, setTitleWidth] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Check if title is overflowing its container
+  useEffect(() => {
+    if (titleRef.current && containerRef.current) {
+      const titleElement = titleRef.current;
+      const containerElement = containerRef.current;
+      
+      // Get actual widths
+      const titleElementWidth = titleElement.scrollWidth;
+      const containerElementWidth = containerElement.clientWidth;
+      
+      // Update state with measured widths
+      setTitleWidth(titleElementWidth);
+      setContainerWidth(containerElementWidth);
+      
+      // Set overflow flag
+      setIsTitleOverflowing(titleElementWidth > containerElementWidth);
+    }
+  }, [songDetails.title]);
 
   if (!songDetails) {
     return <div>Song not found</div>;
   }
 
-  const handleParticlesClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    console.log('Particles clicked - Song Details:', songDetails);
-    const songWithAudio = {
-      ...songDetails,
-      audioSrc: songDetails.audioSrc || '',
-    };
-    console.log('Navigating to particles with data:', songWithAudio);
-    navigate(`/particles/${encodeURIComponent(uri)}`, {
-      state: { songDetails: songWithAudio },
-    });
-  };
-
-  const handleAidenClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    console.log('Aiden clicked - Song Details:', songDetails);
-    const songWithAudio = {
-      ...songDetails,
-      audioSrc: songDetails.audioSrc || '',
-    };
-    console.log('Navigating to aiden with data:', songWithAudio);
-    navigate(`/aiden/${encodeURIComponent(uri)}`, {
-      state: { songDetails: songWithAudio },
-    });
-  };
-
   const handleDetailsClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDetailsClick(uri);
   };
+  
   const [imagePath, setImagePath] = React.useState<string>('');
 
   React.useEffect(() => {
@@ -80,6 +78,14 @@ function SongCard({
     findImagePath();
   }, [songDetails.jacket]);
 
+  // Calculate animation duration based on title length - longer titles need more time to scroll
+  const animationDuration = Math.max(2, Math.min(6, songDetails.title.length * 0.15));
+  
+  // Calculate how far the text needs to translate to show all content
+  const translateDistance = titleWidth > 0 && containerWidth > 0 
+    ? titleWidth - containerWidth + 20 // Add some padding
+    : 0;
+
   return (
     <div
       onMouseEnter={() => setIsHovered(true)}
@@ -89,14 +95,21 @@ function SongCard({
         display: 'flex',
         alignItems: 'center',
         backgroundColor: colors.grey5,
-        padding: '1rem',
+        padding: 'clamp(0.75rem, 1.5vw, 1.5rem)',
         borderRadius: '24px',
-        width: '200px',
-        height: '48px',
-        margin: '0 auto 1rem',
+        width: '95%',
+        height: 'clamp(70px, 12vh, 100px)',
+        margin: '0 auto',
         overflow: 'hidden',
         cursor: 'pointer',
         position: 'relative',
+        boxSizing: 'border-box',
+        transition: 'all 0.3s ease',
+        transform: isHovered ? 'translateY(-3px)' : 'translateY(0)',
+        boxShadow: isHovered 
+          ? '0 10px 15px rgba(0, 0, 0, 0.1)'
+          : '0 2px 5px rgba(0, 0, 0, 0.05)',
+        border: isHovered ? `1px solid ${colors.grey4}` : '1px solid transparent',
       }}
     >
       <img
@@ -104,28 +117,48 @@ function SongCard({
         alt={songDetails.title}
         style={{
           borderRadius: '15px',
-          width: '48px',
-          height: '48px',
+          width: 'clamp(50px, 8vh, 70px)',
+          height: 'clamp(50px, 8vh, 70px)',
           objectFit: 'cover',
+          transition: 'all 0.3s ease',
+          boxShadow: isHovered ? '0 4px 8px rgba(0, 0, 0, 0.15)' : 'none',
         }}
       />
-      <div style={{ flex: 1, marginLeft: '1rem', overflow: 'hidden' }}>
-        <h2
-          style={{
-            fontSize: '1rem',
-            margin: '0 0 0.25rem',
-            fontWeight: 'bold',
-            color: '#000',
-            whiteSpace: 'nowrap',
+      <div style={{ flex: 1, marginLeft: 'clamp(0.8rem, 1.5vw, 1.5rem)', overflow: 'hidden' }}>
+        <div 
+          ref={containerRef}
+          style={{ 
+            width: '100%',
             overflow: 'hidden',
-            textOverflow: 'ellipsis',
+            position: 'relative',
           }}
         >
-          {songDetails.title}
-        </h2>
+          <h2
+            ref={titleRef}
+            style={{
+              fontSize: 'clamp(0.9rem, 2vw, 1.2rem)',
+              margin: '0 0 0.5rem',
+              fontWeight: 'bold',
+              color: '#000',
+              whiteSpace: 'nowrap',
+              display: 'inline-block', // Important for proper width measurement
+              position: 'relative', // Needed for animation
+              transition: 'transform 0.3s ease',
+              overflow: 'visible', // Allow text to flow outside during animation
+              transform: isHovered && isTitleOverflowing 
+                ? `translateX(-${translateDistance}px)` // Use dynamic translation based on calculated overflow
+                : 'translateX(0)',
+              transitionDelay: isHovered ? '0.2s' : '0s', // Delay before scrolling starts
+              transitionDuration: isHovered ? `${animationDuration}s` : '0.3s', // Slower for scrolling, faster for reset
+              transitionTimingFunction: isHovered ? 'linear' : 'ease', // Linear for smoother scrolling
+            }}
+          >
+            {songDetails.title}
+          </h2>
+        </div>
         <p
           style={{
-            fontSize: '0.875rem',
+            fontSize: 'clamp(0.8rem, 1.5vw, 1rem)',
             margin: 0,
             color: '#6B7280',
             whiteSpace: 'nowrap',
@@ -136,99 +169,41 @@ function SongCard({
           {songDetails.uploader}
         </p>
       </div>
+      
+      {/* Status indicator */}
       <div>
         <span
           style={{
             display: 'inline-block',
-            width: '12px',
-            height: '12px',
+            width: 'clamp(12px, 2vw, 18px)',
+            height: 'clamp(12px, 2vw, 18px)',
             backgroundColor: statusMap[songDetails.status.toLowerCase()],
             borderRadius: '50%',
+            transition: 'transform 0.3s ease',
+            transform: isHovered ? 'scale(1.2)' : 'scale(1)',
           }}
         />
       </div>
+      
+      {/* Info button */}
       <button
         onClick={handleDetailsClick}
         style={{
           position: 'absolute',
-          top: '0.5rem',
-          right: '9.5rem',
+          top: 'clamp(0.5rem, 1.2vw, 0.8rem)',
+          right: 'clamp(0.8rem, 1.5vw, 1.0rem)',
           backgroundColor: 'transparent',
           border: 'none',
           cursor: 'pointer',
-          color: colors.grey2,
+          color: isHovered ? colors.grey1 : colors.grey2,
+          transition: 'all 0.3s ease',
+          transform: isHovered ? 'scale(1.15)' : 'scale(1)',
         }}
       >
-        <FaInfoCircle size={16} />
+        <FaInfoCircle size={Math.min(20, Math.max(16, window.innerWidth / 70))} />
       </button>
-      <div
-        style={{
-          position: 'absolute',
-          right: isHovered ? '0' : '-120px',
-          top: 0,
-          height: '100%',
-          width: '120px',
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-evenly',
-          transition: 'right 0.3s ease-in-out',
-          borderTopRightRadius: '24px',
-          borderBottomRightRadius: '24px',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          style={{
-            padding: '4px 8px',
-            backgroundColor: colors.blue,
-            color: 'white',
-            border: 'none',
-            borderRadius: '12px',
-            cursor: 'pointer',
-            fontSize: '0.75rem',
-          }}
-          onClick={handleParticlesClick}
-        >
-          Particles
-        </button>
-        <button
-          style={{
-            padding: '4px 8px',
-            backgroundColor: colors.green,
-            color: 'white',
-            border: 'none',
-            borderRadius: '12px',
-            cursor: 'pointer',
-            fontSize: '0.75rem',
-          }}
-          onClick={handleAidenClick}
-        >
-          Shader
-        </button>
-        {onParticleClick && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onParticleClick(uri);
-            }}
-            style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '9999px',
-              padding: '0.4rem 0.6rem',
-              fontSize: '0.8rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            <FaStar size={12} style={{ marginRight: '0.3rem' }} />
-            Particles
-          </button>
-        )}
-      </div>
+      
+      {/* Remove the keyframe animation style tag since we're using CSS transitions instead */}
     </div>
   );
 }
