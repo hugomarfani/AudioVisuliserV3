@@ -1,6 +1,7 @@
 import p5 from "p5";
 import { ParticleSystem } from "./particles";
 import { ParticleSelector } from "./particleSelector";
+import { particleConfig } from "./particlePhysics";
 
 let particleSystem: ParticleSystem | null = null; // Initialize as null
 let frameCount = 0;
@@ -13,6 +14,10 @@ let allowedParticles: string[] = ['musicNote']; // Default particle
 let isActive = true;
 let isMouseOnCanvas = true; // Always show overlay by default
 let overlayAlwaysVisible = true; // New flag to control overlay visibility behavior
+let isMouseHeld = false; // Track if mouse is being held down
+let mouseHoldTimer = 0; // Control spawn rate when holding
+let mouseParticleType = ParticleSelector.getRandomParticleFromArray(allowedParticles);
+let mouseParticleImageType = 1;
 
 export const initializeSketch = (particleTypes: string[], active: boolean) => {
   console.log('Initializing sketch with particle types:', particleTypes);
@@ -22,6 +27,7 @@ export const initializeSketch = (particleTypes: string[], active: boolean) => {
     console.log(`Validated particle type: ${type} -> ${validatedType}`);
     return validatedType;
   });
+  mouseParticleType = ParticleSelector.getRandomParticleFromArray(allowedParticles);
   return sketch;
 };
 
@@ -31,6 +37,7 @@ const sketch = (p: p5) => {
   };
 
   p.setup = () => {
+    // mouseParticleType = ParticleSelector.getRandomParticleFromArray(allowedParticles);
     console.log('Setting up particle system');
     const canvas = p.createCanvas(window.innerWidth, window.innerHeight);
     canvas.style('position', 'fixed');
@@ -87,6 +94,16 @@ const sketch = (p: p5) => {
         const newParticle = particleSystem.addParticle(randomX, randomY, randomType);
         console.log('Particle created successfully');
       }
+      
+      // Create particles while mouse is held down
+      if (isMouseHeld && particleSystem.particles.length < particleSystem.maxParticles) {
+        mouseHoldTimer++;
+        // Control spawn rate - create particles every few frames
+        if (mouseHoldTimer >= 6) { // Adjust this value to control spawn rate
+          mouseHoldTimer = 0;
+          createParticlesAtMouse(p, 2); // Create fewer particles per burst when holding
+        }
+      }
     }
 
     // Always draw the cursor overlay when in active mode
@@ -114,32 +131,25 @@ const sketch = (p: p5) => {
     
     p.pop();
   };
-
-  p.mousePressed = async () => {
-    // Always ensure overlay is visible during interaction
-    isMouseOnCanvas = true;
-    
-    // Guard clause to prevent execution if particleSystem is not initialized
+  
+  // Helper function to create particles at mouse position
+  const createParticlesAtMouse = async (p: p5, count: number) => {
     if (!particleSystem || !isActive) return;
-
+    
     const remainingSlots = particleSystem.maxParticles - particleSystem.particles.length;
-    const numParticles = Math.min(5, remainingSlots); // Create up to 5 particles, but not more than available slots
+    const numParticles = Math.min(count, remainingSlots);
     
-    if (numParticles <= 0) return; // Don't create any particles if we're at max
-
-    const types = ["musicNote", "bubble", "star"];
+    if (numParticles <= 0) return;
     
+    // Use the same mouseParticleType for all particles in this burst
+    // This ensures consistency during a single press/hold interaction
     for(let i = 0; i < numParticles; i++) {
-      let randomType = ParticleSelector.getRandomParticleFromArray(allowedParticles);
-      // Add slight position variation
       let spawnX = p.mouseX + p.random(-10, 10);
       let spawnY = p.mouseY + p.random(-10, 10);
       
-      // Wait for particle to be created and image loaded
-      const particle = await particleSystem.addParticle(spawnX, spawnY, randomType);
+      const particle = await particleSystem.addParticle(spawnX, spawnY, mouseParticleType, mouseParticleImageType);
       
-      if (particle) {  // Check if particle was created successfully
-        // Add initial velocity based on mouse movement plus random spread
+      if (particle) {
         let angle = p.random(p.TWO_PI);
         let speed = p.random(2, 5);
         let velX = mouseVelX * 0.5 + Math.cos(angle) * speed;
@@ -150,12 +160,51 @@ const sketch = (p: p5) => {
     }
   };
 
+  const randomiseParticleType = () => {
+    const oldType = mouseParticleType;
+    if (allowedParticles.length > 1) {
+      do {
+        mouseParticleType = ParticleSelector.getRandomParticleFromArray(allowedParticles);
+        mouseParticleImageType = Math.floor(Math.random() * particleConfig[mouseParticleType].count) + 1;
+      } while (mouseParticleType === oldType && allowedParticles.length > 1);
+    } else {
+      mouseParticleType = ParticleSelector.getRandomParticleFromArray(allowedParticles);
+      mouseParticleImageType = Math.floor(Math.random() * particleConfig[mouseParticleType].count) + 1;
+    }
+    console.log('Particle type changed to:', mouseParticleType);
+  }
+
+  p.mousePressed = async () => {
+    // Set flag that mouse is being held
+    isMouseHeld = true;
+    isMouseOnCanvas = true;
+    
+    // Create initial burst of particles (all using the same mouseParticleType)
+    if (particleSystem && isActive) {
+      createParticlesAtMouse(p, 5); // Initial larger burst
+    }
+    
+    return false; // Prevents default
+  };
+  
+  p.mouseReleased = () => {
+    // Clear the mouse held flag
+    isMouseHeld = false;
+    mouseHoldTimer = 0;
+    randomiseParticleType();
+    return false; // Prevents default
+  };
+
   // Remove existing mouseMoved handler as we're handling mouse interaction in the particle system
   p.mouseMoved = () => {};
 
-  // Update touch support to always keep overlay visible
+  // Update touch support to handle touch and hold
   p.touchStarted = () => {
+    isMouseHeld = true;
     isMouseOnCanvas = true;
+    if (particleSystem && isActive) {
+      createParticlesAtMouse(p, 5);
+    }
     return false; // Prevents default
   };
   
@@ -165,8 +214,10 @@ const sketch = (p: p5) => {
   };
   
   p.touchEnded = () => {
-    // Keep overlay always visible
+    isMouseHeld = false;
+    mouseHoldTimer = 0;
     isMouseOnCanvas = true;
+    randomiseParticleType();
     return false; // Prevents default
   };
 };

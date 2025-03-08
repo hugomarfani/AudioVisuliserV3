@@ -192,34 +192,42 @@ export const particlePhysics: Record<string, ParticlePhysics> = {
   
 };
 
+export const particleConfig: { [key: string]: { dir: string, count: number } } = {
+  musicNote: { dir: 'musicNotes', count: 2 }, 
+  star: { dir: 'stars', count: 2 },
+  bubble: { dir: 'bubbles', count: 1 },
+  snowflake: { dir: 'snowflakes', count: 1 },
+  heart: { dir: 'hearts', count: 3},
+  leaves: { dir: 'leaves', count: 1 },
+  butterfly: { dir: 'butterflies', count: 1 },
+  confetti: { dir: 'confetti', count: 1 },
+  raindrop: { dir: 'raindrops', count: 1 },
+  firefly: { dir: 'fireflies', count: 1 },
+  balloon: { dir: 'balloons', count: 2},
+  flower: { dir: 'flowers', count: 1 },
+  firework: { dir: 'fireworks', count: 2 },
+  crown: { dir: 'crowns', count: 1 },
+  animal: { dir: 'animals', count: 6 },
+  emoji: { dir: 'emojis', count: 4 }
+};
+
+
 // Function to get a random image for a given particle type
-export const getRandomParticleImage = async (type: string): Promise<string> => {
+export const getRandomParticleImage = async (type: string, imageNumberDet?: number): Promise<string> => {
     console.log(`Getting image for particle type: ${type}`);
     
     // Map particle types to their directory names and number of images
-    const particleConfig: { [key: string]: { dir: string, count: number } } = {
-        musicNote: { dir: 'musicNotes', count: 2 }, // Assuming you have 4 music note images
-        star: { dir: 'stars', count: 2 },
-        bubble: { dir: 'bubbles', count: 1 },
-        snowflake: { dir: 'snowflakes', count: 1 },
-        heart: { dir: 'hearts', count: 3},
-        leaves: { dir: 'leaves', count: 1 },
-        butterfly: { dir: 'butterflies', count: 1 },
-        confetti: { dir: 'confetti', count: 1 },
-        raindrop: { dir: 'raindrops', count: 1 },
-        firefly: { dir: 'fireflies', count: 1 },
-        balloon: { dir: 'balloons', count: 2},
-        flower: { dir: 'flowers', count: 1 },
-        firework: { dir: 'fireworks', count: 2 },
-        crown: { dir: 'crowns', count: 1 },
-        animal: { dir: 'animals', count: 6 },
-        emoji: { dir: 'emojis', count: 4 }
-    };
 
     const config = particleConfig[type] || particleConfig.musicNote;
     
-    // Get random image number
-    const imageNumber = Math.floor(Math.random() * config.count) + 1;
+    let imageNumber
+
+    if (imageNumberDet !== undefined) {
+      imageNumber = imageNumberDet;
+      // console.log("ImageNum is defined in getRandomParticleImage");
+    } else {
+      imageNumber = Math.floor(Math.random() * config.count) + 1;
+    }
     
     // Construct the relative path
     const imageName = type === 'bubble' ? 'bubbles1.png' : `${type}${imageNumber}.png`;

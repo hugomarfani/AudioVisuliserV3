@@ -10,7 +10,7 @@ class Particle {
   img: p5.Image | null;
   p: p5;
 
-  constructor(p: p5, x: number, y: number, type: string) {
+  constructor(p: p5, x: number, y: number, type: string, imageNum?: number) {
     console.log(`Creating particle of type: ${type} at position (${x}, ${y})`);
     this.p = p;
     this.pos = p.createVector(x, y);
@@ -22,18 +22,29 @@ class Particle {
     // Initialize with default image
     this.img = null;
     
-    // Load image immediately
-    this.loadImage();
+    // Load image immediately -> prevent white circles
+    if (imageNum !== undefined) {
+      this.loadImage(imageNum);
+    } else {
+      this.loadImage();
+    }
 
     // Get physics properties
     const physics = particlePhysics[type] || particlePhysics["musicNote"];
     this.lifespan = physics.lifespan;
   }
 
-  async loadImage() {
+  async loadImage(imageNum?: number) {
     try {
-      const imagePath = await getRandomParticleImage(this.type);
-      console.log('Loading particle image from:', imagePath);
+      let imagePath;
+      if (imageNum !== undefined) {
+        imagePath = await getRandomParticleImage(this.type, imageNum);
+        // console.log("ImageNum is defined in loadImage");
+      } else {
+        imagePath = await getRandomParticleImage(this.type);
+        // console.log("No ImageNum defined in loadImage");
+      }
+      // console.log('Loading particle image from:', imagePath);
       
       // Use p5's loadImage with a Promise wrapper
       this.img = await new Promise((resolve, reject) => {
@@ -221,14 +232,25 @@ class ParticleSystem {
     this.p = p;
   }
 
-  async addParticle(x: number, y: number, type: string): Promise<Particle | null> {
+  async addParticle(x: number, y: number, type: string, imageNum?: number): Promise<Particle | null> {
     console.log(`Adding particle: type=${type}, x=${x}, y=${y}`);
     if (this.particles.length >= this.maxParticles) {
       console.log('Max particles reached, removing oldest');
       this.particles.shift();
     }
-    const particle = new Particle(this.p, x, y, type);
-    await particle.loadImage(); // Wait for image to load
+    let particle;
+    if (imageNum !== undefined) {
+      particle = new Particle(this.p, x, y, type, imageNum);
+    } else {
+      particle = new Particle(this.p, x, y, type);
+    }
+    // const particle = new Particle(this.p, x, y, type);
+    if (imageNum !== undefined) {
+      await particle.loadImage(imageNum); 
+      // console.log("ImageNum is defined");
+    }else {
+      await particle.loadImage(); 
+    }
     this.particles.push(particle);
     console.log(`Total particles: ${this.particles.length}`);
     return particle;
