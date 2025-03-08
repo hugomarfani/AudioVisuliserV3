@@ -1,0 +1,30 @@
+{
+  "id": "KSbwHzlcgs8",
+  "title": "Katy Perry - Firework (Lyrics)",
+  "uploader": "7th Heaven",
+  "audioPath": "audio/KSbwHzlcgs8.mp3",
+  "jacket": "images/firework/firework.png",
+  "images": [
+    "images/firework/firework.gif"
+  ],
+  "moods": [],
+  "status": "Yellow",
+  "colours": [],
+  "colours_reason": [],
+  "objects": [],
+  "object_prompts": [],
+  "particles": [
+    "fireworks",
+    "musicNotes",
+    "raindrops"
+  ],
+  "backgrounds": [],
+  "background_prompts": [],
+  "createdAt": "2025-03-03T15:49:46.780Z",
+<<<<<<< HEAD:assets/songData/KSbwHzlcgs8.json
+  "updatedAt": "2025-03-03T15:49:46.781Z"
+}
+=======
+  "updatedAt": "2025-03-07T13:22:15.351Z"
+}
+>>>>>>> 26bb629f7ea836fafa0cdbfd100135ffa82f4589:resources/assets/songData/KSbwHzlcgs8.json

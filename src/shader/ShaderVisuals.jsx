@@ -3,7 +3,6 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import * as THREE from 'three';
 
 import { lerp } from 'three/src/math/MathUtils';
-
 import { AiOutlineForward, AiOutlineBackward } from 'react-icons/ai';
 import { FaPlay, FaPause } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
@@ -14,12 +13,6 @@ const findCompletePath = async (path) => {
     await window.electron.fileSystem.mergeAssetPath(path);
   return response;
 };
-
-let t1 = 'texture/Snowflake.png';
-(async () => {
-  t1 = await findCompletePath(t1);
-  console.log('t1: ', t1);
-})();
 
 const loadImage = (path) => {
   return new Promise((resolve, reject) => {

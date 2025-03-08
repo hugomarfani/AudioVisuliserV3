@@ -93,6 +93,19 @@
         "csetjmp": "cpp",
         "csignal": "cpp",
         "cwctype": "cpp",
-        "*.ipp": "cpp"
+        "*.ipp": "cpp",
+        "barrier": "cpp",
+        "cfenv": "cpp",
+        "cinttypes": "cpp",
+        "condition_variable": "cpp",
+        "coroutine": "cpp",
+        "execution": "cpp",
+        "future": "cpp",
+        "latch": "cpp",
+        "numbers": "cpp",
+        "queue": "cpp",
+        "semaphore": "cpp",
+        "shared_mutex": "cpp",
+        "syncstream": "cpp"
     }
 }

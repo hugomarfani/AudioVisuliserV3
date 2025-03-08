@@ -52,7 +52,7 @@ FetchContent_MakeAvailable(libsamplerate)
 # FetchContent_MakeAvailable(stb)
 
 
-set(TARGET_NAME test)
+set(TARGET_NAME cppVer)
 
 add_executable(${TARGET_NAME} src/main.cpp src/audio_utils.cpp src/imwrite.cpp)
 
