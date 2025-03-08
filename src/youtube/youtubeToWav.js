@@ -3,7 +3,7 @@ const ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
 const fs = require('fs');
 const { app } = require('electron');
-const { mainPaths} = require('../main/paths');
+const { mainPaths, getResourcePath} = require('../main/paths');
 
 const ffmpegPath = mainPaths.ffmpegPath;
 const ffprobePath = mainPaths.ffprobePath;
@@ -24,7 +24,7 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 ffmpeg.setFfprobePath(ffprobePath);
 
 const downloadYoutubeAudio = async (url) => {
-  const downloadsPath = path.join(app.getAppPath(), 'assets', 'audio');
+  const downloadsPath = getResourcePath('assets', 'audio');
 
   if (!fs.existsSync(downloadsPath)) {
     fs.mkdirSync(downloadsPath, { recursive: true });

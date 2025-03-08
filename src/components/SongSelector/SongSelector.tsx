@@ -39,6 +39,8 @@ const SongSelector: React.FC<SongSelectorProps> = ({
   const { songs, loading, error, refetch } = useSongs();
   const [currentPage, setCurrentPage] = useState(1);
   const songsPerPage = 8;
+  const [showParticleManager, setShowParticleManager] = useState<boolean>(false);
+  const [selectedParticleSong, setSelectedParticleSong] = useState<string | null>(null);
 
   const toggleFilter = (color: 'Blue' | 'Green' | 'Yellow' | 'Red') => {
     setSelectedFilters((prevFilters) => {
@@ -100,6 +102,13 @@ const SongSelector: React.FC<SongSelectorProps> = ({
     } catch (error) {
       console.error('Error reloading songs:', error);
     }
+  };
+
+  // Add function to open particle manager
+  const openParticleManager = (songId: string) => {
+    setSelectedParticleSong(songId);
+    setIsSongDetailsOpen(true);
+    // You could add a flag to auto-open the particle section here
   };
 
   // Calculate pagination values
@@ -287,6 +296,8 @@ const SongSelector: React.FC<SongSelectorProps> = ({
               accessToken={accessToken}
               selectedDevice={selectedDevice}
               onDetailsClick={handleSongDetailsOpen} // Pass the handleSongDetailsOpen function
+              // Add particle management button
+              onParticleClick={() => openParticleManager(song.dataValues.id)}
             />
           ))
         ) : (

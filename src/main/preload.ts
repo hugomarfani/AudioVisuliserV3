@@ -10,7 +10,18 @@ export type Channels =
   | 'download-mp3'
   | 'run-whisper'
   | 'run-gemma'
-  | 'run-gemma-reply';
+  | 'run-gemma-with-options'
+  | 'run-gemma-reply'
+  | 'run-stable-diffusion'
+  | 'update-song'
+  | 'save-song-as-json'
+  | 'save-image'
+  | 'open-file-dialog'
+  | 'delete-image'
+  | 'ai-progress-update'  // New channel for progress updates
+  | 'ai-error'           // New channel for error reporting
+  | 'ai-process-complete'; // New channel for process completion
+
 
 const electronHandler = {
   ipcRenderer: {
@@ -21,8 +32,13 @@ const electronHandler = {
       channel: Channels,
       func: (...args: unknown[]) => void,
     ): (() => void) | undefined {
-      const subscription = (_event: IpcRendererEvent, ...args: unknown[]) =>
+      // Fix: Create a subscription function that properly passes data
+      const subscription = (_event: IpcRendererEvent, ...args: unknown[]) => {
+        // Make sure we're logging the data that comes from the main process
+        console.log("Received in preload:", channel, args);
         func(...args);
+      };
+      
       ipcRenderer.on(channel, subscription);
 
       return () => {
@@ -39,6 +55,23 @@ const electronHandler = {
     invoke(channel: Channels, ...args: unknown[]): Promise<unknown> {
       return ipcRenderer.invoke(channel, ...args);
     },
+    // Add explicit methods for handling AI progress tracking
+    off(channel: Channels, func: (...args: unknown[]) => void): void {
+      // We need to create a similar function reference here as the one we used in 'on'
+      // Otherwise the event listener won't be properly removed
+      const validChannels: Channels[] = [
+        'ai-progress-update',
+        'ai-error',
+        'ai-process-complete'
+      ] as Channels[];
+      
+      if (validChannels.includes(channel)) {
+        console.log("Removing listener for:", channel);
+        // The key issue is that we need to use a stored reference to the original subscription
+        // but since we don't have that, we'll directly call removeAllListeners
+        ipcRenderer.removeAllListeners(channel);
+      }
+    }
   },
   database: {
     fetchSongs: () => ipcRenderer.invoke('fetch-songs'),

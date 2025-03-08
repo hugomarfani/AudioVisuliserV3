@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaInfoCircle } from 'react-icons/fa';
+import { FaInfoCircle, FaStar } from 'react-icons/fa';
 import colors from '../../theme/colors';
 import { SongModel } from '../../database/models/Song';
 import { useNavigate } from 'react-router-dom';
@@ -12,6 +12,7 @@ type SongCardProps = {
   accessToken: string;
   selectedDevice: string | null;
   onDetailsClick: (songID: string) => void;
+  onParticleClick?: (songId: string) => void;
 };
 
 const statusMap: Record<string, string> = {
@@ -26,6 +27,7 @@ function SongCard({
   songDetails,
   onSelect,
   onDetailsClick,
+  onParticleClick,
 }: SongCardProps): JSX.Element {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
@@ -204,6 +206,28 @@ function SongCard({
         >
           Shader
         </button>
+        {onParticleClick && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onParticleClick(uri);
+            }}
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '9999px',
+              padding: '0.4rem 0.6rem',
+              fontSize: '0.8rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            <FaStar size={12} style={{ marginRight: '0.3rem' }} />
+            Particles
+          </button>
+        )}
       </div>
     </div>
   );
