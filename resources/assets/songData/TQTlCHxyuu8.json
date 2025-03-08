@@ -1,0 +1,26 @@
+{
+  "id": "TQTlCHxyuu8",
+  "title": "Stray Kids \"神메뉴(God's Menu)\" M/V",
+  "uploader": "JYP Entertainment",
+  "audioPath": "audio/TQTlCHxyuu8.mp3",
+  "jacket": "images/TQTlCHxyuu8/jacket.png",
+  "images": [],
+  "moods": [],
+  "status": "Yellow",
+  "colours": [],
+  "colours_reason": [],
+  "objects": [],
+  "object_prompts": [],
+  "particles": [],
+  "backgrounds": [],
+  "background_prompts": [],
+  "shaderBackground": "assets/shader/background/TQTlCHxyuu8.jpg",
+  "shaderTexture": "assets/shader/texture/TQTlCHxyuu8.jpg",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ],
+  "createdAt": "2025-03-08T16:04:37.704Z",
+  "updatedAt": "2025-03-08T16:04:37.705Z"
+}

@@ -1,0 +1,26 @@
+{
+  "id": "DykVJl6wr_4",
+  "title": "High School Musical Cast - We're All In This Together (From \"High School Musical\")",
+  "uploader": "DisneyMusicVEVO",
+  "audioPath": "audio/DykVJl6wr_4.mp3",
+  "jacket": "images/DykVJl6wr_4/jacket.png",
+  "images": [],
+  "moods": [],
+  "status": "Red",
+  "colours": [],
+  "colours_reason": [],
+  "objects": [],
+  "object_prompts": [],
+  "particles": [],
+  "backgrounds": [],
+  "background_prompts": [],
+  "shaderBackground": "assets/shader/background/DykVJl6wr_4.jpg",
+  "shaderTexture": "assets/shader/texture/DykVJl6wr_4.jpg",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ],
+  "createdAt": "2025-03-08T16:20:50.758Z",
+  "updatedAt": "2025-03-08T16:20:50.759Z"
+}

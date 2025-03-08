@@ -1,0 +1,26 @@
+{
+  "id": "4fndeDfaWCg",
+  "title": "Backstreet Boys - I Want It That Way (Official HD Video)",
+  "uploader": "Backstreet Boys",
+  "audioPath": "audio/4fndeDfaWCg.mp3",
+  "jacket": "images/4fndeDfaWCg/jacket.png",
+  "images": [],
+  "moods": [],
+  "status": "Blue",
+  "colours": [],
+  "colours_reason": [],
+  "objects": [],
+  "object_prompts": [],
+  "particles": [],
+  "backgrounds": [],
+  "background_prompts": [],
+  "shaderBackground": "assets/shader/background/4fndeDfaWCg.jpg",
+  "shaderTexture": "assets/shader/texture/4fndeDfaWCg.jpg",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ],
+  "createdAt": "2025-03-08T16:09:49.909Z",
+  "updatedAt": "2025-03-08T16:09:49.909Z"
+}

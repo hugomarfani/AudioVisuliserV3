@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import colors from '../../theme/colors';
+import AIProgressTracker from '../common/AIProgressTracker';
+import { FaSpinner } from 'react-icons/fa';
 
 const GEMMA_PROMPTS = [
   { id: 'emotions', label: 'Detect Emotions' },
@@ -26,11 +28,100 @@ const AddSongForm: React.FC<AddSongFormProps> = ({ onSubmit }) => {
   const [selectedPrompt, setSelectedPrompt] = useState('');
   const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
   const [status, setStatus] = useState<string>('');
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [currentOperationId, setCurrentOperationId] = useState<string | null>(null);
+  const [progressSteps, setProgressSteps] = useState<{ key: string; label: string; completed: boolean }[]>([]);
+
+  // Progress step display names
+  const progressLabels: Record<string, string> = {
+    download: 'Downloading YouTube Audio',
+    converting: 'Converting to WAV Format',
+    aiSetup: 'Preparing AI Environment',
+    whisper: 'Running Speech Recognition'
+  };
 
   const isValidYouTubeUrl = (url: string) => {
     const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
     return youtubeRegex.test(url);
   };
+
+  // Set up listeners for Whisper progress events when component mounts
+  React.useEffect(() => {
+    let removeProgressListener: (() => void) | undefined;
+    let removeErrorListener: (() => void) | undefined;
+    let removeCompleteListener: (() => void) | undefined;
+    
+    const progressListener = (data: any) => {
+      if (data && data.operationId === currentOperationId) {
+        console.log("Progress update received:", data);
+        setProgressSteps(prevSteps => {
+          const stepIndex = prevSteps.findIndex(step => step.key === data.step);
+          
+          let newSteps;
+          if (stepIndex >= 0) {
+            newSteps = [...prevSteps];
+            newSteps[stepIndex] = {
+              ...newSteps[stepIndex],
+              completed: data.completed
+            };
+          } else {
+            newSteps = [
+              ...prevSteps,
+              {
+                key: data.step,
+                label: progressLabels[data.step] || data.step,
+                completed: data.completed
+              }
+            ];
+          }
+          
+          return newSteps;
+        });
+      }
+    };
+
+    const errorListener = (data: any) => {
+      if (data && data.operationId === currentOperationId) {
+        setStatus(`Error: ${data.error}`);
+        setIsProcessing(false);
+        
+        if (removeProgressListener) removeProgressListener();
+        if (removeErrorListener) removeErrorListener();
+        if (removeCompleteListener) removeCompleteListener();
+      }
+    };
+
+    const completeListener = (data: any) => {
+      if (data && data.operationId === currentOperationId) {
+        setIsProcessing(false);
+        setStatus('Processing completed successfully!');
+        
+        // Continue with form submission or other actions
+        onSubmit({ url, prompt: selectedPrompt, moods: selectedMoods });
+        setUrl('');
+        setSelectedPrompt('');
+        setSelectedMoods([]);
+        
+        if (removeProgressListener) removeProgressListener();
+        if (removeErrorListener) removeErrorListener();
+        if (removeCompleteListener) removeCompleteListener();
+      }
+    };
+
+    // Set up listeners
+    if (currentOperationId) {
+      removeProgressListener = window.electron.ipcRenderer.on('ai-progress-update', progressListener);
+      removeErrorListener = window.electron.ipcRenderer.on('ai-error', errorListener);
+      removeCompleteListener = window.electron.ipcRenderer.on('ai-process-complete', completeListener);
+    }
+
+    return () => {
+      // Cleanup function
+      if (removeProgressListener) removeProgressListener();
+      if (removeErrorListener) removeErrorListener();
+      if (removeCompleteListener) removeCompleteListener();
+    };
+  }, [currentOperationId, onSubmit, url, selectedPrompt, selectedMoods, progressLabels]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,27 +129,53 @@ const AddSongForm: React.FC<AddSongFormProps> = ({ onSubmit }) => {
       setStatus('Invalid YouTube URL');
       return;
     }
-    setStatus('Downloading and converting to WAV...');
+    
+    // Generate operation ID
+    const operationId = `add-song-${Date.now()}`;
+    setCurrentOperationId(operationId);
+    
+    // Initialize processing state
+    setIsProcessing(true);
+    setProgressSteps([
+      { key: 'download', label: 'Downloading YouTube Audio', completed: false },
+      // { key: 'converting', label: 'Converting to WAV Format', completed: false }
+    ]);
+    setStatus('Downloading and processing...');
+    
     try {
+      // Update download step
+      setProgressSteps(prev => {
+        return prev.map(step => 
+          step.key === 'download' ? { ...step, completed: false } : step
+        );
+      });
+      
       const resultID = await window.electron.ipcRenderer.invoke(
         'download-wav',
         url,
       );
-      setStatus(`Successfully converted to WAV! Saved to: ${resultID}`);
-      const whisperResult = await window.electron.ipcRenderer.invoke(
+      
+      // Mark download as complete
+      setProgressSteps(prev => {
+        return prev.map(step => 
+          step.key === 'download' ? { ...step, completed: true } : step
+        );
+      });
+      
+      setStatus(`Successfully downloaded! Processing with Whisper...`);
+      
+      // Run whisper with our operation ID
+      await window.electron.ipcRenderer.invoke(
         'run-whisper',
         resultID,
+        operationId
       );
-      console.log('Whisper result:', whisperResult);
-      setStatus('Running Whisper analysis...');
-      await whisperResult;
-      setStatus('Successfully analyzed with Whisper!');
-      onSubmit({ url, prompt: selectedPrompt, moods: selectedMoods });
-      setUrl('');
-      setSelectedPrompt('');
-      setSelectedMoods([]);
+      
+      // The rest of the process will be handled by the listeners set up in useEffect
     } catch (error) {
       setStatus(`Error: ${error.message || 'Unknown error occurred'}`);
+      setIsProcessing(false);
+      setCurrentOperationId(null);
     }
   };
 
@@ -87,26 +204,6 @@ const AddSongForm: React.FC<AddSongFormProps> = ({ onSubmit }) => {
         }}
         required
       />
-
-      {/* <select
-        value={selectedPrompt}
-        onChange={(e) => setSelectedPrompt(e.target.value)}
-        style={{
-          padding: '0.5rem',
-          borderRadius: '8px',
-          border: `1px solid ${colors.grey2}`,
-          fontSize: '1rem',
-          backgroundColor: colors.white,
-        }}
-        required
-      >
-        <option value="">Select Gemma Prompt</option>
-        {GEMMA_PROMPTS.map((prompt) => (
-          <option key={prompt.id} value={prompt.id}>
-            {prompt.label}
-          </option>
-        ))}
-      </select> */}
 
       <div>
         <p style={{ marginBottom: '0.5rem', color: colors.grey2 }}>
@@ -154,26 +251,34 @@ const AddSongForm: React.FC<AddSongFormProps> = ({ onSubmit }) => {
 
       <button
         type="submit"
+        disabled={isProcessing}
         style={{
           padding: '0.75rem 2rem',
-          backgroundColor: colors.blue,
+          backgroundColor: isProcessing ? colors.grey3 : colors.blue,
           color: colors.white,
           border: 'none',
           borderRadius: '999px',
-          cursor: 'pointer',
+          cursor: isProcessing ? 'not-allowed' : 'pointer',
           fontSize: '1rem',
           marginTop: '1rem',
           width: 'fit-content',
           alignSelf: 'center',
           transition: 'all 0.2s ease',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
         }}
       >
-        Add Song
+        {isProcessing && <FaSpinner style={{ animation: 'spin 1s linear infinite' }} />}
+        {isProcessing ? 'Processing...' : 'Add Song'}
       </button>
 
-      {status && (
-        <p style={{ color: colors.grey2, textAlign: 'center' }}>{status}</p>
-      )}
+      {/* Use AIProgressTracker component */}
+      <AIProgressTracker 
+        isProcessing={isProcessing}
+        progressSteps={progressSteps}
+        statusMessage={status}
+      />
     </form>
   );
 };

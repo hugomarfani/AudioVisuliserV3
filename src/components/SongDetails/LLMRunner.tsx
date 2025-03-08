@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaPlay, FaList, FaCheckSquare, FaSpinner, FaCheck } from 'react-icons/fa';
 import { SongModel } from '../../database/models/Song';
 import colors from '../../theme/colors';
+import AIProgressTracker from '../common/AIProgressTracker';
 
 interface LLMRunnerProps {
   song: SongModel;
@@ -449,77 +450,12 @@ const LLMRunner: React.FC<LLMRunnerProps> = ({ song, songId, refetch }) => {
         </div>
       )}
       
-      {/* Progress Checklist */}
-      {isProcessing && (
-        <div style={{ 
-          backgroundColor: colors.grey5, 
-          borderRadius: '12px', 
-          padding: '1rem', 
-          marginBottom: '1rem'
-        }}>
-          <h4 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Processing Status:</h4>
-          
-          {progressSteps.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {progressSteps.map((step) => (
-                <div 
-                  key={step.key} 
-                  style={{ 
-                    display: 'flex', 
-                    alignItems: 'center',
-                    padding: '0.5rem',
-                    borderRadius: '8px',
-                    backgroundColor: step.completed ? 'rgba(52, 199, 89, 0.1)' : 'transparent'
-                  }}
-                >
-                  {step.completed ? (
-                    <FaCheck style={{ marginRight: '0.5rem', color: '#34C759' }} />
-                  ) : (
-                    <FaSpinner 
-                      style={{ 
-                        marginRight: '0.5rem', 
-                        color: colors.blue,
-                        animation: 'spin 1s linear infinite'
-                      }} 
-                    />
-                  )}
-                  <span style={{ 
-                    color: step.completed ? '#34C759' : colors.white,
-                  }}>
-                    {step.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ padding: '0.5rem' }}>
-              <FaSpinner 
-                style={{ 
-                  marginRight: '0.5rem', 
-                  color: colors.blue,
-                  animation: 'spin 1s linear infinite'
-                }} 
-              />
-              <span>Initializing process...</span>
-            </div>
-          )}
-        </div>
-      )}
-      
-      {/* Gemma Status Message */}
-      {gemmaStatus && (
-        <p
-          style={{ 
-            fontSize: '1rem', 
-            color: gemmaStatus.includes('Error') || gemmaStatus.includes('Cannot')
-              ? '#FF3B30' 
-              : colors.grey2,
-            marginTop: '1rem' 
-          }}
-        >
-          {gemmaStatus}
-        </p>
-      )}
+      {/* Use AIProgressTracker component */}
+      <AIProgressTracker 
+        isProcessing={isProcessing}
+        progressSteps={progressSteps}
+        statusMessage={gemmaStatus}
+      />
       
       {/* Add keyframe animation for spinner */}
       <style >{`

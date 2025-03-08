@@ -3,30 +3,17 @@
   "title": "Bruno Mars - Grenade (Official Music Video)",
   "uploader": "Bruno Mars",
   "audioPath": "audio/SR6iYWJxHqs.mp3",
-  "jacket": "icon.png",
-  "images": [],
+  "jacket": "images/SR6iYWJxHqs/jacket.png",
+  "images": [
+    "images/SR6iYWJxHqs/jacket.png"
+  ],
   "moods": [],
-  "status": "Yellow",
-  "colours": [
-    "#FFD700",
-    "#800080",
-    "#008000",
-    "#FFC0CB",
-    "#0000FF",
-    "#800080",
-    "#008000",
-    "#FFC0CB",
-    "#0000FF"
-  ],
-  "colours_reason": [
-    "\n\n```\nColor 1: #FFD700\nColor 2: #800080\nColor 3: #008000\nColor 4: #FFC0CB\nColor 5: #0000FF\n\nColor 1 reason: The lyrics mention \"tossing something in the trash,\" which often evokes the image of a yellow garbage bag.\nColor 2: #800080 reason: The phrase \"black, black and blue\" strongly suggests the color purple, often associated with bruises and pain.\nColor 3: #008000 reason: The line \"catch a grenade for you\" implies a sense of sacrifice and protection, reminiscent of the green camouflage worn by soldiers.\nColor 4: #FFC0CB reason: The lyrics describe the woman as a \"mad woman, bad woman,\" which could be associated with a shade of pink often used to portray anger or aggression.\nColor 5: #0000FF reason: The line \"take a bullet straight through my brain\" evokes a sense of darkness and danger, represented by the color blue often associated with the night sky. \n```\n\n\n\nLet me know if you'd like me to analyze another song!\n"
-  ],
+  "status": "Green",
+  "colours": [],
+  "colours_reason": [],
   "objects": [],
   "object_prompts": [],
-  "particles": [
-    "balloons",
-    "bubbles"
-  ],
+  "particles": [],
   "backgrounds": [],
   "background_prompts": [],
   "shaderBackground": "assets/shader/background/SR6iYWJxHqs.jpg",
@@ -36,6 +23,6 @@
     "255",
     "255"
   ],
-  "createdAt": "2025-03-07T22:27:20.059Z",
-  "updatedAt": "2025-03-08T15:32:33.203Z"
+  "createdAt": "2025-03-08T16:35:12.470Z",
+  "updatedAt": "2025-03-08T16:35:12.471Z"
 }

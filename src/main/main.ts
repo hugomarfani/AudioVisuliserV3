@@ -237,7 +237,7 @@ ipcMain.handle('download-wav', async (_, url) => {
       uploader: artist,
       audioPath: 'audio/' + id + '.mp3',
       jacket: thumbnailPath, // Use the downloaded thumbnail path instead of icon.png
-      images: [],
+      images: [thumbnailPath],
       moods: [],
       status: randomStatus,
       colours: [],
