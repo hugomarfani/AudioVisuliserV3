@@ -33,6 +33,9 @@ const Particles: React.FC = () => {
           songDetails.jacket
         );
 
+        console.log("path test")
+        console.log(jacketPath, songDetails.jacket);''
+
         // Load all image paths with logging
         try {
           const imagePaths = await Promise.all(
@@ -51,6 +54,8 @@ const Particles: React.FC = () => {
 
         setFullAudioPath(audioPath);
         setFullJacketPath(jacketPath);
+        console.log(fullAudioPath, fullJacketPath);
+
       }
     };
     loadAssets();
@@ -110,7 +115,7 @@ const Particles: React.FC = () => {
       console.log('No background images available');
       return;
     }
-    
+
     if (duration !== songDuration) {
       setSongDuration(duration);
       console.log('Song duration:', duration);
@@ -122,7 +127,7 @@ const Particles: React.FC = () => {
       Math.floor(currentTime / intervalDuration),
       backgroundImages.length - 1
     );
-    
+
     if (newIndex !== currentImageIndex) {
       console.log('Switching to image index:', newIndex);
       console.log('Current image path:', backgroundImages[newIndex]);
@@ -134,8 +139,8 @@ const Particles: React.FC = () => {
 
   return (
     <div className={`page-transition ${isVisible ? 'visible' : ''}`}
-      style={{ 
-        width: '100vw', 
+      style={{
+        width: '100vw',
         height: '100vh',
         position: 'fixed',
         top: 0,
@@ -163,9 +168,9 @@ const Particles: React.FC = () => {
       )}
 
       {/* Particle container on top of background */}
-      <div 
-        ref={containerRef} 
-        style={{ 
+      <div
+        ref={containerRef}
+        style={{
           position: 'fixed',
           top: 0,
           left: 0,
@@ -173,9 +178,9 @@ const Particles: React.FC = () => {
           height: '100%',
           zIndex: 1,
           background: 'transparent',
-        }} 
+        }}
       />
-      
+
       {/* Back button and player with highest z-index */}
       <button
         onClick={handleBack}
@@ -197,7 +202,7 @@ const Particles: React.FC = () => {
       </button>
 
       {fullAudioPath && (
-        <div 
+        <div
           className={`player-wrapper ${isVisible ? 'visible' : ''}`}
           style={{
             position: 'fixed', // Change to fixed
@@ -224,10 +229,10 @@ const Particles: React.FC = () => {
       {/* Force image preloading */}
       <div style={{ display: 'none', position: 'absolute' }}>
         {backgroundImages.map((imagePath, index) => (
-          <img 
-            key={index} 
-            src={imagePath} 
-            alt="" 
+          <img
+            key={index}
+            src={imagePath}
+            alt=""
             onLoad={() => console.log(`Preloaded image ${index} loaded successfully:`, imagePath)}
             onError={(e) => console.error(`Error loading image ${index}:`, e)}
           />

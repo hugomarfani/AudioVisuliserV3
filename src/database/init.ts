@@ -54,6 +54,7 @@ const initDatabase = async () => {
     const songFiles = fs
       .readdirSync(songDataDir)
       .filter((file) => file.endsWith('.json'));
+    console.log(songDataDir)
     const sampleSongs = songFiles.map((file) => {
       const filePath = path.join(songDataDir, file);
       const songData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
