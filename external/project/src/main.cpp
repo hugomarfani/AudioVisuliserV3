@@ -107,6 +107,7 @@ std::string backgroundSettings =
 // ----------------- paths -----------------
 std::filesystem::path currentDirectory = std::filesystem::current_path();
 std::string gemmaModelPath;
+std::string smallerLLMPath;
 std::string stableDiffusionModelPath;
 std::filesystem::path whisperModelPath;
 std::filesystem::path songDataPath;
@@ -119,6 +120,8 @@ std::filesystem::path imageDirPath;
 void setPaths() {
   gemmaModelPath =
       (currentDirectory / "AiResources" / "gemma-2-9b-it-int4-ov").string();
+  smallerLLMPath =
+      (currentDirectory / "AiResources" / "Phi-3-mini-4k-instruct-int4-ov").string();
   stableDiffusionModelPath =
       (currentDirectory / "AiResources" / "dreamlike_anime_1_0_ov" / "FP16")
           .string();
@@ -157,6 +160,50 @@ void setPaths() {
 //     (currentDirectory / "AiResources" / "sd-v1-5-int8-onnx");
 // std::string textEncoderPath = (sdPath / "text_encoder" /
 // "model.onnx").string(); std::string
+
+
+// ----------------- Finish Functions -----------------
+// Specific Finish statements, which trigger flags in Super Happy Space
+void finishWhisper() {
+  std::cout << "Finished Whisper" << std::endl;
+}
+void finishLLM() {
+  std::cout << "Finished LLM" << std::endl;
+}
+void finishStableDiffusion() {
+  std::cout << "Finished Stable Diffusion" << std::endl;
+}
+
+void finishAISetup() {
+  std::cout << "Finished AI Setup" << std::endl;
+}
+
+void finishStatusExtraction() {
+  std::cout << "Finished Status Extraction" << std::endl;
+}
+void finishColourExtraction() {
+  std::cout << "Finished Colour Extraction" << std::endl;
+}
+void finishParticleExtraction() {
+  std::cout << "Finished Particle Extraction" << std::endl;
+}
+void finishObjectExtraction() {
+  std::cout << "Finished Object Extraction" << std::endl;
+}
+void finishBackgroundExtraction() {
+  std::cout << "Finished Background Extraction" << std::endl;
+}
+void finishObjectPrompts() {
+  std::cout << "Finished Object Prompts" << std::endl;
+}
+void finishBackgroundPrompts() {
+  std::cout << "Finished Background Prompts" << std::endl;
+}
+
+void finishJsonStorage() {
+  std::cout << "Finished Json Storage" << std::endl;
+}
+
 
 // ----------------- Log Functions -----------------
 void redirectConsoleOutput() {
@@ -741,6 +788,8 @@ int main(int argc, char *argv[]) {
     --prompt <arg>: prompt to generate image
 
   LLM only options
+    --smallerLLM: use smaller LLM model, with less parameters
+    --status: extract status from lyrics
     -c, --extractColour: extract colours from lyrics
     -p, --extractParticle: extract particle effect from lyrics
     -o, --extractObject: extract objects from lyrics
@@ -772,7 +821,10 @@ int main(int argc, char *argv[]) {
 
   po::options_description llm_options("LLM only options");
 
-  llm_options.add_options()("extractColour,c", "extract colours from lyrics")(
+  llm_options.add_options()
+      ("status", "extract status from lyrics")
+      ("smallerLLM", "use smaller LLM model, with less parameters")
+      ("extractColour,c", "extract colours from lyrics")(
       "extractParticle,p", "extract particle effect from lyrics")(
       "extractObject,o", "extract objects from lyrics")(
       "extractBackground,b", "extract backgrounds from lyrics")(
@@ -855,6 +907,7 @@ int main(int argc, char *argv[]) {
     std::string modelPath =
         (currentDirectory / "AiResources" / modelName).string();
     gemmaModelPath = modelPath;
+    smallerLLMPath = modelPath;
     stableDiffusionModelPath = modelPath;
     whisperModelPath = modelPath;
   }
@@ -886,13 +939,16 @@ int main(int argc, char *argv[]) {
       std::cout << "pipe created" << std::endl;
       // StableDiffusion stableDiffusion(t2iPipe, device, songId, debug);
       // stableDiffusion.generateImage(vm["prompt"].as<std::string>());
+      finishStableDiffusion();
     } catch (const std::exception &e) {
       std::cerr << "Error: " << e.what() << std::endl;
       cleanup();
+      finishStableDiffusion();
       return 1;
     } catch (...) {
       std::cerr << "Error: Unknown error" << std::endl;
       cleanup();
+      finishStableDiffusion();
       return 1;
     }
   }
@@ -913,7 +969,9 @@ int main(int argc, char *argv[]) {
       std::cout << "Starting Whisper Pipeline" << std::endl;
       try {
         Whisper whisper(songId, debug);
+        finishAISetup();
         whisper.generateLyrics();
+        finishWhisper();
         // delete wav file after lyrics have been generated
         std::string wavPath = (wavDirPath / (songId + ".wav")).string();
         std::filesystem::remove(wavPath);
@@ -929,26 +987,42 @@ int main(int argc, char *argv[]) {
   if (vm.count("llm")) {
     std::cout << "Starting LLM Pipeline" << std::endl;
     try {
+      if (vm.count("smallerLLM")){
+        gemmaModelPath = smallerLLMPath;
+      }
       LLM llm(gemmaModelPath, songId, debug);
+      finishAISetup();
+      if (vm.count("status")) {
+        llm.extractStatus();
+        finishStatusExtraction();
+      }
       if (vm.count("extractColour")) {
         llm.extractColours();
+        finishColourExtraction();
       }
       if (vm.count("extractParticle")) {
         llm.extractParticleEffect();
+        finishParticleExtraction();
       }
       if (vm.count("extractObject")) {
         llm.extractObjects();
+        finishObjectExtraction();
       }
       if (vm.count("extractBackground")) {
         llm.extractBackgrounds();
+        finishBackgroundExtraction();
       }
       if (vm.count("generateObjectPrompts")) {
         llm.generateObjectPrompts();
+        finishObjectPrompts();
       }
       if (vm.count("generateBackgroundPrompts")) {
         llm.generateBackgroundPrompts();
+        finishBackgroundPrompts();
       }
       llm.jsonStoreData();
+      finishJsonStorage();
+      finishLLM();
     } catch (const std::exception &e) {
       std::cerr << "Error: " << e.what() << std::endl;
       cleanup();

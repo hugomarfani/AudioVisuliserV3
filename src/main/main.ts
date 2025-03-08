@@ -43,6 +43,94 @@ const SDPath = mainPaths.SDPath;
 
 registerImageHandlers();
 
+// Define the possible progress steps for tracking
+const progressSteps = {
+  whisper: 'Finished Whisper',
+  llm: 'Finished LLM',
+  stableDiffusion: 'Finished Stable Diffusion',
+  aiSetup: 'Finished AI Setup',
+  statusExtraction: 'Finished Status Extraction',
+  colourExtraction: 'Finished Colour Extraction',
+  particleExtraction: 'Finished Particle Extraction',
+  objectExtraction: 'Finished Object Extraction',
+  backgroundExtraction: 'Finished Background Extraction',
+  objectPrompts: 'Finished Object Prompts',
+  backgroundPrompts: 'Finished Background Prompts',
+  jsonStorage: 'Finished Json Storage'
+};
+
+// Helper function to parse stdout and track progress
+function trackProgressFromStdout(data: Buffer, sender: Electron.WebContents, operationId: string) {
+  const output = data.toString();
+  console.log(`📜 stdout: ${output}`);
+  
+  // Check for each progress step
+  Object.entries(progressSteps).forEach(([key, message]) => {
+    if (output.includes(message)) {
+      const progressData = { 
+        operationId,
+        step: key,
+        message: message,
+        completed: true
+      };
+      console.log("Sending progress update:", progressData);
+      // Send with explicit event name
+      sender.send('ai-progress-update', progressData);
+    }
+  });
+}
+
+// General purpose function to run AI processes with progress tracking
+function runAIProcessWithTracking(
+  command: string,
+  args: string[],
+  sender: Electron.WebContents,
+  operationId: string,
+  expectedSteps: string[]
+) {
+  // Initialize all expected steps as not completed
+  expectedSteps.forEach(step => {
+    const progressData = {
+      operationId,
+      step,
+      message: `Waiting for ${step}...`,
+      completed: false
+    };
+    console.log("Sending initial step:", progressData);
+    // Use explicit event name
+    sender.send('ai-progress-update', progressData);
+  });
+
+  // Start the process
+  const process = spawn(command, args);
+  
+  process.stdout.on('data', (data) => {
+    trackProgressFromStdout(data, sender, operationId);
+  });
+  
+  process.stderr.on('data', (data) => {
+    const errorMessage = data.toString();
+    console.error(`⚠️ stderr: ${errorMessage}`);
+    const errorData = {
+      operationId,
+      error: errorMessage
+    };
+    console.log("Sending error:", errorData);
+    sender.send('ai-error', errorData);
+  });
+  
+  process.on('close', (code) => {
+    console.log(`✅ Process exited with code ${code}`);
+    const completeData = {
+      operationId,
+      exitCode: code
+    };
+    console.log("Sending process complete:", completeData);
+    sender.send('ai-process-complete', completeData);
+    return code;
+  });
+}
+
 ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
   console.log(msgTemplate(arg));
@@ -172,25 +260,27 @@ ipcMain.handle('download-wav', async (_, url) => {
   }
 });
 
+// Replace existing run-whisper handler
 ipcMain.handle('run-whisper', (event, songId) => {
   console.log('Running whisper with songId:', songId, "with exePath:", exePath);
-  const process = spawn('powershell', [
-    '-ExecutionPolicy',
-    'Bypass',
-    '-Command',
-    `& { . '${ps1Path}'; & ${exePath} -e -w --song ${songId}; }`,
-  ]);
-  process.stdout.on('data', (data) => {
-    console.log(`📜 stdout: ${data.toString()}`);
-  });
-  process.stderr.on('data', (data) => {
-    console.error(`⚠️ stderr: ${data.toString()}`);
-    throw new Error(data.toString());
-  });
-  process.on('close', (code) => {
-    console.log(`✅ Process exited with code ${code}`);
-    return code;
-  });
+  
+  const operationId = `whisper-${songId}-${Date.now()}`;
+  const expectedSteps = ['aiSetup', 'whisper'];
+  
+  runAIProcessWithTracking(
+    'powershell',
+    [
+      '-ExecutionPolicy',
+      'Bypass',
+      '-Command',
+      `& { . '${ps1Path}'; & ${exePath} -e -w --song ${songId}; }`,
+    ],
+    event.sender,
+    operationId,
+    expectedSteps
+  );
+  
+  return operationId;
 });
 
 // Add the function to build Gemma command with options
@@ -213,22 +303,30 @@ function buildGemmaCommand(songId: string, options: Record<string, boolean>) {
 // Keep the existing simple Gemma handler (without options) for backward compatibility
 ipcMain.handle('run-gemma', (event, songId: string) => {
   console.log('Running Gemma with songId:', songId);
-  const process = spawn('powershell', [
-    '-ExecutionPolicy',
-    'Bypass',
-    '-Command',
-    `& { . '${ps1Path}'; & ${exePath} -e -l -s ${songId} --all; }`,
-  ]);
-  process.stdout.on('data', (data) => {
-    console.log(`📜 stdout: ${data.toString()}`);
-  });
-  process.stderr.on('data', (data) => {
-    console.error(`⚠️ stderr: ${data.toString()}`);
-  });
-  process.on('close', (code) => {
-    console.log(`✅ Process exited with code ${code}`);
-    return code;
-  });
+  
+  const operationId = `gemma-${songId}-${Date.now()}`;
+  const expectedSteps = [
+    'aiSetup', 
+    'statusExtraction', 'colourExtraction', 'particleExtraction', 
+    'objectExtraction', 'backgroundExtraction', 
+    'objectPrompts', 'backgroundPrompts', 
+    'jsonStorage', 'llm'
+  ];
+  
+  runAIProcessWithTracking(
+    'powershell',
+    [
+      '-ExecutionPolicy',
+      'Bypass',
+      '-Command',
+      `& { . '${ps1Path}'; & ${exePath} -e -l -s ${songId} --all; }`,
+    ],
+    event.sender,
+    operationId,
+    expectedSteps
+  );
+  
+  return operationId;
 });
 
 // Add new handler with options
@@ -236,51 +334,77 @@ ipcMain.handle('run-gemma-with-options', (event, { songId, options }) => {
   console.log('Running Gemma with options:', songId, options);
   
   const command = buildGemmaCommand(songId, options);
+  const operationId = `gemma-options-${songId}-${Date.now()}`;
   
-  const process = spawn('powershell', [
-    '-ExecutionPolicy',
-    'Bypass',
-    '-Command',
-    `& { . '${ps1Path}'; & ${command}; }`,
-  ]);
+  // Determine which steps to expect based on the options
+  const expectedSteps = ['aiSetup'];
   
-  process.stdout.on('data', (data) => {
-    console.log(`📜 stdout: ${data.toString()}`);
-  });
+  if (options.rerunWhisper) {
+    expectedSteps.push('whisper');
+  }
+  if (options.extractColour || options.all) {
+    expectedSteps.push('colourExtraction');
+  }
+  if (options.extractParticle || options.all) {
+    expectedSteps.push('particleExtraction');
+  }
+  if (options.extractObject || options.all) {
+    expectedSteps.push('objectExtraction');
+  }
+  if (options.extractBackground || options.all) {
+    expectedSteps.push('backgroundExtraction');
+  }
+  if (options.generateObjectPrompts || options.all) {
+    expectedSteps.push('objectPrompts');
+  }
+  if (options.generateBackgroundPrompts || options.all) {
+    expectedSteps.push('backgroundPrompts');
+  }
+  if (options.extractStatus || options.all) {
+    expectedSteps.push('statusExtraction');
+  }
+
+  expectedSteps.push('jsonStorage');
+  expectedSteps.push('llm');
   
-  process.stderr.on('data', (data) => {
-    console.error(`⚠️ stderr: ${data.toString()}`);
-  });
+  runAIProcessWithTracking(
+    'powershell',
+    [
+      '-ExecutionPolicy',
+      'Bypass',
+      '-Command',
+      `& { . '${ps1Path}'; & ${command}; }`,
+    ],
+    event.sender,
+    operationId,
+    expectedSteps
+  );
   
-  process.on('close', (code) => {
-    console.log(`✅ Process exited with code ${code}`);
-    return code;
-  });
-  
-  // Return a message indicating the command is running
-  return `Command: ${command}`;
+  return operationId;
 });
 
 // Add the Stable Diffusion handler
 ipcMain.handle('run-stable-diffusion', (event, songId: string) => {
   console.log('Running Stable Diffusion with songId:', songId);
-  const sdPathStr = SDPath.toString();;
-  const process = spawn('powershell', [
-    '-ExecutionPolicy',
-    'Bypass',
-    '-Command',
-    `& { . '${ps1Path}'; & ${sdPathStr} -e --songId ${songId}; }`,
-  ]);
-  process.stdout.on('data', (data) => {
-    console.log(`📜 SD stdout: ${data.toString()}`);
-  });
-  process.stderr.on('data', (data) => {
-    console.error(`⚠️ SD stderr: ${data.toString()}`);
-  });
-  process.on('close', (code) => {
-    console.log(`✅ SD Process exited with code ${code}`);
-    return true;
-  });
+  
+  const sdPathStr = SDPath.toString();
+  const operationId = `sd-${songId}-${Date.now()}`;
+  const expectedSteps = ['stableDiffusion', 'jsonStorage'];
+  
+  runAIProcessWithTracking(
+    'powershell',
+    [
+      '-ExecutionPolicy',
+      'Bypass',
+      '-Command',
+      `& { . '${ps1Path}'; & ${sdPathStr} -e --songId ${songId}; }`,
+    ],
+    event.sender,
+    operationId,
+    expectedSteps
+  );
+  
+  return operationId;
 });
 
 ipcMain.on('run-gemma-test', (event) => {

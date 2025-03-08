@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { FaPlay, FaList, FaCheckSquare } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { FaPlay, FaList, FaCheckSquare, FaSpinner, FaCheck } from 'react-icons/fa';
 import { SongModel } from '../../database/models/Song';
 import colors from '../../theme/colors';
 
@@ -19,10 +19,35 @@ interface LLMOptionType {
   disabledReason?: string;
 }
 
+interface ProgressStep {
+  key: string;
+  label: string;
+  completed: boolean;
+}
+
 const LLMRunner: React.FC<LLMRunnerProps> = ({ song, songId, refetch }) => {
   const [gemmaStatus, setGemmaStatus] = useState<string>('');
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [showOptions, setShowOptions] = useState<boolean>(false);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [currentOperationId, setCurrentOperationId] = useState<string | null>(null);
+  const [progressSteps, setProgressSteps] = useState<ProgressStep[]>([]);
+
+  // Progress step display names
+  const progressLabels: Record<string, string> = {
+    whisper: 'Speech to Text',
+    llm: 'Language Model Processing',
+    stableDiffusion: 'Image Generation',
+    aiSetup: 'AI Setup',
+    statusExtraction: 'Extracting Status',
+    colourExtraction: 'Extracting Colors',
+    particleExtraction: 'Extracting Particles',
+    objectExtraction: 'Extracting Objects',
+    backgroundExtraction: 'Extracting Backgrounds',
+    objectPrompts: 'Generating Object Prompts',
+    backgroundPrompts: 'Generating Background Prompts',
+    jsonStorage: 'Saving Results'
+  };
 
   // Define the available LLM options
   const llmOptions: LLMOptionType[] = [
@@ -75,12 +100,80 @@ const LLMRunner: React.FC<LLMRunnerProps> = ({ song, songId, refetch }) => {
       description: 'Rerun Whisper speech-to-text on audio (note: usually does not change output)'
     },
     { 
+      key: 'extractStatus',
+      label: 'Extract Status',
+      flag: '--status',
+      description: 'Extract Zone of Regulation status from lyrics'
+    },
+    { 
       key: 'all',
       label: 'Run All Features',
       flag: '--all',
       description: 'Extract all features using LLM'
     }
   ];
+
+  // Set up listeners for AI progress events
+  useEffect(() => {
+    const progressListener = (data: any) => {
+      console.log("Progress update received in component:", data);
+      if (data && data.operationId === currentOperationId) {
+        setProgressSteps(prev => {
+          // Find if the step is already in our list
+          const stepIndex = prev.findIndex(step => step.key === data.step);
+          
+          if (stepIndex >= 0) {
+            // Update existing step
+            const updatedSteps = [...prev];
+            updatedSteps[stepIndex] = {
+              ...updatedSteps[stepIndex],
+              completed: data.completed
+            };
+            return updatedSteps;
+          } else {
+            // Add new step
+            return [
+              ...prev,
+              {
+                key: data.step,
+                label: progressLabels[data.step] || data.step,
+                completed: data.completed
+              }
+            ];
+          }
+        });
+      }
+    };
+
+    const errorListener = (data: any) => {
+      console.log("Error received in component:", data);
+      if (data && data.operationId === currentOperationId) {
+        setGemmaStatus(`Error: ${data.error}`);
+        setIsProcessing(false);
+      }
+    };
+
+    const completeListener = (data: any) => {
+      console.log("Process complete received in component:", data);
+      if (data && data.operationId === currentOperationId) {
+        setIsProcessing(false);
+        setGemmaStatus(`Process completed with code: ${data.exitCode}`);
+        refetch();
+      }
+    };
+
+    // Set up listeners
+    const removeProgressListener = window.electron.ipcRenderer.on('ai-progress-update', progressListener);
+    const removeErrorListener = window.electron.ipcRenderer.on('ai-error', errorListener);
+    const removeCompleteListener = window.electron.ipcRenderer.on('ai-process-complete', completeListener);
+
+    return () => {
+      // Properly cleanup by calling the removal functions returned by `on`
+      if (removeProgressListener) removeProgressListener();
+      if (removeErrorListener) removeErrorListener();
+      if (removeCompleteListener) removeCompleteListener();
+    };
+  }, [currentOperationId, refetch, progressLabels]);
 
   const toggleOption = (optionKey: string) => {
     setSelectedOptions(prev => {
@@ -128,7 +221,13 @@ const LLMRunner: React.FC<LLMRunnerProps> = ({ song, songId, refetch }) => {
       return;
     }
 
+    // Generate operation ID locally
+    const operationId = `gemma-${songId}-${Date.now()}`;
+    setCurrentOperationId(operationId);
+    
     setGemmaStatus('Running Gemma...');
+    setIsProcessing(true);
+    setProgressSteps([]);
     
     try {
       // Prepare the options to send to main process
@@ -142,6 +241,7 @@ const LLMRunner: React.FC<LLMRunnerProps> = ({ song, songId, refetch }) => {
           extractBackground: true,
           generateObjectPrompts: true,
           generateBackgroundPrompts: true,
+          extractStatus: true,
           all: true
         };
       } else {
@@ -150,17 +250,19 @@ const LLMRunner: React.FC<LLMRunnerProps> = ({ song, songId, refetch }) => {
         });
       }
       
-      const result = await window.electron.ipcRenderer.invoke(
+      // Send operationId to main process
+      await window.electron.ipcRenderer.invoke(
         'run-gemma-with-options',
         {
           songId,
-          options
+          options,
+          operationId  // Pass the operation ID to main process
         }
       );
       
-      setGemmaStatus(`Gemma running... ${result}`);
-      refetch();
+      setGemmaStatus(`Gemma running with operation ID: ${operationId}`);
     } catch (error) {
+      setIsProcessing(false);
       setGemmaStatus(`Error: ${error.message || 'Unknown error occurred'}`);
     }
   };
@@ -230,6 +332,7 @@ const LLMRunner: React.FC<LLMRunnerProps> = ({ song, songId, refetch }) => {
       <div style={{ display: 'flex', gap: '12px', marginBottom: '1rem' }}>
         <button
           onClick={() => setShowOptions(!showOptions)}
+          disabled={isProcessing}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -238,7 +341,8 @@ const LLMRunner: React.FC<LLMRunnerProps> = ({ song, songId, refetch }) => {
             border: 'none',
             borderRadius: '9999px',
             padding: '0.5rem 1rem',
-            cursor: 'pointer',
+            cursor: isProcessing ? 'not-allowed' : 'pointer',
+            opacity: isProcessing ? 0.7 : 1,
             fontSize: '0.9rem',
           }}
         >
@@ -248,24 +352,30 @@ const LLMRunner: React.FC<LLMRunnerProps> = ({ song, songId, refetch }) => {
         
         <button
           onClick={handleRunGemma}
+          disabled={isProcessing || selectedOptions.length === 0}
           style={{
             display: 'flex',
             alignItems: 'center',
-            backgroundColor: selectedOptions.length > 0 ? colors.blue : colors.grey3,
+            backgroundColor: selectedOptions.length > 0 && !isProcessing ? colors.blue : colors.grey3,
             color: colors.white,
             border: 'none',
             borderRadius: '9999px',
             padding: '0.5rem 1rem',
-            cursor: selectedOptions.length > 0 ? 'pointer' : 'not-allowed',
+            cursor: (selectedOptions.length > 0 && !isProcessing) ? 'pointer' : 'not-allowed',
             fontSize: '1rem',
           }}
         >
-          <FaPlay style={{ marginRight: '0.5rem' }} />
-          Run Selected Features
+          {isProcessing ? (
+            <FaSpinner style={{ marginRight: '0.5rem', animation: 'spin 1s linear infinite' }} />
+          ) : (
+            <FaPlay style={{ marginRight: '0.5rem' }} />
+          )}
+          {isProcessing ? 'Processing...' : 'Run Selected Features'}
         </button>
       </div>
       
-      {showOptions && (
+      {/* Options Selection */}
+      {showOptions && !isProcessing && (
         <div style={{ 
           backgroundColor: colors.grey5, 
           borderRadius: '12px', 
@@ -313,6 +423,50 @@ const LLMRunner: React.FC<LLMRunnerProps> = ({ song, songId, refetch }) => {
         </div>
       )}
       
+      {/* Progress Checklist */}
+      {isProcessing && progressSteps.length > 0 && (
+        <div style={{ 
+          backgroundColor: colors.grey5, 
+          borderRadius: '12px', 
+          padding: '1rem', 
+          marginBottom: '1rem'
+        }}>
+          <h4 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Processing Status:</h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {progressSteps.map((step) => (
+              <div 
+                key={step.key} 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  padding: '0.5rem',
+                  borderRadius: '8px',
+                  backgroundColor: step.completed ? 'rgba(52, 199, 89, 0.1)' : 'transparent'
+                }}
+              >
+                {step.completed ? (
+                  <FaCheck style={{ marginRight: '0.5rem', color: '#34C759' }} />
+                ) : (
+                  <FaSpinner 
+                    style={{ 
+                      marginRight: '0.5rem', 
+                      color: colors.blue,
+                      animation: 'spin 1s linear infinite'
+                    }} 
+                  />
+                )}
+                <span style={{ 
+                  color: step.completed ? '#34C759' : colors.white,
+                }}>
+                  {step.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Gemma Status Message */}
       {gemmaStatus && (
         <p
           style={{ 
@@ -326,6 +480,14 @@ const LLMRunner: React.FC<LLMRunnerProps> = ({ song, songId, refetch }) => {
           {gemmaStatus}
         </p>
       )}
+      
+      {/* Add keyframe animation for spinner */}
+      <style >{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };
