@@ -12,9 +12,22 @@ let currentMood = 'happy'; // Can be updated based on AI input
 let allowedParticles: string[] = ['musicNote']; // Default particle
 let isActive = true;
 
-export const initializeSketch = (particleTypes: string[], active: boolean) => {
+// Track particle distribution
+let leftParticleCount = 0;
+let rightParticleCount = 0;
+let particleDistributionCallback: ((distribution: {left: number, right: number}) => void) | null = null;
+
+export const initializeSketch = (
+  particleTypes: string[],
+  active: boolean,
+  onDistributionUpdate?: (distribution: {left: number, right: number}) => void
+) => {
   console.log('Initializing sketch with particle types:', particleTypes);
   isActive = active;
+
+  // Set the distribution callback if provided
+  particleDistributionCallback = onDistributionUpdate || null;
+
   allowedParticles = particleTypes.map(type => {
     const validatedType = ParticleSelector.validateParticleType(type);
     console.log(`Validated particle type: ${type} -> ${validatedType}`);
@@ -35,32 +48,33 @@ const sketch = (p: p5) => {
     canvas.style('top', '0');
     canvas.style('left', '0');
     canvas.style('z-index', '1');
+
     particleSystem = new ParticleSystem(p);
     console.log('Particle system initialized');
 
     // Add window resize handler
     window.addEventListener('resize', () => {
       p.resizeCanvas(window.innerWidth, window.innerHeight);
-    }); 
+    });
   };
 
   p.draw = () => {
     p.clear(); // Use clear instead of background to maintain transparency
-    
+
     // Improved mouse velocity calculation
     mouseVelX = (p.mouseX - (lastMouseX || p.mouseX)) * 0.5; // Scaled for better control
     mouseVelY = (p.mouseY - (lastMouseY || p.mouseY)) * 0.5;
     lastMouseX = p.mouseX;
     lastMouseY = p.mouseY;
-    
+
     // Add velocity smoothing
     mouseVelX = p.constrain(mouseVelX, -10, 10);
     mouseVelY = p.constrain(mouseVelY, -10, 10);
-    
+
     // Check if particleSystem exists before using it
     if (particleSystem && isActive) {
       particleSystem.updateAndDisplay(p.mouseX, p.mouseY, mouseVelX, mouseVelY);
-    
+
       frameCount++;
       if (frameCount % 30 === 0 && particleSystem.particles.length < particleSystem.maxParticles) {
         let randomType = ParticleSelector.getRandomParticleFromArray(allowedParticles);
@@ -72,36 +86,68 @@ const sketch = (p: p5) => {
           console.log('Particle created successfully');
         }
       }
+
+      // Calculate and report particle distribution
+      updateParticleDistribution(p);
+    }
+  };
+
+  // New function to track particle distribution
+  const updateParticleDistribution = (p: p5) => {
+    if (!particleSystem) return;
+
+    // Count particles on left vs right side of screen
+    const centerX = p.width / 2;
+    leftParticleCount = 0;
+    rightParticleCount = 0;
+
+    // Count total particles on each side
+    for (const particle of particleSystem.particles) {
+      if (particle.pos.x < centerX) {
+        leftParticleCount++;
+      } else {
+        rightParticleCount++;
+      }
+    }
+
+    // Calculate normalized distribution (0-1 range)
+    const totalParticles = particleSystem.particles.length || 1; // Avoid division by zero
+    const leftRatio = leftParticleCount / totalParticles;
+    const rightRatio = rightParticleCount / totalParticles;
+
+    // Report distribution via callback
+    if (particleDistributionCallback && frameCount % 5 === 0) { // Only update every 5 frames
+      particleDistributionCallback({
+        left: leftRatio,
+        right: rightRatio
+      });
     }
   };
 
   p.mousePressed = async () => {
     // Guard clause to prevent execution if particleSystem is not initialized
     if (!particleSystem || !isActive) return;
-
     const remainingSlots = particleSystem.maxParticles - particleSystem.particles.length;
     const numParticles = Math.min(5, remainingSlots); // Create up to 5 particles, but not more than available slots
-    
+
     if (numParticles <= 0) return; // Don't create any particles if we're at max
 
-    const types = ["musicNote", "bubble", "star"];
-    
     for(let i = 0; i < numParticles; i++) {
       let randomType = ParticleSelector.getRandomParticleFromArray(allowedParticles);
       // Add slight position variation
       let spawnX = p.mouseX + p.random(-10, 10);
       let spawnY = p.mouseY + p.random(-10, 10);
-      
+
       // Wait for particle to be created and image loaded
       const particle = await particleSystem.addParticle(spawnX, spawnY, randomType);
-      
+
       if (particle) {  // Check if particle was created successfully
         // Add initial velocity based on mouse movement plus random spread
         let angle = p.random(p.TWO_PI);
         let speed = p.random(2, 5);
         let velX = mouseVelX * 0.5 + Math.cos(angle) * speed;
         let velY = mouseVelY * 0.5 + Math.sin(angle) * speed;
-        
+
         particle.vel.set(velX, velY);
       }
     }

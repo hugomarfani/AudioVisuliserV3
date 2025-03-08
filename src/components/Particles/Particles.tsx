@@ -23,6 +23,8 @@ const Particles: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioData, setAudioData] = useState<Uint8Array | undefined>(undefined);
   const [dominantColors, setDominantColors] = useState<number[][]>([]);
+  // Add state for particle distribution
+  const [particleDistribution, setParticleDistribution] = useState<{left: number, right: number}>({ left: 0.5, right: 0.5 });
 
   useEffect(() => {
     const loadAssets = async () => {
@@ -66,6 +68,12 @@ const Particles: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  // Handle particle distribution updates
+  const handleDistributionUpdate = (distribution: {left: number, right: number}) => {
+    setParticleDistribution(distribution);
+    console.log(`Particle distribution - Left: ${Math.round(distribution.left * 100)}%, Right: ${Math.round(distribution.right * 100)}%`);
+  };
+
   useEffect(() => {
     if (songDetails && containerRef.current && isActive) {
       if (p5Instance) {
@@ -77,8 +85,13 @@ const Particles: React.FC = () => {
         ? songDetails.particles
         : ['musicNote'];
 
-      // Initialize sketch with song's particle types
-      const sketch = initializeSketch(particleTypes, isActive); // Pass isActive to sketch
+      // Initialize sketch with song's particle types and distribution callback
+      const sketch = initializeSketch(
+        particleTypes,
+        isActive,
+        handleDistributionUpdate // Pass the distribution callback
+      );
+
       const newP5 = new p5(sketch, containerRef.current);
       setP5Instance(newP5);
     }
@@ -114,7 +127,7 @@ const Particles: React.FC = () => {
       console.log('No background images available');
       return;
     }
-    
+
     if (duration !== songDuration) {
       setSongDuration(duration);
       console.log('Song duration:', duration);
@@ -126,7 +139,7 @@ const Particles: React.FC = () => {
       Math.floor(currentTime / intervalDuration),
       backgroundImages.length - 1
     );
-    
+
     if (newIndex !== currentImageIndex) {
       console.log('Switching to image index:', newIndex);
       console.log('Current image path:', backgroundImages[newIndex]);
@@ -152,7 +165,7 @@ const Particles: React.FC = () => {
     // Simple implementation to extract representative colors from the song data
     // In a real app, you might want to use a proper image analysis library
     // This is just a simplified approach
-    
+
     if (songDetails && songDetails.colours && songDetails.colours.length > 0) {
       // Use song's predefined colors if available
       const colors = songDetails.colours.map(colorStr => {
@@ -174,7 +187,7 @@ const Particles: React.FC = () => {
         [255, 255, 0],  // Yellow
         [255, 0, 255],  // Magenta
       ];
-      
+
       // Use the image index to rotate through colors
       const colorIndex = currentImageIndex % defaultColors.length;
       setDominantColors([defaultColors[colorIndex]]);
@@ -185,8 +198,8 @@ const Particles: React.FC = () => {
 
   return (
     <div className={`page-transition ${isVisible ? 'visible' : ''}`}
-      style={{ 
-        width: '100vw', 
+      style={{
+        width: '100vw',
         height: '100vh',
         position: 'fixed',
         top: 0,
@@ -214,9 +227,9 @@ const Particles: React.FC = () => {
       )}
 
       {/* Particle container on top of background */}
-      <div 
-        ref={containerRef} 
-        style={{ 
+      <div
+        ref={containerRef}
+        style={{
           position: 'fixed',
           top: 0,
           left: 0,
@@ -224,9 +237,9 @@ const Particles: React.FC = () => {
           height: '100%',
           zIndex: 1,
           background: 'transparent',
-        }} 
+        }}
       />
-      
+
       {/* Back button and player with highest z-index */}
       <button
         onClick={handleBack}
@@ -248,7 +261,7 @@ const Particles: React.FC = () => {
       </button>
 
       {fullAudioPath && (
-        <div 
+        <div
           className={`player-wrapper ${isVisible ? 'visible' : ''}`}
           style={{
             position: 'fixed', // Change to fixed
@@ -273,20 +286,21 @@ const Particles: React.FC = () => {
         </div>
       )}
 
-      {/* Hue integration */}
-      <HueVisualizer 
-        audioData={audioData} 
-        dominantColors={dominantColors} 
-        isPlaying={isPlaying} 
+      {/* Hue integration - now with particle distribution data */}
+      <HueVisualizer
+        audioData={audioData}
+        dominantColors={dominantColors}
+        isPlaying={isPlaying}
+        particleDistribution={particleDistribution}
       />
 
       {/* Force image preloading */}
       <div style={{ display: 'none', position: 'absolute' }}>
         {backgroundImages.map((imagePath, index) => (
-          <img 
-            key={index} 
-            src={imagePath} 
-            alt="" 
+          <img
+            key={index}
+            src={imagePath}
+            alt=""
             onLoad={() => console.log(`Preloaded image ${index} loaded successfully:`, imagePath)}
             onError={(e) => console.error(`Error loading image ${index}:`, e)}
           />

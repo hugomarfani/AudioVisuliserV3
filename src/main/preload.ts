@@ -17,7 +17,8 @@ export type Channels =
   | 'hue-start-streaming'
   | 'hue-stop-streaming'
   | 'hue-set-color'
-  | 'hue-test-lights'; // Add the new channel
+  | 'hue-test-lights'
+  | 'hue-get-entertainment-setup'; // Add the new channel
 
 const electronHandler = {
   ipcRenderer: {
@@ -61,21 +62,23 @@ const electronHandler = {
   hue: {
     discoverBridges: () => ipcRenderer.invoke('hue-discover'),
     registerBridge: (ip: string) => ipcRenderer.invoke('hue-register', ip),
-    fetchGroups: (data: { ip: string; username: string; psk: string }) => 
+    fetchGroups: (data: { ip: string; username: string; psk: string }) =>
       ipcRenderer.invoke('hue-fetch-groups', data),
-    startStreaming: (data: { 
-      ip: string; 
-      username: string; 
-      psk: string; 
+    startStreaming: (data: {
+      ip: string;
+      username: string;
+      psk: string;
       groupId: string;
       numericGroupId?: string; // Add numeric group ID parameter
-    }) => 
+    }) =>
       ipcRenderer.invoke('hue-start-streaming', data),
     stopStreaming: () => ipcRenderer.invoke('hue-stop-streaming'),
-    setColor: (data: { lightIds: number[]; rgb: number[]; transitionTime: number }) => 
+    setColor: (data: { lightIds: number[]; rgb: number[]; transitionTime: number }) =>
       ipcRenderer.invoke('hue-set-color', data),
-    testLights: (data?: { lightIds?: number[] }) => 
+    testLights: (data?: { lightIds?: number[] }) =>
       ipcRenderer.invoke('hue-test-lights', data), // Updated to accept lightIds
+    getEntertainmentSetup: (data: { ip: string; username: string; groupId: string }) =>
+      ipcRenderer.invoke('hue-get-entertainment-setup', data), // Add new method
   },
 };
 
