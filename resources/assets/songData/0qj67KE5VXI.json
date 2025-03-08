@@ -4,7 +4,9 @@
   "uploader": "DisneyMusicVEVO",
   "audioPath": "audio/0qj67KE5VXI.mp3",
   "jacket": "images/0qj67KE5VXI/jacket.png",
-  "images": [],
+  "images": [
+    "images/0qj67KE5VXI/image_1741452244800.png"
+  ],
   "moods": [],
   "status": "Yellow",
   "colours": [],
@@ -22,5 +24,5 @@
     "255"
   ],
   "createdAt": "2025-03-08T16:24:33.537Z",
-  "updatedAt": "2025-03-08T16:24:33.537Z"
+  "updatedAt": "2025-03-08T16:44:04.806Z"
 }

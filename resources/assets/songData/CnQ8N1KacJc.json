@@ -4,7 +4,9 @@
   "uploader": "Green Day",
   "audioPath": "audio/CnQ8N1KacJc.mp3",
   "jacket": "images/CnQ8N1KacJc/jacket.png",
-  "images": [],
+  "images": [
+    "images/CnQ8N1KacJc/image_1741452290492.png"
+  ],
   "moods": [],
   "status": "Yellow",
   "colours": [],
@@ -22,5 +24,5 @@
     "255"
   ],
   "createdAt": "2025-03-08T16:14:01.827Z",
-  "updatedAt": "2025-03-08T16:14:01.827Z"
+  "updatedAt": "2025-03-08T16:44:50.497Z"
 }

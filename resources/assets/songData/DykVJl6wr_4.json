@@ -4,7 +4,9 @@
   "uploader": "DisneyMusicVEVO",
   "audioPath": "audio/DykVJl6wr_4.mp3",
   "jacket": "images/DykVJl6wr_4/jacket.png",
-  "images": [],
+  "images": [
+    "images/DykVJl6wr_4/image_1741452259354.png"
+  ],
   "moods": [],
   "status": "Red",
   "colours": [],
@@ -22,5 +24,5 @@
     "255"
   ],
   "createdAt": "2025-03-08T16:20:50.758Z",
-  "updatedAt": "2025-03-08T16:20:50.759Z"
+  "updatedAt": "2025-03-08T16:44:19.358Z"
 }

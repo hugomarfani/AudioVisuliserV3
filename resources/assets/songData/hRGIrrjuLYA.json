@@ -4,7 +4,9 @@
   "uploader": "Selected.",
   "audioPath": "audio/hRGIrrjuLYA.mp3",
   "jacket": "images/hRGIrrjuLYA/jacket.png",
-  "images": [],
+  "images": [
+    "images/hRGIrrjuLYA/image_1741452270970.png"
+  ],
   "moods": [],
   "status": "Green",
   "colours": [],
@@ -22,5 +24,5 @@
     "255"
   ],
   "createdAt": "2025-03-08T16:17:20.146Z",
-  "updatedAt": "2025-03-08T16:17:20.146Z"
+  "updatedAt": "2025-03-08T16:44:30.973Z"
 }

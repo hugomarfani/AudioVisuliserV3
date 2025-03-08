@@ -4,7 +4,9 @@
   "uploader": "Backstreet Boys",
   "audioPath": "audio/4fndeDfaWCg.mp3",
   "jacket": "images/4fndeDfaWCg/jacket.png",
-  "images": [],
+  "images": [
+    "images/4fndeDfaWCg/image_1741452306463.png"
+  ],
   "moods": [],
   "status": "Blue",
   "colours": [],
@@ -22,5 +24,5 @@
     "255"
   ],
   "createdAt": "2025-03-08T16:09:49.909Z",
-  "updatedAt": "2025-03-08T16:09:49.909Z"
+  "updatedAt": "2025-03-08T16:45:06.472Z"
 }

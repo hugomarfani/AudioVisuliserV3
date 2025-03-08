@@ -4,7 +4,9 @@
   "uploader": "Stray Kids",
   "audioPath": "audio/T17AR8cVmto.mp3",
   "jacket": "images/T17AR8cVmto/jacket.png",
-  "images": [],
+  "images": [
+    "images/T17AR8cVmto/image_1741452340642.png"
+  ],
   "moods": [],
   "status": "Red",
   "colours": [],
@@ -22,5 +24,5 @@
     "255"
   ],
   "createdAt": "2025-03-08T15:42:44.582Z",
-  "updatedAt": "2025-03-08T15:42:44.583Z"
+  "updatedAt": "2025-03-08T16:45:40.646Z"
 }
