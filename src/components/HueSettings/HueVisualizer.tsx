@@ -9,29 +9,23 @@ interface HueVisualizerProps {
 
 /**
  * Component that syncs Phillips Hue lights with audio visualization
- * Enhanced with beat detection for rhythmic light pulsing
+ * Detects beats and sends data to HueService for processing
  */
 const HueVisualizer: React.FC<HueVisualizerProps> = ({
   audioData,
   dominantColors,
   isPlaying
 }) => {
-  const { isConfigured, isStreamingActive, startHueStreaming, stopHueStreaming, setLightColor, testLights } = useHue();
+  const { isConfigured, isStreamingActive, startHueStreaming, stopHueStreaming } = useHue();
   const [isConnected, setIsConnected] = useState(false);
-  const lastColorUpdateTime = useRef(0);
-  const updateIntervalMs = useRef(50); // Faster updates for better responsiveness
+  const lastUpdateTime = useRef(0);
+  const updateIntervalMs = useRef(50); // Milliseconds between updates
 
   // Beat detection state
   const energyHistory = useRef<number[]>([]);
   const beatThreshold = useRef(1.5); // Multiplier for beat detection
-  const beatHoldTime = useRef(100); // How long to hold a beat color (ms)
+  const beatHoldTime = useRef(100); // How long to hold a beat (ms)
   const lastBeatTime = useRef(0);
-  const isBeat = useRef(false);
-
-  // Color transition state
-  const currentColor = useRef<number[]>([255, 255, 255]);
-  const targetColor = useRef<number[]>([255, 255, 255]);
-  const colorTransitionSpeed = useRef(0.3); // How fast colors blend (0-1)
 
   // Start/stop streaming based on playback state
   useEffect(() => {
@@ -55,14 +49,14 @@ const HueVisualizer: React.FC<HueVisualizerProps> = ({
     };
   }, [isPlaying, isConfigured, isStreamingActive, startHueStreaming, stopHueStreaming]);
 
-  // Detect beats and update light colors
+  // Process audio data and detect beats
   useEffect(() => {
     if (!isConnected || !isStreamingActive || !audioData || audioData.length === 0) return;
 
     const now = Date.now();
-    if (now - lastColorUpdateTime.current < updateIntervalMs.current) return;
+    if (now - lastUpdateTime.current < updateIntervalMs.current) return;
 
-    const updateLights = async () => {
+    const processBeatDetection = async () => {
       try {
         // Split frequency data into segments
         const bassRange = Math.floor(audioData.length * 0.1); // Lower 10% for bass
@@ -89,72 +83,37 @@ const HueVisualizer: React.FC<HueVisualizerProps> = ({
                           Math.max(1, energyHistory.current.length);
 
         // Beat detection
-        const beatDetected = totalEnergy > avgEnergy * beatThreshold.current &&
-                             now - lastBeatTime.current > beatHoldTime.current;
+        const isBeat = totalEnergy > avgEnergy * beatThreshold.current &&
+                       now - lastBeatTime.current > beatHoldTime.current;
 
-        if (beatDetected) {
+        // If beat detected, update the last beat time
+        if (isBeat) {
           lastBeatTime.current = now;
-          isBeat.current = true;
-
-          // On beat: select a new target color
-          if (dominantColors && dominantColors.length > 0) {
-            // Use dominant colors if available
-            const randomIndex = Math.floor(Math.random() * dominantColors.length);
-            targetColor.current = dominantColors[randomIndex];
-          } else {
-            // Or create a color based on frequency content
-            targetColor.current = [
-              Math.min(255, bassEnergy * 3),
-              Math.min(255, midEnergy * 2.5),
-              Math.min(255, highEnergy * 2)
-            ];
-          }
-
-          // On beat: make lights brighter suddenly
-          const intensity = Math.min(255, avgEnergy * 4);
-          const beatColor = targetColor.current.map(c => Math.min(255, c * 1.5));
-          await setLightColor([0], beatColor, 10); // Fast transition
-        } else if (isBeat.current && now - lastBeatTime.current > beatHoldTime.current) {
-          isBeat.current = false;
         }
 
-        // Gradually transition current color toward target color
-        if (!isBeat.current) {
-          currentColor.current = currentColor.current.map((c, i) => {
-            return c + (targetColor.current[i] - c) * colorTransitionSpeed.current;
-          });
+        // Scale energy values for better visualization (0-255 range)
+        const scaledBassEnergy = Math.min(255, bassEnergy * 2);
+        const scaledMidEnergy = Math.min(255, midEnergy * 2);
+        const scaledHighEnergy = Math.min(255, highEnergy * 2);
 
-          // Calculate transition time based on music tempo
-          // Faster songs = faster transitions
-          const energyRatio = totalEnergy / (avgEnergy || 1);
-          const transitionTime = Math.max(50, 300 - energyRatio * 100);
+        // Instead of controlling lights directly, send beat data to HueService
+        await window.electron.hue.processBeat({
+          isBeat,
+          energy: totalEnergy,
+          bassEnergy: scaledBassEnergy,
+          midEnergy: scaledMidEnergy,
+          highEnergy: scaledHighEnergy
+        });
 
-          await setLightColor([0], currentColor.current, transitionTime);
-
-          // If there are multiple lights, create more complex patterns
-          if (dominantColors && dominantColors.length > 1) {
-            // Create wave-like effects across multiple lights
-            for (let i = 1; i < Math.min(5, dominantColors.length); i++) {
-              const phaseOffset = (now % 1000) / 1000; // 0-1 phase
-              const pulseAmount = 0.5 + 0.5 * Math.sin(2 * Math.PI * (phaseOffset + i * 0.2));
-
-              const lightColor = dominantColors[i].map((c) =>
-                Math.round(c * (0.3 + 0.7 * pulseAmount))
-              );
-
-              await setLightColor([i], lightColor, transitionTime);
-            }
-          }
-        }
       } catch (error) {
-        console.error('Error updating light colors:', error);
+        console.error('Error processing beat data:', error);
       }
 
-      lastColorUpdateTime.current = now;
+      lastUpdateTime.current = now;
     };
 
-    updateLights();
-  }, [audioData, dominantColors, isConnected, isStreamingActive, setLightColor]);
+    processBeatDetection();
+  }, [audioData, isConnected, isStreamingActive]);
 
   return null; // This component doesn't render any UI
 };

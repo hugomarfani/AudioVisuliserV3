@@ -17,6 +17,15 @@ interface DtlsOptions {
   ciphers: string[];
 }
 
+// Interface for beat detection data
+interface BeatData {
+  isBeat: boolean;
+  energy: number;
+  bassEnergy: number;
+  midEnergy: number;
+  highEnergy: number;
+}
+
 /**
  * HueService handles the communication with Phillips Hue bridges and lights
  * using the Entertainment API via direct DTLS communication
@@ -29,6 +38,24 @@ export default class HueService {
   private groupIdMap: Map<string, string> = new Map(); // Map to store UUID to numeric ID mapping
   private entertainmentId: string | null = null;
   private sequenceNumber = 1;
+  // Beat detection state
+  private lastBeatTime = 0;
+  private beatHoldTime = 100; // ms
+  private beatColors: number[][] = [
+    [255, 0, 0],    // Red
+    [0, 255, 0],    // Green
+    [0, 0, 255],    // Blue
+    [255, 255, 0],  // Yellow
+    [0, 255, 255],  // Cyan
+    [255, 0, 255],  // Magenta
+  ];
+  private currentBeatColorIndex = 0;
+  // Updated: Initialize with empty array instead of just [0]
+  private activeLightIds: number[] = [];
+  // New: Store the number of lights in the selected group
+  private numberOfLights: number = 0;
+  // New: Track beat detection status for UI
+  private lastBeatDetected: boolean = false;
 
   constructor() {
     this.registerIpcHandlers();
@@ -45,9 +72,20 @@ export default class HueService {
     ipcMain.handle('hue-start-streaming', this.handleStartStreaming);
     ipcMain.handle('hue-stop-streaming', this.handleStopStreaming);
     ipcMain.handle('hue-set-color', this.handleSetColor);
-    ipcMain.handle('hue-test-lights', this.handleTestLights); // Add new handler
+    ipcMain.handle('hue-test-lights', this.handleTestLights);
+    ipcMain.handle('hue-process-beat', this.handleProcessBeat);
+    // New handler to get beat detection status
+    ipcMain.handle('hue-get-beat-status', this.handleGetBeatStatus);
     console.log('Registered Hue IPC handlers');
   }
+
+  // New method to get the current beat status
+  private handleGetBeatStatus = async (): Promise<{isDetected: boolean, lastTime: number}> => {
+    return {
+      isDetected: this.lastBeatDetected,
+      lastTime: this.lastBeatTime
+    };
+  };
 
   /**
    * Discover available Hue bridges on the network
@@ -57,7 +95,7 @@ export default class HueService {
       console.log('Discovering Hue bridges...');
       // Using the Hue discovery endpoint
       const response = await axios.get('https://discovery.meethue.com/');
-      
+
       console.log('Discovery response:', response.data);
       return response.data.map((bridge: any) => ({
         id: bridge.id,
@@ -76,33 +114,33 @@ export default class HueService {
   private handleRegister = async (_: any, ip: string): Promise<any> => {
     try {
       console.log(`Attempting to register with bridge at ${ip}`);
-      
+
       // Try to register and get credentials
       const response = await axios.post(`http://${ip}/api`, {
         devicetype: "audio_visualizer#app",
         generateclientkey: true
       });
-      
+
       console.log('Registration response:', response.data);
-      
+
       if (Array.isArray(response.data) && response.data[0]) {
         if (response.data[0].error) {
           // If there's an error (like button not pressed)
           console.error('Registration error:', response.data[0].error);
           throw new Error(response.data[0].error.description);
         }
-        
+
         if (response.data[0].success) {
           const credentials = {
             username: response.data[0].success.username,
             clientkey: response.data[0].success.clientkey
           };
-          
+
           console.log('Registration successful, credentials obtained');
           return credentials;
         }
       }
-      
+
       throw new Error('Invalid response from bridge');
     } catch (error) {
       console.error('Registration failed:', error);
@@ -125,7 +163,7 @@ export default class HueService {
   private handleFetchGroups = async (_: any, { ip, username, psk }: { ip: string; username: string; psk: string }): Promise<any> => {
     try {
       console.log(`Fetching entertainment groups from bridge at ${ip}`);
-      
+
       // Try the CLIP v2 API first
       try {
         const url = `https://${ip}/clip/v2/resource/entertainment_configuration`;
@@ -133,10 +171,10 @@ export default class HueService {
           headers: { 'hue-application-key': username },
           httpsAgent
         });
-        
+
         console.log('Entertainment groups response:', response.data);
         this.groupIdMap.clear(); // Clear previous mappings
-        
+
         if (response.data && Array.isArray(response.data.data)) {
           const groups = response.data.data.map((group: any) => {
             // Extract the numeric ID from the v1 API path
@@ -146,7 +184,7 @@ export default class HueService {
               // Store mapping of UUID to numeric ID
               this.groupIdMap.set(group.id, numericId);
             }
-            
+
             return {
               id: group.id, // Keep using UUID for frontend
               name: group.metadata?.name || 'Unknown',
@@ -154,19 +192,19 @@ export default class HueService {
               numericId: numericId // Add numeric ID to response
             };
           });
-          
+
           console.log('Processed entertainment groups with numeric IDs:', this.groupIdMap);
           return groups;
         }
       } catch (error) {
         console.warn('CLIP v2 API failed, falling back to v1:', error);
       }
-      
+
       // Fallback to CLIP v1 API
       const v1Url = `http://${ip}/api/${username}/groups`;
       const v1Response = await axios.get(v1Url);
       console.log('V1 Groups response:', v1Response.data);
-      
+
       const groups = [];
       for (const [id, group] of Object.entries(v1Response.data)) {
         const groupData = group as any;
@@ -178,12 +216,12 @@ export default class HueService {
             lights: groupData.lights || [],
             numericId: id // In v1, the id is already numeric
           });
-          
+
           // Also store in our map
           this.groupIdMap.set(id, id);
         }
       }
-      
+
       return groups;
     } catch (error) {
       console.error('Error fetching entertainment groups:', error);
@@ -219,7 +257,7 @@ export default class HueService {
    */
   private async stopEntertainmentGroup(ip: string, username: string, entertainmentId: string): Promise<boolean> {
     if (!entertainmentId) return false;
-    
+
     try {
       console.log(`Stopping entertainment group ${entertainmentId}...`);
       const response = await axios.put(
@@ -248,11 +286,11 @@ export default class HueService {
 
         // Convert clientkey from hex to Buffer
         const pskBuffer = Buffer.from(clientkey, 'hex');
-        
+
         // Create PSK lookup object - use Buffer value as specified in the documentation
         const pskLookup = {};
         pskLookup[username] = pskBuffer; // Use Buffer for PSK value instead of hex string
-        
+
         // Debug output for PSK values
         console.log(`Debug - PSK Username: ${username}`);
         console.log(`Debug - PSK Value (hex): ${clientkey}`);
@@ -273,13 +311,13 @@ export default class HueService {
           ...options,
           psk: { [username]: `Buffer(${pskBuffer.length})` } // Show buffer length for readability
         });
-        
+
         // Check if the module structure exists
         console.log("DTLS module structure:", Object.keys(dtls));
-        
+
         // Attempt to create the socket with the proper structure
         let client;
-        
+
         if (dtls.dtls && typeof dtls.dtls.createSocket === 'function') {
           console.log("Using dtls.dtls.createSocket");
           client = dtls.dtls.createSocket(options);
@@ -289,28 +327,28 @@ export default class HueService {
         } else {
           throw new Error("Could not find createSocket method in the DTLS module");
         }
-        
+
         client.on("connected", () => {
           console.log("DTLS connection established successfully");
           resolve(client);
         });
-        
+
         client.on("error", (error) => {
           console.error("DTLS connection error:", error);
           reject(error);
         });
-        
+
         client.on("close", () => {
           console.log("DTLS connection closed");
           this.isStreaming = false;
         });
-        
+
         client.on("message", (message) => {
           console.log("Received message from bridge:", message);
         });
-        
+
         // Note: connection should happen automatically with createSocket
-        
+
       } catch (error) {
         console.error("Error creating DTLS socket:", error);
         reject(error);
@@ -328,7 +366,7 @@ export default class HueService {
     lightCommands.forEach(cmd => {
       console.log(`  Light ID: ${cmd.id}, Color: RGB(${cmd.rgb.join(',')})`);
     });
-    
+
     // Static protocol name used by the API
     const protocolName = Buffer.from("HueStream", "ascii");
 
@@ -343,7 +381,7 @@ export default class HueService {
 
     // Log sequence number for debugging
     console.log(`Using sequence number: ${this.sequenceNumber}`);
-    
+
     // Increment sequence number for next command
     this.sequenceNumber = (this.sequenceNumber + 1) % 256;
 
@@ -370,43 +408,43 @@ export default class HueService {
     // Concat everything together to build the command
     const finalBuffer = Buffer.concat([protocolName, restOfHeader, entertainmentConfigurationId, ...lightBuffers]);
     console.log(`Command buffer created, total length: ${finalBuffer.length} bytes`);
-    
+
     return finalBuffer;
   }
 
   /**
    * Starts streaming to the selected entertainment group using direct DTLS
    */
-  private handleStartStreaming = async (_: any, { 
-    ip, 
-    username, 
-    psk, 
-    groupId, 
-    numericGroupId 
-  }: { 
-    ip: string; 
-    username: string; 
-    psk: string; 
+  private handleStartStreaming = async (_: any, {
+    ip,
+    username,
+    psk,
+    groupId,
+    numericGroupId
+  }: {
+    ip: string;
+    username: string;
+    psk: string;
     groupId: string;
     numericGroupId?: string;
   }): Promise<boolean> => {
     try {
       console.log(`Starting streaming to group ${groupId}`);
-      
+
       // Make sure previous connections are closed
       await this.stopStreaming();
-      
+
       // Store the entertainment UUID for later use
       this.entertainmentId = groupId;
       this.selectedGroup = groupId;
-      
+
       // First, start the entertainment group
       const startSuccess = await this.startEntertainmentGroup(ip, username, groupId);
       if (!startSuccess) {
         console.error('Failed to start entertainment group');
         return false;
       }
-      
+
       // Create a DTLS socket
       try {
         this.socket = await this.createDtlsSocket(ip, username, psk);
@@ -416,10 +454,29 @@ export default class HueService {
         await this.stopEntertainmentGroup(ip, username, groupId);
         return false;
       }
-      
+
       // Connection was established successfully
       this.isStreaming = true;
-      
+
+      // Retrieve info about the group to determine how many lights it contains
+      try {
+        // Try to get light information from the bridge
+        const groupInfo = await this.fetchGroupInfo(ip, username, groupId, numericGroupId);
+        if (groupInfo && groupInfo.lights && groupInfo.lights.length > 0) {
+          // Create activeLightIds array with indices from 0 to n-1
+          this.numberOfLights = groupInfo.lights.length;
+          this.activeLightIds = Array.from({ length: this.numberOfLights }, (_, i) => i);
+          console.log(`Set up control for ${this.numberOfLights} lights: [${this.activeLightIds.join(', ')}]`);
+        } else {
+          // Fallback to default if we couldn't get light info
+          this.activeLightIds = [0, 1, 2, 3, 4];
+          console.log('Could not determine number of lights, using default range:', this.activeLightIds);
+        }
+      } catch (error) {
+        console.error('Error determining number of lights, using defaults:', error);
+        this.activeLightIds = [0, 1, 2, 3, 4];
+      }
+
       // Start a keepalive interval to keep the connection alive
       this.streamInterval = setInterval(() => {
         if (this.isStreaming && this.socket && this.entertainmentId) {
@@ -429,7 +486,7 @@ export default class HueService {
               this.entertainmentId,
               [{ id: 0, rgb: [0, 0, 0] }]
             );
-            
+
             this.socket.send(keepaliveCommand, (error) => {
               if (error) console.error('Error sending keepalive:', error);
             });
@@ -438,14 +495,16 @@ export default class HueService {
           }
         }
       }, 5000);
-      
+
       // Send a test color to verify the connection
       if (this.socket && this.entertainmentId) {
+        // Updated: Use all active lights for the test color
+        const testCommands = this.activeLightIds.map(id => ({ id, rgb: [255, 0, 0] })); // Red color
         const testCommand = this.createCommandBuffer(
           this.entertainmentId,
-          [{ id: 0, rgb: [255, 0, 0] }] // Red color
+          testCommands
         );
-        
+
         this.socket.send(testCommand, (error) => {
           if (error) {
             console.error('Failed to send test color:', error);
@@ -454,7 +513,7 @@ export default class HueService {
           }
         });
       }
-      
+
       console.log('Streaming started successfully');
       return true;
     } catch (error) {
@@ -464,6 +523,42 @@ export default class HueService {
       return false;
     }
   };
+
+  // New method to fetch group information to determine number of lights
+  private async fetchGroupInfo(ip: string, username: string, groupId: string, numericGroupId?: string): Promise<any> {
+    try {
+      // Try using the CLIP v2 API first
+      try {
+        const url = `https://${ip}/clip/v2/resource/entertainment_configuration/${groupId}`;
+        const response = await axios.get(url, {
+          headers: { 'hue-application-key': username },
+          httpsAgent
+        });
+
+        if (response.data && response.data.data && response.data.data.length > 0) {
+          console.log('Retrieved group info from CLIP v2 API');
+          return {
+            lights: response.data.data[0].light_services || []
+          };
+        }
+      } catch (error) {
+        console.warn('Failed to get group info via CLIP v2 API, trying v1');
+      }
+
+      // Fallback to CLIP v1 API if needed
+      if (numericGroupId) {
+        const v1Url = `http://${ip}/api/${username}/groups/${numericGroupId}`;
+        const response = await axios.get(v1Url);
+        console.log('Retrieved group info from CLIP v1 API');
+        return response.data;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error fetching group info:', error);
+      return null;
+    }
+  }
 
   /**
    * Stops streaming to the Hue entertainment group
@@ -488,26 +583,26 @@ export default class HueService {
         console.log('Cannot set color - not streaming or no socket connection');
         return false;
       }
-      
+
       // Validate RGB values to ensure they're within range
       const validRgb = rgb.map(val => Math.max(0, Math.min(255, Math.round(val))));
-      
+
       // Add more debugging
       console.log(`Setting colors for lights ${lightIds.join(', ')}: RGB(${validRgb.join(', ')}), transition: ${transitionTime}ms`);
-      
+
       // For longer transitions, we need to stream multiple commands over time
       if (transitionTime > 100) {
         await this.streamTransition(lightIds, validRgb, transitionTime);
         return true;
       }
-      
+
       // For quick transitions, just send a single command
       // Create commands for each light
       const lightCommands = lightIds.map(id => ({ id, rgb: validRgb }));
-      
+
       // Create and send the command buffer
       const commandBuffer = this.createCommandBuffer(this.entertainmentId, lightCommands);
-      
+
       return new Promise((resolve) => {
         this.socket!.send(commandBuffer, (error) => {
           if (error) {
@@ -535,46 +630,46 @@ export default class HueService {
     startRgb: number[] = [255, 255, 255] // Default starting from white
   ): Promise<void> {
     console.log(`Creating smooth transition from RGB(${startRgb.join(',')}) to RGB(${targetRgb.join(',')}) over ${transitionTime}ms`);
-    
+
     // Create more steps for smoother transition
     const steps = Math.max(Math.floor(transitionTime / 30), 30); // At least 30 steps
     const stepInterval = Math.floor(transitionTime / steps);
     const frameRate = 60; // Hz - higher frame rate for smoother animation
-    
+
     return new Promise((resolve) => {
       let currentStep = 0;
-      
+
       // Calculate step size for each color component
       const stepSize = [
         (targetRgb[0] - startRgb[0]) / steps,
         (targetRgb[1] - startRgb[1]) / steps,
         (targetRgb[2] - startRgb[2]) / steps
       ];
-      
+
       console.log(`Step sizes: R: ${stepSize[0]}, G: ${stepSize[1]}, B: ${stepSize[2]}`);
-      
+
       // Create interval to send commands at specified frame rate
       const interval = setInterval(() => {
         currentStep++;
-        
+
         // Calculate current color
         const currentRgb = [
           Math.round(startRgb[0] + (stepSize[0] * currentStep)),
           Math.round(startRgb[1] + (stepSize[1] * currentStep)),
           Math.round(startRgb[2] + (stepSize[2] * currentStep))
         ];
-        
+
         // Clamp values between 0-255
         const clampedRgb = currentRgb.map(val => Math.max(0, Math.min(255, val)));
-        
+
         // Log every few steps to reduce console output
         if (currentStep % 5 === 0 || currentStep === steps) {
           console.log(`Transition step ${currentStep}/${steps}: RGB(${clampedRgb.join(',')})`);
         }
-        
+
         // Create commands for each light
         const lightCommands = lightIds.map(id => ({ id, rgb: clampedRgb }));
-        
+
         // Create and send the command buffer
         try {
           const commandBuffer = this.createCommandBuffer(this.entertainmentId!, lightCommands);
@@ -586,12 +681,12 @@ export default class HueService {
         } catch (error) {
           console.error('Error creating command buffer:', error);
         }
-        
+
         // Check if we've reached the end
         if (currentStep >= steps) {
           clearInterval(interval);
           console.log('Transition complete');
-          
+
           // Send one final command with exact target color for precision
           try {
             const finalCommands = lightIds.map(id => ({ id, rgb: targetRgb }));
@@ -600,7 +695,7 @@ export default class HueService {
           } catch (error) {
             console.error('Error sending final color:', error);
           }
-          
+
           resolve();
         }
       }, Math.floor(1000 / frameRate));
@@ -619,18 +714,18 @@ export default class HueService {
       }
 
       // Use the provided light IDs, or fall back to a single light if none provided
-      const targetLightIds = lightIds && lightIds.length > 0 
-        ? lightIds 
+      const targetLightIds = lightIds && lightIds.length > 0
+        ? lightIds
         : [0]; // Default to just light 0 if no lights specified
-      
+
       console.log(`====== STARTING ENHANCED LIGHT TEST SEQUENCE ======`);
       console.log(`Target lights: ${targetLightIds.length}`);
       console.log(`Light IDs: ${targetLightIds.join(', ')}`);
       console.log(`Entertainment ID: ${this.entertainmentId}`);
-      
+
       // Reset all lights to black first
       await this.streamColorWithHighFrequency([0, 0, 0], targetLightIds, 300, 30);
-      
+
       // 1. Quick RGB flash sequence (very fast color changes)
       console.log("Effect: Quick RGB flashes");
       const flashColors = [[255,0,0], [0,255,0], [0,0,255]];
@@ -639,10 +734,10 @@ export default class HueService {
           await this.streamColorWithHighFrequency(color, targetLightIds, 150, 60);
         }
       }
-      
+
       // Brief pause
       await this.streamColorWithHighFrequency([0, 0, 0], targetLightIds, 300, 30);
-      
+
       // 2. Wave effect - lights turn on one after another
       if (targetLightIds.length > 1) {
         console.log("Effect: Wave pattern");
@@ -656,11 +751,11 @@ export default class HueService {
             await this.streamColorWithHighFrequency([0, 0, 255], [targetLightIds[i]], 80, 60);
           }
         }
-        
+
         // All lights together
         await this.streamColorWithHighFrequency([255, 255, 255], targetLightIds, 300, 60);
       }
-      
+
       // 3. Rainbow effect - smooth color transitions
       console.log("Effect: Rainbow transition");
       const rainbowColors = [
@@ -672,14 +767,14 @@ export default class HueService {
         [75, 0, 130],   // Indigo
         [148, 0, 211]   // Violet
       ];
-      
+
       // Instead of discrete colors, use smooth transitions between each rainbow color
       console.log("Starting smooth rainbow transitions...");
       for (let i = 0; i < rainbowColors.length - 1; i++) {
         const startColor = rainbowColors[i];
         const endColor = rainbowColors[i + 1];
         console.log(`Rainbow transition: ${startColor.join(',')} → ${endColor.join(',')}`);
-        
+
         // Use the transition method with longer duration for smoother effect
         await this.streamTransition(
           targetLightIds,
@@ -688,7 +783,7 @@ export default class HueService {
           startColor      // Starting color
         );
       }
-      
+
       // Complete the rainbow circle by transitioning back to red
       await this.streamTransition(
         targetLightIds,
@@ -696,17 +791,17 @@ export default class HueService {
         800,                   // Transition time
         rainbowColors[rainbowColors.length - 1]  // From violet
       );
-      
+
       // Brief pause with lights off
       await this.streamColorWithHighFrequency([0, 0, 0], targetLightIds, 300, 30);
-      
+
       // 4. Strobe effect - rapid white flashes
       console.log("Effect: Strobe effect");
       for (let i = 0; i < 10; i++) {
         const color = i % 2 === 0 ? [255, 255, 255] : [0, 0, 0];
         await this.streamColorWithHighFrequency(color, targetLightIds, 100, 60);
       }
-      
+
       // 5. Theater chase effect (if multiple lights)
       if (targetLightIds.length > 2) {
         console.log("Effect: Theater chase pattern");
@@ -714,36 +809,36 @@ export default class HueService {
         const group1 = targetLightIds.filter((_, i) => i % 3 === 0);
         const group2 = targetLightIds.filter((_, i) => i % 3 === 1);
         const group3 = targetLightIds.filter((_, i) => i % 3 === 2);
-        
+
         console.log(`Chase groups: Group1[${group1.join(',')}], Group2[${group2.join(',')}], Group3[${group3.join(',')}]`);
-        
+
         // Chase pattern - fixed to illuminate groups simultaneously with different colors
         for (let repeat = 0; repeat < 5; repeat++) {
           // Create commands for all lights, with different colors per group
           const lightCommands = [];
-          
+
           // Set all lights to black first
           await this.streamColorWithHighFrequency([0, 0, 0], targetLightIds, 30, 60);
-          
+
           // Group 1 red, others off
           await this.streamColorWithHighFrequency([255, 0, 0], group1, 150, 60);
           await this.streamColorWithHighFrequency([0, 0, 0], group1, 30, 60);
-          
+
           // Group 2 green, others off
           await this.streamColorWithHighFrequency([0, 255, 0], group2, 150, 60);
           await this.streamColorWithHighFrequency([0, 0, 0], group2, 30, 60);
-          
+
           // Group 3 blue, others off
           await this.streamColorWithHighFrequency([0, 0, 255], group3, 150, 60);
           await this.streamColorWithHighFrequency([0, 0, 0], group3, 30, 60);
         }
       }
-      
+
       // 6. Pulse effect - brightness pulsing with smooth transitions
       console.log("Effect: Smooth breathing/pulsing effect");
       for (let pulse = 0; pulse < 3; pulse++) {
         console.log(`Pulse cycle ${pulse + 1}/3`);
-        
+
         // Instead of discrete steps, create smooth fade up
         await this.streamTransition(
           targetLightIds,
@@ -751,10 +846,10 @@ export default class HueService {
           1500,             // Longer fade up
           [0, 0, 0]         // From black
         );
-        
+
         // Hold the brightness briefly
         await this.streamColorWithHighFrequency([255, 255, 255], targetLightIds, 200, 60);
-        
+
         // Then smooth fade down
         await this.streamTransition(
           targetLightIds,
@@ -762,11 +857,11 @@ export default class HueService {
           1500,              // Longer fade down
           [255, 255, 255]    // From white
         );
-        
+
         // Hold the darkness briefly
         await this.streamColorWithHighFrequency([0, 0, 0], targetLightIds, 200, 60);
       }
-      
+
       // Final effect: All lights color explosion
       console.log("Effect: Color explosion finale");
       const finaleColors = [
@@ -778,18 +873,18 @@ export default class HueService {
         [255, 0, 255],  // Purple
         [255, 255, 255] // White
       ];
-      
+
       // Rapid finale
       for (const color of finaleColors) {
         await this.streamColorWithHighFrequency(color, targetLightIds, 200, 60);
       }
-      
+
       // End with a much smoother fade to black using a longer transition
       console.log("Effect: Smooth fade to black finale");
-      
+
       // First set to bright white
       await this.streamColorWithHighFrequency([255, 255, 255], targetLightIds, 800, 60);
-      
+
       // Then gradually fade to black using our enhanced transition method
       await this.streamTransition(
         targetLightIds,     // Target light IDs
@@ -797,10 +892,10 @@ export default class HueService {
         4000,               // Longer transition time (4 seconds)
         [255, 255, 255]     // Starting color (white)
       );
-      
+
       // Wait a moment at black to make the effect clear
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       console.log('====== ENHANCED LIGHT TEST SEQUENCE COMPLETED ======');
       return true;
     } catch (error) {
@@ -814,39 +909,39 @@ export default class HueService {
    * Modified to support higher frame rates for smoother transitions
    */
   private async streamColorWithHighFrequency(
-    rgb: number[], 
-    lightIds: number[], 
-    durationMs: number = 1000, 
+    rgb: number[],
+    lightIds: number[],
+    durationMs: number = 1000,
     frequencyHz: number = 50
   ): Promise<void> {
     if (!this.isStreaming || !this.socket || !this.entertainmentId) {
       throw new Error('Streaming not active');
     }
-    
+
     // Only log color changes that last more than 200ms to reduce console spam
     if (durationMs > 200) {
       console.log(`Color: RGB(${rgb.join(',')}) to ${lightIds.length} lights for ${durationMs}ms`);
     }
-    
+
     return new Promise((resolve, reject) => {
       // Calculate interval time based on frequency (ms)
       const intervalMs = Math.floor(1000 / frequencyHz);
-      
+
       // Create light commands once
       const lightCommands = lightIds.map(id => ({ id, rgb }));
-      
+
       // Create command buffer once
       const commandBuffer = this.createCommandBuffer(this.entertainmentId!, lightCommands);
-      
+
       let elapsedTime = 0;
       let errorOccurred = false;
       let commandsSent = 0;
-      
+
       // Create interval to send commands at specified frequency
       const interval = setInterval(() => {
         elapsedTime += intervalMs;
         commandsSent++;
-        
+
         // Send the command
         this.socket!.send(commandBuffer, (error) => {
           if (error) {
@@ -856,14 +951,14 @@ export default class HueService {
             reject(error);
           }
         });
-        
+
         // Check if we've reached the duration
         if (elapsedTime >= durationMs && !errorOccurred) {
           clearInterval(interval);
           resolve();
         }
       }, intervalMs);
-      
+
       // Safety timeout to ensure the promise resolves
       setTimeout(() => {
         clearInterval(interval);
@@ -880,13 +975,13 @@ export default class HueService {
   private async stopStreaming(): Promise<void> {
     if (this.isStreaming && this.socket) {
       console.log('Stopping Hue streaming...');
-      
+
       // Clear keepalive interval
       if (this.streamInterval) {
         clearInterval(this.streamInterval);
         this.streamInterval = null;
       }
-      
+
       // Close the DTLS connection
       try {
         if (typeof this.socket.close === 'function') {
@@ -901,7 +996,7 @@ export default class HueService {
       } catch (error) {
         console.error('Error closing DTLS connection:', error);
       }
-      
+
       // Stop the entertainment group if we have an ID and it's still active
       if (this.entertainmentId) {
         // Get the IP and username from the socket options if available
@@ -909,7 +1004,7 @@ export default class HueService {
         const options = socketAny.options || {};
         const ip = options.address;
         const username = Object.keys(options.psk || {})[0];
-        
+
         if (ip && username) {
           try {
             await this.stopEntertainmentGroup(ip, username, this.entertainmentId);
@@ -918,11 +1013,102 @@ export default class HueService {
           }
         }
       }
-      
+
       // Reset state
       this.isStreaming = false;
       this.socket = null;
       console.log('Streaming stopped and resources cleaned up');
     }
+  }
+
+  /**
+   * Processes beat detection data from the renderer and updates lights accordingly
+   */
+  private handleProcessBeat = async (_: any, beatData: BeatData): Promise<boolean> => {
+    try {
+      if (!this.isStreaming || !this.socket || !this.entertainmentId) {
+        this.lastBeatDetected = false;
+        return false;
+      }
+
+      const now = Date.now();
+
+      // Process beat detection and update lights
+      if (beatData.isBeat && now - this.lastBeatTime > this.beatHoldTime) {
+        // Update the last beat time and beat detected status
+        this.lastBeatTime = now;
+        this.lastBeatDetected = true;
+
+        // For beats, flash all lights with the next color in our sequence
+        const beatColor = this.beatColors[this.currentBeatColorIndex];
+
+        // Scale color intensity based on beat energy
+        const scaledColor = beatColor.map(c => Math.min(255, Math.round(c * (0.5 + beatData.energy / 200))));
+
+        // Create commands for each active light - use all of them!
+        const lightCommands = this.activeLightIds.map(id => ({ id, rgb: scaledColor }));
+
+        console.log(`Beat detected! Energy: ${beatData.energy.toFixed(2)}, Color: [${scaledColor.join(',')}], Lights: ${this.activeLightIds.length}`);
+
+        // Create and send the command buffer
+        const commandBuffer = this.createCommandBuffer(this.entertainmentId, lightCommands);
+        await this.sendCommandToLights(commandBuffer);
+
+        // Update to next color for next beat
+        this.currentBeatColorIndex = (this.currentBeatColorIndex + 1) % this.beatColors.length;
+
+        return true;
+      }
+      else if (!beatData.isBeat && now - this.lastBeatTime > 200) {
+        // Reset beat detected status between beats
+        this.lastBeatDetected = false;
+
+        // Between beats, create ambient light based on frequency distribution
+        const bassColor = [beatData.bassEnergy, 0, 0]; // Red for bass
+        const midColor = [0, beatData.midEnergy, 0];   // Green for mids
+        const highColor = [0, 0, beatData.highEnergy]; // Blue for highs
+
+        // Mix the colors together
+        const mixedColor = [
+          Math.min(255, bassColor[0] + midColor[0] + highColor[0]),
+          Math.min(255, bassColor[1] + midColor[1] + highColor[1]),
+          Math.min(255, bassColor[2] + midColor[2] + highColor[2])
+        ];
+
+        // Create commands for each active light
+        const lightCommands = this.activeLightIds.map(id => ({ id, rgb: mixedColor }));
+
+        // Create and send the command buffer
+        const commandBuffer = this.createCommandBuffer(this.entertainmentId, lightCommands);
+        await this.sendCommandToLights(commandBuffer);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error processing beat data:', error);
+      this.lastBeatDetected = false;
+      return false;
+    }
+  };
+
+  /**
+   * Send a command to the lights via DTLS
+   */
+  private sendCommandToLights(commandBuffer: Buffer): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (!this.socket) {
+        resolve(false);
+        return;
+      }
+
+      this.socket.send(commandBuffer, (error) => {
+        if (error) {
+          console.error('Error sending command to lights:', error);
+          resolve(false);
+        } else {
+          resolve(true);
+        }
+      });
+    });
   }
 }

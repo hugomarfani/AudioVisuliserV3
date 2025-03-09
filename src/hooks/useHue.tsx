@@ -8,11 +8,27 @@ declare global {
   }
 }
 
+// Beat detection data interface
+export interface BeatData {
+  isBeat: boolean;
+  energy: number;
+  bassEnergy: number;
+  midEnergy: number;
+  highEnergy: number;
+}
+
+// Beat status interface
+export interface BeatStatus {
+  isDetected: boolean;
+  lastTime: number;
+}
+
 // Export the types and interfaces that other components might need
 export interface HueContextType {
   isConfigured: boolean;
   hueSettings: HueSettings | null;
   isStreamingActive: boolean;
+  beatStatus: BeatStatus;
   registerBridge: (ip: string) => Promise<HueCredentials>;
   fetchGroups: (ip: string, username: string, clientkey: string) => Promise<EntertainmentGroup[]>;
   startHueStreaming: () => Promise<boolean>;
@@ -20,7 +36,9 @@ export interface HueContextType {
   setLightColor: (lightIds: number[], rgb: number[], transitionTime: number) => Promise<boolean>;
   saveHueSettings: (settings: HueSettings, numericId?: string) => void;
   resetHueSettings: () => void;
-  testLights: (lightIds?: number[]) => Promise<boolean>; // Updated to accept specific light IDs
+  testLights: (lightIds?: number[]) => Promise<boolean>;
+  processBeat: (beatData: BeatData) => Promise<boolean>;
+  refreshBeatStatus: () => Promise<BeatStatus>;
 }
 
 // Create the context with default values
@@ -28,6 +46,7 @@ const HueContext = createContext<HueContextType>({
   isConfigured: false,
   hueSettings: null,
   isStreamingActive: false,
+  beatStatus: {isDetected: false, lastTime: 0},
   registerBridge: async () => ({ username: '', clientkey: '' }),
   fetchGroups: async () => [],
   startHueStreaming: async () => false,
@@ -36,6 +55,8 @@ const HueContext = createContext<HueContextType>({
   saveHueSettings: () => {},
   resetHueSettings: () => {},
   testLights: async () => false,
+  processBeat: async () => false,
+  refreshBeatStatus: async () => ({ isDetected: false, lastTime: 0 }),
 });
 
 // Hook to use the Hue context
@@ -49,6 +70,7 @@ export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [hueSettings, setHueSettings] = useState<HueSettings | null>(null);
   const [isConfigured, setIsConfigured] = useState<boolean>(false);
   const [isStreamingActive, setIsStreamingActive] = useState<boolean>(false);
+  const [beatStatus, setBeatStatus] = useState<BeatStatus>({ isDetected: false, lastTime: 0 });
 
   // Load saved settings on mount
   useEffect(() => {
@@ -109,7 +131,7 @@ export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         groupId: hueSettings.selectedGroup,
         numericGroupId: hueSettings.numericGroupId // Pass the numeric ID
       });
-      
+
       setIsStreamingActive(success);
       return success;
     } catch (error) {
@@ -155,10 +177,10 @@ export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const saveHueSettings = useCallback((settings: HueSettings, numericId?: string) => {
     try {
       // Include the numeric ID in settings if provided
-      const settingsToSave = numericId ? 
-        { ...settings, numericGroupId: numericId } : 
+      const settingsToSave = numericId ?
+        { ...settings, numericGroupId: numericId } :
         settings;
-      
+
       localStorage.setItem(HUE_SETTINGS_KEY, JSON.stringify(settingsToSave));
       setHueSettings(settingsToSave);
       setIsConfigured(true);
@@ -188,22 +210,22 @@ export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           groupId: hueSettings.selectedGroup,
           numericGroupId: hueSettings.numericGroupId
         });
-        
+
         if (!success) {
           console.error('Failed to start streaming for light test');
           return false;
         }
-        
+
         setIsStreamingActive(true);
       }
-      
+
       // Run the light test with specific light IDs
       const testResult = await window.electron.hue.testLights({ lightIds });
-      
+
       // Stop streaming when done
       await window.electron.hue.stopStreaming();
       setIsStreamingActive(false);
-      
+
       return testResult;
     } catch (error) {
       console.error('Error during light test:', error);
@@ -213,6 +235,53 @@ export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return false;
     }
   }, [hueSettings, isStreamingActive]);
+
+  // Process beat data - new method
+  const processBeat = useCallback(async (beatData: BeatData): Promise<boolean> => {
+    if (!isStreamingActive) return false;
+
+    try {
+      const result = await window.electron.hue.processBeat(beatData);
+      // After processing beat, refresh the beat status
+      refreshBeatStatus();
+      return result;
+    } catch (error) {
+      console.error('Failed to process beat data:', error);
+      return false;
+    }
+  }, [isStreamingActive]);
+
+  // New method to refresh beat detection status
+  const refreshBeatStatus = useCallback(async (): Promise<BeatStatus> => {
+    if (!isStreamingActive) {
+      const defaultStatus = { isDetected: false, lastTime: 0 };
+      setBeatStatus(defaultStatus);
+      return defaultStatus;
+    }
+
+    try {
+      const status = await window.electron.hue.getBeatStatus() as BeatStatus;
+      setBeatStatus(status);
+      return status;
+    } catch (error) {
+      console.error('Failed to get beat status:', error);
+      const defaultStatus = { isDetected: false, lastTime: 0 };
+      setBeatStatus(defaultStatus);
+      return defaultStatus;
+    }
+  }, [isStreamingActive]);
+
+  // Setup a periodic polling for beat status
+  useEffect(() => {
+    if (!isStreamingActive) return;
+
+    // Poll beat status every 100ms
+    const interval = setInterval(refreshBeatStatus, 100);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [isStreamingActive, refreshBeatStatus]);
 
   // Cleanup streaming on unmount
   useEffect(() => {
@@ -228,6 +297,7 @@ export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     isConfigured,
     hueSettings,
     isStreamingActive,
+    beatStatus,
     registerBridge,
     fetchGroups,
     startHueStreaming,
@@ -235,7 +305,9 @@ export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setLightColor,
     saveHueSettings,
     resetHueSettings,
-    testLights // Add new function to context
+    testLights,
+    processBeat,
+    refreshBeatStatus
   };
 
   return <HueContext.Provider value={value}>{children}</HueContext.Provider>;

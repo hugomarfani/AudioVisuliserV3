@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, CSSProperties, forwardRef, useImperativeHandle } from 'react';
 import { AiOutlineForward, AiOutlineBackward } from 'react-icons/ai';
-import { FaPlay, FaPause } from 'react-icons/fa';
+import { FaPlay, FaPause, FaCog } from 'react-icons/fa';
+import HueStatusPanel from '../HueSettings/HueStatusPanel';
+import HueSettings from '../HueSettings/HueSettings';
 
 interface PlayerProps {
   track: {
@@ -24,6 +26,8 @@ const Player = forwardRef<any, PlayerProps>(({
   const [progress, setProgress] = useState(0);
   const [hoverProgress, setHoverProgress] = useState<number | null>(null);
   const [rotation, setRotation] = useState(0);
+  const [isHueStatusOpen, setIsHueStatusOpen] = useState(false);
+  const [isHueSettingsOpen, setIsHueSettingsOpen] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -240,6 +244,17 @@ const Player = forwardRef<any, PlayerProps>(({
     setHoverProgress(0);
   };
 
+  // Toggle Hue status panel
+  const toggleHueStatusPanel = () => {
+    setIsHueStatusOpen(!isHueStatusOpen);
+  };
+
+  // Open full Hue settings
+  const openFullSettings = () => {
+    setIsHueStatusOpen(false);
+    setIsHueSettingsOpen(true);
+  };
+
   return (
     <div
       style={{
@@ -248,6 +263,7 @@ const Player = forwardRef<any, PlayerProps>(({
         justifyContent: 'center',
         alignItems: 'center',
         padding: '2rem 0',
+        position: 'relative',
       }}
     >
       {/* Pill-shaped player container */}
@@ -358,12 +374,55 @@ const Player = forwardRef<any, PlayerProps>(({
           <button onClick={skipForward} style={iconButtonStyle}>
             <AiOutlineForward />
           </button>
-          <button style={iconButtonStyle}>Options</button>
+          <button
+            onClick={toggleHueStatusPanel}
+            style={{
+              ...iconButtonStyle,
+              position: 'relative',
+              color: isHueStatusOpen ? '#007AFF' : undefined,
+              backgroundColor: isHueStatusOpen ? 'rgba(0, 122, 255, 0.1)' : 'transparent',
+              borderRadius: '50%',
+              width: '35px',
+              height: '35px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <FaCog style={{fontSize: '1.1rem'}} />
+            {!isHueStatusOpen && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '3px',
+                  right: '3px',
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: '#007AFF',
+                  display: 'block',
+                }}
+              />
+            )}
+          </button>
         </div>
 
         {/* Hidden audio element */}
         <audio ref={audioRef} src={track.audioSrc} />
       </div>
+
+      {/* Hue Status Panel (only shown when isHueStatusOpen is true) */}
+      <HueStatusPanel
+        isOpen={isHueStatusOpen}
+        onClose={() => setIsHueStatusOpen(false)}
+        onOpenFullSettings={openFullSettings}
+      />
+
+      {/* Full Hue Settings Modal (only shown when isHueSettingsOpen is true) */}
+      {isHueSettingsOpen && (
+        <HueSettings onClose={() => setIsHueSettingsOpen(false)} />
+      )}
     </div>
   );
 });
