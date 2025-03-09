@@ -338,7 +338,10 @@ const Player = forwardRef<any, PlayerProps>(({
             highEnergy: scaledHighEnergy,
             // Add additional data for enhanced lighting
             color: finalColor,
-            vocalEnergy: isHighVocalEnergy.current ? vocalEnergy : 0
+            vocalEnergy: vocalEnergy,
+            audioData: dataArrayRef.current, // Send full audio data for visualization
+            brightness: brightness,
+            vocalActive: isHighVocalEnergy.current
           });
         }
 
@@ -370,7 +373,21 @@ const Player = forwardRef<any, PlayerProps>(({
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
       }
-      // Still notify about paused state
+      // Still notify about paused state and send empty audio data to reset visualizations
+      if (isStreamingActive && isHueConnected) {
+        window.electron.hue.processBeat({
+          isBeat: false,
+          energy: 0,
+          bassEnergy: 0,
+          midEnergy: 0,
+          highEnergy: 0,
+          color: baseColors.current[currentColorIndex.current],
+          vocalEnergy: 0,
+          audioData: new Uint8Array(analyzerRef.current?.frequencyBinCount || 0),
+          brightness: 0.5,
+          vocalActive: false
+        });
+      }
       onPlayStateChange?.(false);
     }
 
@@ -380,7 +397,7 @@ const Player = forwardRef<any, PlayerProps>(({
         animationFrameRef.current = null;
       }
     };
-  }, [isPlaying, isStreamingActive, isHueConnected]);
+  }, [isPlaying, isStreamingActive, isHueConnected, onPlayStateChange]);
 
   useEffect(() => {
     const audio = audioRef.current;
