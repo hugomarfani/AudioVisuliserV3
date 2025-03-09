@@ -14,17 +14,17 @@ interface PlayerProps {
   onPlayStateChange?: (isPlaying: boolean, audioData?: Uint8Array) => void; // New prop for Hue integration
 }
 
-const Player = forwardRef<any, PlayerProps>(({ 
-  track, 
-  autoPlay = false, 
+const Player = forwardRef<any, PlayerProps>(({
+  track,
+  autoPlay = false,
   onTimeUpdate,
-  onPlayStateChange 
+  onPlayStateChange
 }, ref) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [hoverProgress, setHoverProgress] = useState<number | null>(null);
   const [rotation, setRotation] = useState(0);
-  
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyzerRef = useRef<AnalyserNode | null>(null);
@@ -49,11 +49,12 @@ const Player = forwardRef<any, PlayerProps>(({
       try {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
         analyzerRef.current = audioContextRef.current.createAnalyser();
-        analyzerRef.current.fftSize = 256; // Power of 2, smaller values = less detail but better performance
-        
+        analyzerRef.current.fftSize = 512; // Increased for better frequency resolution
+        analyzerRef.current.smoothingTimeConstant = 0.5; // Smoothing for more stable beat detection
+
         const bufferLength = analyzerRef.current.frequencyBinCount;
         dataArrayRef.current = new Uint8Array(bufferLength);
-        
+
         sourceNodeRef.current = audioContextRef.current.createMediaElementSource(audioRef.current);
         sourceNodeRef.current.connect(analyzerRef.current);
         analyzerRef.current.connect(audioContextRef.current.destination);
@@ -93,19 +94,19 @@ const Player = forwardRef<any, PlayerProps>(({
   useEffect(() => {
     const analyzeAudio = () => {
       if (!analyzerRef.current || !dataArrayRef.current) return;
-      
+
       // Get frequency data
       analyzerRef.current.getByteFrequencyData(dataArrayRef.current);
-      
+
       // Notify callback with current play state and audio data
       onPlayStateChange?.(isPlaying, dataArrayRef.current);
-      
+
       // Continue the loop if still playing
       if (isPlaying) {
         animationFrameRef.current = requestAnimationFrame(analyzeAudio);
       }
     };
-    
+
     if (isPlaying) {
       // Resume audio context if needed (browsers require user interaction)
       if (audioContextRef.current?.state === 'suspended') {
@@ -120,7 +121,7 @@ const Player = forwardRef<any, PlayerProps>(({
       // Still notify about paused state
       onPlayStateChange?.(false);
     }
-    
+
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
@@ -180,17 +181,17 @@ const Player = forwardRef<any, PlayerProps>(({
         animationFrame = requestAnimationFrame(updateRotation);
       }
     };
-    
+
     if (isPlaying) {
       animationFrame = requestAnimationFrame(updateRotation);
     }
-    
+
     return () => cancelAnimationFrame(animationFrame);
   }, [isPlaying]);
 
   const togglePlayPause = () => {
     if (!audioRef.current || !track.audioSrc) return;
-    
+
     if (isPlaying) {
       audioRef.current.pause();
     } else {
@@ -198,14 +199,14 @@ const Player = forwardRef<any, PlayerProps>(({
       if (audioContextRef.current?.state === 'suspended') {
         audioContextRef.current.resume();
       }
-      
+
       audioRef.current.play().catch(error => {
         console.error('Error playing audio:', error);
         setIsPlaying(false);
         onPlayStateChange?.(false);
       });
     }
-    
+
     const newPlayState = !isPlaying;
     setIsPlaying(newPlayState);
     onPlayStateChange?.(newPlayState);
