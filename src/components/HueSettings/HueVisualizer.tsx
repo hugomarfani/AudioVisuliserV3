@@ -48,12 +48,23 @@ const HueVisualizer: React.FC<HueVisualizerProps> = ({
   const lastUpdateRef = useRef<number>(0);
   const [isVisualizerActive, setIsVisualizerActive] = useState(false);
 
-  // Beat detection state
+  // Beat detection state with improved sensitivity and smoother transitions
   const [isBeat, setIsBeat] = useState(false);
   const [beatIntensity, setBeatIntensity] = useState(0);
   const energyHistory = useRef<number[]>([]);
   const beatThreshold = useRef(0.8);
   const lastBeatTime = useRef(0);
+
+  // Smoothing states for transitions
+  const leftIntensityRef = useRef(0);
+  const rightIntensityRef = useRef(0);
+  const centerIntensityRef = useRef(0);
+  const smoothingFactor = 0.15; // Lower = smoother but slower transitions
+  const idleDefaultIntensity = 0.3; // Default intensity when no beat is detected
+
+  // Amplitude tracking for general volume response
+  const volumeLevel = useRef(0);
+  const baselineVolume = useRef(0.1);
 
   // Fetch light information including positions from entertainment setup
   useEffect(() => {
@@ -64,7 +75,6 @@ const HueVisualizer: React.FC<HueVisualizerProps> = ({
         console.log('Fetching light positions from entertainment configuration');
 
         // Use bridge API to get entertainment configuration with light positions
-        // This should ideally come from the actual Hue bridge data
         const entertainmentConfig = await window.electron.hue.getEntertainmentSetup({
           ip: hueSettings.bridge.ip,
           username: hueSettings.credentials.username,
@@ -168,59 +178,131 @@ const HueVisualizer: React.FC<HueVisualizerProps> = ({
     }
   }, [isStreamingActive, isPlaying, isConfigured, isVisualizerActive, startHueStreaming]);
 
-  // Beat detection function
-  const detectBeat = (audioDataArray: Uint8Array): { isBeat: boolean, intensity: number } => {
+  // Analyze audio to detect beats and overall volume level
+  const analyzeAudio = (audioDataArray: Uint8Array): {
+    isBeat: boolean,
+    intensity: number,
+    volume: number
+  } => {
     if (!audioDataArray || audioDataArray.length === 0) {
-      return { isBeat: false, intensity: 0 };
+      return { isBeat: false, intensity: 0, volume: 0 };
     }
 
-    // Calculate energy from lower frequency bands (bass frequencies)
-    // Use only the first 30% of frequency bands which contain most of the bass
-    const bassRange = Math.floor(audioDataArray.length * 0.3);
-    let energy = 0;
+    // Calculate overall volume first (average of all frequencies)
+    let overallVolume = 0;
+    for (let i = 0; i < audioDataArray.length; i++) {
+      overallVolume += audioDataArray[i] / 255;
+    }
+    overallVolume = overallVolume / audioDataArray.length;
+
+    // Update the volume level with some smoothing
+    volumeLevel.current = volumeLevel.current * 0.7 + overallVolume * 0.3;
+
+    // For beat detection, focus on bass frequencies (first 15-20% of spectrum)
+    const bassRange = Math.floor(audioDataArray.length * 0.2);
+    let bassEnergy = 0;
 
     for (let i = 0; i < bassRange; i++) {
       // Weight lower frequencies more heavily
       const weight = 1 - (i / bassRange);
-      energy += (audioDataArray[i] / 255) * weight;
+      bassEnergy += (audioDataArray[i] / 255) * weight;
     }
 
-    // Normalize energy to a 0-1 scale
-    energy = energy / bassRange;
+    // Normalize bass energy to a 0-1 scale
+    bassEnergy = bassEnergy / bassRange;
 
     // Add to history
-    energyHistory.current.push(energy);
+    energyHistory.current.push(bassEnergy);
 
     // Keep history at a reasonable size
-    if (energyHistory.current.length > 50) {
+    if (energyHistory.current.length > 60) {
       energyHistory.current.shift();
     }
 
-    // Calculate average energy
+    // Calculate average energy and variance over recent history
     const avgEnergy = energyHistory.current.reduce((sum, e) => sum + e, 0) / energyHistory.current.length;
 
-    // Dynamically adjust threshold based on recent history
+    // Calculate variance to help with dynamic thresholds
+    let variance = 0;
+    for (const energy of energyHistory.current) {
+      variance += Math.pow(energy - avgEnergy, 2);
+    }
+    variance /= energyHistory.current.length;
+
+    // Dynamically adjust threshold based on variance and recent history
     if (energyHistory.current.length > 20) {
-      // Adjust threshold to be slightly above average
-      beatThreshold.current = avgEnergy * 1.15;
+      // Higher variance = more dynamic audio = higher threshold
+      // Lower variance = more steady audio = lower threshold
+      const dynamicFactor = Math.min(1.5, Math.max(1.05, 1.1 + variance * 2));
+      beatThreshold.current = avgEnergy * dynamicFactor;
     }
 
     // Detect beat - energy must exceed threshold and must have been at least 100ms since last beat
     const now = Date.now();
     const timeSinceLastBeat = now - lastBeatTime.current;
-    const beatDetected = energy > beatThreshold.current && energy > avgEnergy * 1.2 && timeSinceLastBeat > 100;
+    const beatDetected = bassEnergy > beatThreshold.current && bassEnergy > avgEnergy * 1.2 && timeSinceLastBeat > 180;
 
     // Calculate beat intensity - how much the current energy exceeds the threshold
     const intensity = beatDetected
-      ? Math.min(1, (energy - beatThreshold.current) / beatThreshold.current * 2)
+      ? Math.min(1, (bassEnergy - beatThreshold.current) / beatThreshold.current * 2)
       : 0;
 
     if (beatDetected) {
       lastBeatTime.current = now;
-      console.log(`Beat detected! Energy: ${energy.toFixed(2)}, Threshold: ${beatThreshold.current.toFixed(2)}, Intensity: ${intensity.toFixed(2)}`);
+      console.log(`Beat detected! Energy: ${bassEnergy.toFixed(2)}, Threshold: ${beatThreshold.current.toFixed(2)}, Intensity: ${intensity.toFixed(2)}, Volume: ${volumeLevel.current.toFixed(2)}`);
     }
 
-    return { isBeat: beatDetected, intensity };
+    // Update baseline volume estimation (slowly)
+    baselineVolume.current = baselineVolume.current * 0.99 + volumeLevel.current * 0.01;
+
+    // Return beat detection, intensity, and volume level
+    return {
+      isBeat: beatDetected,
+      intensity,
+      volume: Math.max(0, (volumeLevel.current - baselineVolume.current) * 3)  // Scale volume relative to baseline
+    };
+  };
+
+  // Calculate smoothed light intensity based on multiple factors
+  const calculateLightIntensities = (
+    audioInfo: { isBeat: boolean, intensity: number, volume: number },
+    distribution: { left: number, right: number } | undefined
+  ): { left: number, center: number, right: number } => {
+    // Start with a base intensity that responds to volume
+    const baseIntensity = idleDefaultIntensity + audioInfo.volume * 0.4;
+
+    // Distribution factors - default to even if no distribution data
+    const leftFactor = distribution ? distribution.left * 3 : 1;
+    const rightFactor = distribution ? distribution.right * 3 : 1;
+    const centerFactor = distribution ? (distribution.left + distribution.right) / 2 : 1;
+
+    // Target intensities based on beat, volume and particle distribution
+    let targetLeft = baseIntensity * leftFactor;
+    let targetRight = baseIntensity * rightFactor;
+    let targetCenter = baseIntensity * centerFactor;
+
+    // Make the lights pulse more dramatically when a beat is detected
+    if (audioInfo.isBeat) {
+      // Apply beat boost, scaled by the intensity
+      const beatBoost = 0.3 + audioInfo.intensity * 0.7;
+
+      // Apply particle-sensitive beat effect
+      targetLeft += beatBoost * leftFactor;
+      targetRight += beatBoost * rightFactor;
+      targetCenter += beatBoost * centerFactor;
+    }
+
+    // Apply smoothing to create more natural transitions
+    leftIntensityRef.current = leftIntensityRef.current * (1 - smoothingFactor) + targetLeft * smoothingFactor;
+    rightIntensityRef.current = rightIntensityRef.current * (1 - smoothingFactor) + targetRight * smoothingFactor;
+    centerIntensityRef.current = centerIntensityRef.current * (1 - smoothingFactor) + targetCenter * smoothingFactor;
+
+    // Ensure we stay in a reasonable range (0-2)
+    return {
+      left: Math.min(2.0, Math.max(0, leftIntensityRef.current)),
+      center: Math.min(2.0, Math.max(0, centerIntensityRef.current)),
+      right: Math.min(2.0, Math.max(0, rightIntensityRef.current))
+    };
   };
 
   // Update lights based on particle distribution, colors, and audio data
@@ -231,74 +313,44 @@ const HueVisualizer: React.FC<HueVisualizerProps> = ({
     const visualizeFrame = () => {
       const now = Date.now();
 
-      // Limit updates to 20 per second to avoid overwhelming the Hue bridge
-      if (now - lastUpdateRef.current >= 50) {
+      // Process frames at a steady rate (30fps is smooth enough for lights)
+      if (now - lastUpdateRef.current >= 33) { // ~30fps
         lastUpdateRef.current = now;
 
-        // Process audio data for beat detection
-        let beatInfo = { isBeat: false, intensity: 0 };
+        // Process audio data for beat detection and volume
+        let audioInfo = { isBeat: false, intensity: 0, volume: 0 };
 
         if (audioData && audioData.length > 0) {
-          beatInfo = detectBeat(audioData);
-          setIsBeat(beatInfo.isBeat);
-          setBeatIntensity(beatInfo.intensity);
+          audioInfo = analyzeAudio(audioData);
+          setIsBeat(audioInfo.isBeat);
+          setBeatIntensity(audioInfo.intensity);
         }
 
-        // Get base colors from dominant colors or default white
+        // Get base colors from dominant colors or default
         const baseColor = dominantColors[0] || [255, 255, 255];
 
-        // If we have particle distribution data, use it to control left/right light balance
-        if (particleDistribution) {
-          // Scale intensities by beat if detected
-          let beatMultiplier = beatInfo.isBeat ? 1.2 + beatInfo.intensity : 1;
+        // Calculate smoother light intensities
+        const intensities = calculateLightIntensities(audioInfo, particleDistribution);
 
-          // Calculate intensities based on particle distribution
-          let leftIntensity = Math.min(1, particleDistribution.left * 3) * beatMultiplier;
-          let rightIntensity = Math.min(1, particleDistribution.right * 3) * beatMultiplier;
+        // Scale colors based on intensity
+        const leftColor = baseColor.map(val => Math.min(255, Math.round(val * intensities.left)));
+        const rightColor = baseColor.map(val => Math.min(255, Math.round(val * intensities.right)));
+        const centerColor = baseColor.map(val => Math.min(255, Math.round(val * intensities.center)));
 
-          // Center intensity is average of left and right
-          let centerIntensity = ((particleDistribution.left + particleDistribution.right) / 2) * beatMultiplier;
+        // Adaptive transition times based on whether we're on a beat
+        const transitionTime = audioInfo.isBeat ? 50 : 200;
 
-          // Increase intensity on beat
-          if (beatInfo.isBeat) {
-            // Flash brighter on beats
-            leftIntensity = Math.min(2.0, leftIntensity + beatInfo.intensity);
-            rightIntensity = Math.min(2.0, rightIntensity + beatInfo.intensity);
-            centerIntensity = Math.min(2.0, centerIntensity + beatInfo.intensity);
-          }
-
-          // Scale colors based on intensity
-          const leftColor = baseColor.map(val => Math.min(255, Math.round(val * leftIntensity)));
-          const rightColor = baseColor.map(val => Math.min(255, Math.round(val * rightIntensity)));
-          const centerColor = baseColor.map(val => Math.min(255, Math.round(val * centerIntensity)));
-
-          // Use shorter transition times on beats for more responsiveness
-          const transitionTime = beatInfo.isBeat ? 50 : 200;
-
-          // Send colors to lights
-          if (leftLights.length > 0) {
-            setLightColor(leftLights, leftColor, transitionTime);
-          }
-
-          if (rightLights.length > 0) {
-            setLightColor(rightLights, rightColor, transitionTime);
-          }
-
-          if (centerLights.length > 0) {
-            setLightColor(centerLights, centerColor, transitionTime);
-          }
+        // Apply different intensities based on particle distribution and beat
+        if (leftLights.length > 0 && intensities.left > 0.05) {
+          setLightColor(leftLights, leftColor, transitionTime);
         }
-        // If no particle distribution, just use beat detection for all lights
-        else if (audioData) {
-          // Make all lights pulse with the beat
-          const intensity = beatInfo.isBeat ? 1 + beatInfo.intensity : 0.7;
-          const color = baseColor.map(val => Math.min(255, Math.round(val * intensity)));
 
-          // Use shorter transition on beats
-          const transitionTime = beatInfo.isBeat ? 50 : 200;
+        if (rightLights.length > 0 && intensities.right > 0.05) {
+          setLightColor(rightLights, rightColor, transitionTime);
+        }
 
-          // Apply to all lights
-          setLightColor(lightIds, color, transitionTime);
+        if (centerLights.length > 0 && intensities.center > 0.05) {
+          setLightColor(centerLights, centerColor, transitionTime);
         }
       }
 
