@@ -96,4 +96,66 @@ export const registerImageHandlers = () => {
       return { success: false, error: error.message };
     }
   });
+
+  // Add new handler for shader images
+  ipcMain.handle('save-shader-image', async (_, { songId, filePath, fileName, shaderType }) => {
+    try {
+      if (!songId || !filePath || !shaderType) {
+        return { success: false, error: 'Invalid parameters' };
+      }
+
+      // Determine folder based on shader type
+      const folderName = shaderType === 'background' ? 'background' : 'texture';
+      
+      // Create directory if it doesn't exist
+      const outputDir = getResourcePath('assets', 'shader', folderName);
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
+
+      // Get file extension
+      const ext = path.extname(fileName).toLowerCase();
+      const validExtensions = ['.jpg', '.jpeg', '.png'];
+      
+      if (!validExtensions.includes(ext)) {
+        return { 
+          success: false, 
+          error: 'Invalid file format. Please use JPG, JPEG or PNG.' 
+        };
+      }
+
+      // Using .jpg for all shader images for consistency
+      const outputFileName = `${songId}.jpg`;
+      const outputPath = path.join(outputDir, outputFileName);
+      
+      // Copy the file
+      fs.copyFileSync(filePath, outputPath);
+      
+      const relativePath = `assets/shader/${folderName}/${outputFileName}`;
+
+      // Update song in database with new image path
+      const song = await Song.findByPk(songId);
+      if (song) {
+        if (shaderType === 'background') {
+          await song.update({ shaderBackground: relativePath });
+        } else {
+          await song.update({ shaderTexture: relativePath });
+        }
+        
+        // Save the updated song as JSON
+        saveSongAsJson(song);
+      }
+
+      return { 
+        success: true, 
+        savedPath: relativePath 
+      };
+    } catch (error) {
+      console.error('Error saving shader image:', error);
+      return { 
+        success: false, 
+        error: error.message || 'Failed to save shader image' 
+      };
+    }
+  });
 };

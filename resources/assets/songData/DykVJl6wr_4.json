@@ -16,8 +16,8 @@
   "particles": [],
   "backgrounds": [],
   "background_prompts": [],
-  "shaderBackground": "assets/shader/background/DykVJl6wr_4.jpg",
-  "shaderTexture": "assets/shader/texture/DykVJl6wr_4.jpg",
+  "shaderBackground": "shader/background/DykVJl6wr_4.jpg",
+  "shaderTexture": "shader/texture/DykVJl6wr_4.jpg",
   "particleColour": [
     "255",
     "255",

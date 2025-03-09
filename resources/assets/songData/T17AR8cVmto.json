@@ -16,8 +16,8 @@
   "particles": [],
   "backgrounds": [],
   "background_prompts": [],
-  "shaderBackground": "assets/shader/background/T17AR8cVmto.jpg",
-  "shaderTexture": "assets/shader/texture/T17AR8cVmto.jpg",
+  "shaderBackground": "shader/background/T17AR8cVmto.jpg",
+  "shaderTexture": "shader/texture/T17AR8cVmto.jpg",
   "particleColour": [
     "255",
     "255",

@@ -28,8 +28,8 @@
         "255"
     ],
     "particles": [],
-    "shaderBackground": "assets/shader/background/SR6iYWJxHqs.jpg",
-    "shaderTexture": "assets/shader/texture/SR6iYWJxHqs.jpg",
+    "shaderBackground": "shader/background/SR6iYWJxHqs.jpg",
+    "shaderTexture": "shader/texture/SR6iYWJxHqs.jpg",
     "status": "Green",
     "title": "Bruno Mars - Grenade (Official Music Video)",
     "updatedAt": "2025-03-08T16:35:12.471Z",

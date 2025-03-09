@@ -285,8 +285,8 @@ ipcMain.handle('download-wav', async (_, url) => {
       background_prompts: [],
       particles: [],
       particleColour: ["255", "255", "255"],
-      shaderBackground: 'assets/shader/background/'+ id + '.jpg',
-      shaderTexture: 'assets/shader/texture/'+ id + '.jpg',
+      shaderBackground: 'shader/background/'+ id + '.jpg',
+      shaderTexture: 'shader/texture/'+ id + '.jpg',
     });
     saveSongAsJson(song);
     console.log('Song entry created:', song);

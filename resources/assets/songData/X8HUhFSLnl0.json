@@ -14,6 +14,13 @@
   "particles": [],
   "backgrounds": [],
   "background_prompts": [],
+  "shaderBackground": "shader/background/X8HUhFSLnl0.jpg",
+  "shaderTexture": "shader/texture/X8HUhFSLnl0.jpg",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ],
   "createdAt": "2025-03-03T15:48:39.899Z",
   "updatedAt": "2025-03-03T15:48:39.899Z"
 }

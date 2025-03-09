@@ -52,8 +52,8 @@
     ", swirling storm clouds, bright lightning bolts, a smiling sun peeking through the clouds, a rainbow arching over the storm, a small village nestled in the valley below the storm, houses with colourful roofs, smoke rising from chimneys, happy villagers waving from their windows, a path leading up to the village, a clear blue sky above the storm, a feeling of hope and joy, whimsical, magical, cartoon style, high resolution, 8k.\n\n\nA Swirling Storm Inside$, colourful background, suitable for children and family, swirling storm clouds, bright lightning bolts, a smiling sun peeking through the clouds, a rainbow arching over the storm, a small village nestled in the valley below the storm, houses with colourful roofs, smoke rising from chimneys, happy villagers waving from their windows, a path leading up to the village, a clear blue sky above the storm, a feeling of hope and joy, whimsical, magical, cartoon style, high resolution, 8k \n",
     ", style: intricate, detailed, magical, surreal, composition: central focus on a snowflake, surrounding by smaller snowflakes, swirling patterns, glowing lines, ethereal light, mood: peaceful, serene, whimsical.\n\nFrozen Fractals$, colourful background, suitable for children and family, intricate, detailed, magical, surreal, central focus on a snowflake, surrounding by smaller snowflakes, swirling patterns, glowing lines, ethereal light, peaceful, serene, whimsical \n\n\n"
   ],
-  "shaderBackground": "",
-  "shaderTexture": "",
+  "shaderBackground": "shader/background/L0MK7qz13bU.jpg",
+  "shaderTexture": "shader/texture/L0MK7qz13bU.jpg",
   "particleColour": [
     "255",
     "255",

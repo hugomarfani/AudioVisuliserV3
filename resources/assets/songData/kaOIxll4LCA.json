@@ -25,5 +25,12 @@
   "status": "Red",
   "title": "Hakuna Matata (from The Lion King)",
   "updatedAt": "2025-02-24T17:24:33.121Z",
+  "shaderBackground": "shader/background/kaOIxll4LCA.jpg",
+  "shaderTexture": "shader/texture/kaOIxll4LCA.jpg",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ],
   "uploader": "DisneySingItVideos"
 }

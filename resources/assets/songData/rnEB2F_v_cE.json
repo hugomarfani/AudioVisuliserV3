@@ -33,5 +33,12 @@
   "status": "Green",
   "title": "FROZEN | \"In Summer\" - Sing-a-long with Olaf | Official Disney UK",
   "updatedAt": "2025-02-24T17:18:57.019Z",
+  "shaderBackground": "shader/background/rnEB2F_v_cE.jpg",
+  "shaderTexture": "shader/texture/rnEB2F_v_cE.jpg",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ],
   "uploader": "Disney UK"
 }

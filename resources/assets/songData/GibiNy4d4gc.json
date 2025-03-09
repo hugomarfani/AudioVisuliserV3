@@ -46,5 +46,12 @@
     "status": "Red",
     "title": "Carmen Twillie, Lebo M. - Circle of Life (From \"The Lion King\")",
     "updatedAt": "2025-02-23T15:04:38.905Z",
+    "shaderBackground": "shader/background/GibiNy4d4gc.jpg",
+    "shaderTexture": "shader/texture/GibiNy4d4gc.jpg",
+    "particleColour": [
+      "255",
+      "255",
+      "255"
+    ],
     "uploader": "DisneyMusicVEVO"
 }

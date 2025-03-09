@@ -7,6 +7,7 @@ import BackgroundSelector from './BackgroundSelector';
 import ImageGallery from './ImageGallery';
 import LLMRunner from './LLMRunner';
 import WhisperRunner from './WhisperRunner';
+import ShaderImageSelector from './ShaderImageSelector';
 
 interface SongDetailsProps {
   onClose: () => void;
@@ -223,6 +224,13 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
             refetch={refetch}
           />
         </div>
+        
+        {/* Shader Image Selector */}
+        <ShaderImageSelector 
+          song={song} 
+          songId={songId} 
+          refetch={refetch}
+        />
         
         {/* Particle selection component */}
         <ParticleSelector 

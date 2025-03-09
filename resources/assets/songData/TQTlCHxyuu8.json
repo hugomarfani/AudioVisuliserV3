@@ -16,8 +16,8 @@
   "particles": [],
   "backgrounds": [],
   "background_prompts": [],
-  "shaderBackground": "assets/shader/background/TQTlCHxyuu8.jpg",
-  "shaderTexture": "assets/shader/texture/TQTlCHxyuu8.jpg",
+  "shaderBackground": "shader/background/TQTlCHxyuu8.jpg",
+  "shaderTexture": "shader/texture/TQTlCHxyuu8.jpg",
   "particleColour": [
     "255",
     "255",

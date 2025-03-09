@@ -42,6 +42,13 @@
     ", style: cartoon, subject: a family of four, father, mother, son, daughter, all smiling, wearing matching t-shirts, holding hands, walking towards the viewer, path, leading to a giant, smiling sunflower, sunflower, bright yellow petals, large, towering, centre of the sunflower, a small house, tiny windows, a door, a chimney, smoke coming out of the chimney, sky, bright blue, fluffy white clouds, sun, shining brightly, warm, happy, feeling of joy, sense of wonder, family togetherness, love, happiness, innocence, childhood, imagination, adventure.\n\n\ncolour: colourful, suitable for children and family, style: cartoon, subject: a family of four, father, mother, son, daughter, all smiling, wearing matching t-shirts, holding hands, walking towards the viewer, path, leading to a giant, smiling sunflower, sunflower, bright yellow petals, large, towering, centre of the sunflower, a small house, tiny windows, a door, a chimney, smoke coming out of the chimney, sky, bright blue, fluffy white clouds, sun, shining brightly, warm, happy, feeling of joy, sense of wonder, family togetherness, love, happiness, innocence, childhood, imagination, adventure \n",
     ", style: cartoon, subject: a family of four, father, mother, son, daughter, all smiling, wearing matching t-shirts, holding hands, walking towards the viewer, path, leading to a giant, smiling sunflower, sunflower, petals, bright yellow, centre, brown, seeds, happy, cheerful, warm, sunny day, blue sky, fluffy white clouds, grass, green, lush, vibrant, detailed, high resolution.\n\n\ncolour: colourful, suitable for children and family, style: cartoon, subject: a family of four, father, mother, son, daughter, all smiling, wearing matching t-shirts, holding hands, walking towards the viewer, path, leading to a giant, smiling sunflower, sunflower, petals, bright yellow, centre, brown, seeds, happy, cheerful, warm, sunny day, blue sky, fluffy white clouds, grass, green, lush, vibrant, detailed, high resolution \n"
   ],
+  "shaderBackground": "shader/background/SXKlJuO07eM.jpg",
+  "shaderTexture": "shader/texture/SXKlJuO07eM.jpg",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ],
   "createdAt": "2025-02-24T20:26:08.755Z",
   "updatedAt": "2025-03-06T20:14:09.813Z"
 }

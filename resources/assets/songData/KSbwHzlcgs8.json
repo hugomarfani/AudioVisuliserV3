@@ -20,6 +20,13 @@
   ],
   "backgrounds": [],
   "background_prompts": [],
+  "shaderBackground": "shader/background/KSbwHzlcgs8.jpg",
+  "shaderTexture": "shader/texture/KSbwHzlcgs8.jpg",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ],
   "createdAt": "2025-03-03T15:49:46.780Z",
   "updatedAt": "2025-03-03T15:49:46.781Z"
 }
