@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { SongModel } from '../../database/models/Song';
 import Player from '../SongPlayer/Player';
 import { initializeSketch } from '../../particles/sketch';
-import HueVisualizer from '../HueSettings/HueVisualizer';
 import p5 from 'p5';
 
 const Particles: React.FC = () => {
@@ -20,9 +19,6 @@ const Particles: React.FC = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [songDuration, setSongDuration] = useState(0);
   const playerRef = useRef<any>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [audioData, setAudioData] = useState<Uint8Array | undefined>(undefined);
-  const [dominantColors, setDominantColors] = useState<number[][]>([]);
 
   useEffect(() => {
     const loadAssets = async () => {
@@ -37,7 +33,6 @@ const Particles: React.FC = () => {
           songDetails.jacket
         );
 
-        // Load all image paths with logging
         try {
           const imagePaths = await Promise.all(
             songDetails.images.map(async (imagePath: string) => {
@@ -61,7 +56,6 @@ const Particles: React.FC = () => {
   }, [songDetails]);
 
   useEffect(() => {
-    // Trigger entrance animation
     const timer = setTimeout(() => setIsVisible(true), 100);
     return () => clearTimeout(timer);
   }, []);
@@ -72,13 +66,12 @@ const Particles: React.FC = () => {
         p5Instance.remove();
       }
 
-      // Ensure particles array exists and is not empty
-      const particleTypes = songDetails.particles && songDetails.particles.length > 0
-        ? songDetails.particles
-        : ['musicNote'];
+      const particleTypes =
+        songDetails.particles && songDetails.particles.length > 0
+          ? songDetails.particles
+          : ['musicNote'];
 
-      // Initialize sketch with song's particle types
-      const sketch = initializeSketch(particleTypes, isActive); // Pass isActive to sketch
+      const sketch = initializeSketch(particleTypes, isActive);
       const newP5 = new p5(sketch, containerRef.current);
       setP5Instance(newP5);
     }
@@ -90,7 +83,6 @@ const Particles: React.FC = () => {
     };
   }, [songDetails, isActive]);
 
-  // Add effect to set initial image when images are loaded
   useEffect(() => {
     if (backgroundImages.length > 0) {
       console.log('Setting initial background image:', backgroundImages[0]);
@@ -98,23 +90,21 @@ const Particles: React.FC = () => {
     }
   }, [backgroundImages]);
 
-  // Handle leaving the page
   const handleBack = () => {
-    setIsActive(false); // Stop particle generation
+    setIsActive(false);
     setIsVisible(false);
     if (p5Instance) {
-      p5Instance.remove(); // Remove p5 instance immediately
+      p5Instance.remove();
     }
     setTimeout(() => navigate('/'), 300);
   };
 
-  // Handle image rotation based on current time
   const handleTimeUpdate = (currentTime: number, duration: number) => {
     if (backgroundImages.length === 0) {
       console.log('No background images available');
       return;
     }
-    
+
     if (duration !== songDuration) {
       setSongDuration(duration);
       console.log('Song duration:', duration);
@@ -126,75 +116,34 @@ const Particles: React.FC = () => {
       Math.floor(currentTime / intervalDuration),
       backgroundImages.length - 1
     );
-    
+
     if (newIndex !== currentImageIndex) {
       console.log('Switching to image index:', newIndex);
       console.log('Current image path:', backgroundImages[newIndex]);
       setCurrentImageIndex(newIndex);
-
-      // Extract dominant colors from the current background image for Hue lights
-      if (backgroundImages[newIndex]) {
-        extractDominantColors(backgroundImages[newIndex]);
-      }
     }
   };
 
-  // Handle player state changes
-  const handlePlayerStateChange = (isPlayingNow: boolean, audioDataArray?: Uint8Array) => {
-    setIsPlaying(isPlayingNow);
-    if (audioDataArray) {
-      setAudioData(audioDataArray);
-    }
-  };
-
-  // Extract dominant colors from the current image for Hue lights
-  const extractDominantColors = (imagePath: string) => {
-    // Simple implementation to extract representative colors from the song data
-    // In a real app, you might want to use a proper image analysis library
-    // This is just a simplified approach
-    
-    if (songDetails && songDetails.colours && songDetails.colours.length > 0) {
-      // Use song's predefined colors if available
-      const colors = songDetails.colours.map(colorStr => {
-        // Convert hex string to RGB array
-        const hex = colorStr.replace('#', '');
-        return [
-          parseInt(hex.substring(0, 2), 16),
-          parseInt(hex.substring(2, 4), 16),
-          parseInt(hex.substring(4, 6), 16)
-        ];
-      });
-      setDominantColors(colors);
-    } else {
-      // Fallback to some default colors based on the current image index
-      const defaultColors = [
-        [255, 0, 0],    // Red
-        [0, 255, 0],    // Green
-        [0, 0, 255],    // Blue
-        [255, 255, 0],  // Yellow
-        [255, 0, 255],  // Magenta
-      ];
-      
-      // Use the image index to rotate through colors
-      const colorIndex = currentImageIndex % defaultColors.length;
-      setDominantColors([defaultColors[colorIndex]]);
-    }
+  // Handle player state changes (if needed for other purposes)
+  const handlePlayerStateChange = (isPlayingNow: boolean) => {
+    // You can add logic here if necessary.
   };
 
   if (!songDetails) return null;
 
   return (
-    <div className={`page-transition ${isVisible ? 'visible' : ''}`}
-      style={{ 
-        width: '100vw', 
+    <div
+      className={`page-transition ${isVisible ? 'visible' : ''}`}
+      style={{
+        width: '100vw',
         height: '100vh',
         position: 'fixed',
         top: 0,
         left: 0,
         overflow: 'hidden',
-        background: 'transparent', // Change to transparent
-    }}>
-      {/* Replace background div with full-screen image */}
+        background: 'transparent',
+      }}
+    >
       {backgroundImages.length > 0 && (
         <img
           src={backgroundImages[currentImageIndex]}
@@ -213,10 +162,9 @@ const Particles: React.FC = () => {
         />
       )}
 
-      {/* Particle container on top of background */}
-      <div 
-        ref={containerRef} 
-        style={{ 
+      <div
+        ref={containerRef}
+        style={{
           position: 'fixed',
           top: 0,
           left: 0,
@@ -224,14 +172,13 @@ const Particles: React.FC = () => {
           height: '100%',
           zIndex: 1,
           background: 'transparent',
-        }} 
+        }}
       />
-      
-      {/* Back button and player with highest z-index */}
+
       <button
         onClick={handleBack}
         style={{
-          position: 'fixed', // Change to fixed
+          position: 'fixed',
           top: 20,
           left: 20,
           zIndex: 10,
@@ -241,21 +188,21 @@ const Particles: React.FC = () => {
           border: 'none',
           cursor: 'pointer',
           width: 'fit-content',
-          color: 'black'
+          color: 'black',
         }}
       >
         Back
       </button>
 
       {fullAudioPath && (
-        <div 
+        <div
           className={`player-wrapper ${isVisible ? 'visible' : ''}`}
           style={{
-            position: 'fixed', // Change to fixed
+            position: 'fixed',
             bottom: 20,
             left: 0,
             right: 0,
-            zIndex: 10
+            zIndex: 10,
           }}
         >
           <Player
@@ -273,21 +220,16 @@ const Particles: React.FC = () => {
         </div>
       )}
 
-      {/* Hue integration */}
-      <HueVisualizer 
-        audioData={audioData} 
-        dominantColors={dominantColors} 
-        isPlaying={isPlaying} 
-      />
-
       {/* Force image preloading */}
       <div style={{ display: 'none', position: 'absolute' }}>
         {backgroundImages.map((imagePath, index) => (
-          <img 
-            key={index} 
-            src={imagePath} 
-            alt="" 
-            onLoad={() => console.log(`Preloaded image ${index} loaded successfully:`, imagePath)}
+          <img
+            key={index}
+            src={imagePath}
+            alt=""
+            onLoad={() =>
+              console.log(`Preloaded image ${index} loaded successfully:`, imagePath)
+            }
             onError={(e) => console.error(`Error loading image ${index}:`, e)}
           />
         ))}
