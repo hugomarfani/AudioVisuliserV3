@@ -39,20 +39,20 @@ export class ParticleSelector {
 
     public static validateParticleType(type: string): string {
         const normalized = this.normalizeParticleType(type);
-        console.log(`Normalizing particle type: ${type} -> ${normalized}`);
-        
+        // console.log(`Normalizing particle type: ${type} -> ${normalized}`);
+
         if (this.validParticles.includes(normalized)) {
             return normalized;
         }
-        
+
         // If not found, try to find closest match
         const closest = this.validParticles.find(p => p.includes(normalized) || normalized.includes(p));
         if (closest) {
-            console.log(`Found closest match for ${normalized}: ${closest}`);
+            // console.log(`Found closest match for ${normalized}: ${closest}`);
             return closest;
         }
-        
-        console.log(`No valid particle type found for: ${type}, using default`);
+
+        // console.log(`No valid particle type found for: ${type}, using default`);
         return 'musicNote';
     }
 
@@ -60,7 +60,7 @@ export class ParticleSelector {
         if (!particles || particles.length === 0) {
             return 'musicNote';
         }
-        
+
         // Get a random valid particle from the array
         const validParticles = particles
             .map(p => this.validateParticleType(p))

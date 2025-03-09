@@ -11,17 +11,17 @@ class Particle {
   p: p5;
 
   constructor(p: p5, x: number, y: number, type: string) {
-    console.log(`Creating particle of type: ${type} at position (${x}, ${y})`);
+    // console.log(`Creating particle of type: ${type} at position (${x}, ${y})`);
     this.p = p;
     this.pos = p.createVector(x, y);
     // Increased initial velocity range for more dynamic movement
     this.vel = p.createVector(p.random(-2, 2), p.random(-2, 2));
     this.acc = p.createVector(0, 0);
     this.type = type;
-    
+
     // Initialize with default image
     this.img = null;
-    
+
     // Load image immediately
     this.loadImage();
 
@@ -33,8 +33,8 @@ class Particle {
   async loadImage() {
     try {
       const imagePath = await getRandomParticleImage(this.type);
-      console.log('Loading particle image from:', imagePath);
-      
+      // console.log('Loading particle image from:', imagePath);
+
       // Use p5's loadImage with a Promise wrapper
       this.img = await new Promise((resolve, reject) => {
         const img = this.p.loadImage(
@@ -46,8 +46,8 @@ class Particle {
           }
         );
       });
-      
-      console.log('Image loaded successfully for', this.type);
+
+      // console.log('Image loaded successfully for', this.type);
     } catch (error) {
       console.error('Error loading particle image:', error);
     }
@@ -59,11 +59,11 @@ class Particle {
 
   update() {
     const physics = particlePhysics[this.type] || particlePhysics["musicNote"];
-    
+
     // Apply gravity (positive y is downward in p5)
     const gravity = this.p.createVector(0, physics.gravity * physics.weight);
     this.applyForce(gravity);
-    
+
     // Apply air resistance
     const airResistance = this.vel.copy();
     airResistance.mult(-physics.airResistance);
@@ -99,15 +99,15 @@ class Particle {
 
   isDead() {
     const physics = particlePhysics[this.type] || particlePhysics["musicNote"];
-    
+
     // Check if particle has expired based on lifespan
     if (this.lifespan <= 0) return true;
-    
+
     // For particles with negative gravity (like balloons), check top of screen
     if (physics.gravity < 0) {
       return this.pos.y < -30; // -30 to account for particle size
     }
-    
+
     // For regular particles, check bottom of screen
     return this.pos.y > this.p.height + 30;
   }
@@ -122,24 +122,24 @@ class Particle {
       // Create repulsion force
       const repulsionStrength = 1 - (distance / mouseRadius); // Stronger when closer
       const baseForce = 15; // Increased base force
-      
+
       // Calculate force direction
       let forceX = (dx / distance) * baseForce * repulsionStrength;
       let forceY = (dy / distance) * baseForce * repulsionStrength;
-      
+
       // Add mouse velocity influence
       const mouseInfluence = 0.3;
       forceX += mouseVelX * mouseInfluence;
       forceY += mouseVelY * mouseInfluence;
-      
+
       // Apply the force
       this.vel.x += forceX;
       this.vel.y += forceY;
-      
+
       // Add some chaos
       this.vel.x += this.p.random(-0.5, 0.5);
       this.vel.y += this.p.random(-0.5, 0.5);
-      
+
       // Optional: Cap maximum velocity
       const maxVel = 20;
       this.vel.x = this.p.constrain(this.vel.x, -maxVel, maxVel);
@@ -168,7 +168,7 @@ class Particle {
       // Apply impulse with stronger effect
       const impulseX = nx * impulse;
       const impulseY = ny * impulse;
-      
+
       this.vel.x += impulseX;
       this.vel.y += impulseY;
       other.vel.x -= impulseX;
@@ -198,20 +198,20 @@ class ParticleSystem {
   maxParticles = 30;  // Changed from 50 to 10
 
   constructor(p: p5) {
-    console.log('Initializing ParticleSystem');
+    // console.log('Initializing ParticleSystem');
     this.p = p;
   }
 
   async addParticle(x: number, y: number, type: string): Promise<Particle | null> {
-    console.log(`Adding particle: type=${type}, x=${x}, y=${y}`);
+    // console.log(`Adding particle: type=${type}, x=${x}, y=${y}`);
     if (this.particles.length >= this.maxParticles) {
-      console.log('Max particles reached, removing oldest');
+      // console.log('Max particles reached, removing oldest');
       this.particles.shift();
     }
     const particle = new Particle(this.p, x, y, type);
     await particle.loadImage(); // Wait for image to load
     this.particles.push(particle);
-    console.log(`Total particles: ${this.particles.length}`);
+    // console.log(`Total particles: ${this.particles.length}`);
     return particle;
   }
 
@@ -219,7 +219,7 @@ class ParticleSystem {
     // More thorough collision detection
     for (let i = 0; i < this.particles.length; i++) {
       const particle = this.particles[i];
-      
+
       // Check collisions with all other particles
       for (let j = 0; j < this.particles.length; j++) {
         if (i !== j) {

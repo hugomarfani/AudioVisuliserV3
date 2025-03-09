@@ -131,6 +131,7 @@
     "spotify-web-api-js": "^1.5.2",
     "three": "^0.173.0",
     "uuid": "^11.0.5",
+    "web-audio-beat-detector": "^8.2.23",
     "yt-dlp-exec": "^1.0.2"
   },
   "devDependencies": {
