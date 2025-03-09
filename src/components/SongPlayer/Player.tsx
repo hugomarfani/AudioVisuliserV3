@@ -71,22 +71,13 @@ const Player = forwardRef<any, PlayerProps>(({
     };
   }, []);
 
-  // Handle track change - if audio source changes, reconnect the nodes
+  // No need to recreate audio nodes on track change - just watch for
+  // AudioContext state in case it needs to be resumed after user interaction
   useEffect(() => {
-    if (!audioRef.current || !audioContextRef.current || !analyzerRef.current) return;
-
-    // If the track changes and we already have a source node, disconnect it
-    if (sourceNodeRef.current) {
-      sourceNodeRef.current.disconnect();
-    }
-
-    // Create a new source node for the new audio element
-    try {
-      sourceNodeRef.current = audioContextRef.current.createMediaElementSource(audioRef.current);
-      sourceNodeRef.current.connect(analyzerRef.current);
-      analyzerRef.current.connect(audioContextRef.current.destination);
-    } catch (error) {
-      console.error("Failed to reconnect audio nodes:", error);
+    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+      audioContextRef.current.resume().catch(err => {
+        console.error("Failed to resume audio context:", err);
+      });
     }
   }, [track.audioSrc]);
 
