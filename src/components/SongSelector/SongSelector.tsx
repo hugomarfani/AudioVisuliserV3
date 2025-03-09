@@ -510,10 +510,13 @@ const SongSelector: React.FC<SongSelectorProps> = ({
       )}
       {/* Song Details Popup */}
       {isSongDetailsOpen && selectedSongId && (
-        <SongDetails
-          onClose={() => setIsSongDetailsOpen(false)}
-          songId={selectedSongId}
-        />
+
+            <SongDetails
+              onClose={() => {
+                setIsSongDetailsOpen(false);
+                setSelectedSongId(null);
+              }}
+              songId={selectedSongId} />
       )}
     </div>
   );

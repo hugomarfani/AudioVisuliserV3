@@ -94,6 +94,7 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
         zIndex: 1000,
         overflowY: 'auto',
       }}
+      onClick={onClose}
     >
       <div
         style={{
