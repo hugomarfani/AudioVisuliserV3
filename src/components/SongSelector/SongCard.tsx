@@ -13,6 +13,7 @@ type SongCardProps = {
   onDetailsClick: (songID: string) => void;
   useShader: boolean; // Whether to use shader or particles
   onParticleClick?: (songId: string) => void;
+  disabled?: boolean; // Add disabled prop
 };
 
 const statusMap: Record<string, string> = {
@@ -29,6 +30,7 @@ function SongCard({
   onDetailsClick,
   useShader,
   onParticleClick,
+  disabled = false, // Default to not disabled
 }: SongCardProps): JSX.Element {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
@@ -90,26 +92,27 @@ function SongCard({
     <div
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={() => onSelect(uri)}
+      onClick={() => !disabled && onSelect(uri)} // Only call onSelect if not disabled
       style={{
         display: 'flex',
         alignItems: 'center',
-        backgroundColor: colors.grey5,
+        backgroundColor: disabled ? `${colors.grey5}90` : colors.grey5, // Make more transparent if disabled
         padding: 'clamp(0.75rem, 1.5vw, 1.5rem)',
         borderRadius: '24px',
         width: '95%',
         height: 'clamp(70px, 12vh, 100px)',
         margin: '0 auto',
         overflow: 'hidden',
-        cursor: 'pointer',
+        cursor: disabled ? 'not-allowed' : 'pointer', // Change cursor for disabled state
         position: 'relative',
         boxSizing: 'border-box',
         transition: 'all 0.3s ease',
-        transform: isHovered ? 'translateY(-3px)' : 'translateY(0)',
-        boxShadow: isHovered 
+        transform: isHovered && !disabled ? 'translateY(-3px)' : 'translateY(0)', // Don't lift if disabled
+        boxShadow: isHovered && !disabled 
           ? '0 10px 15px rgba(0, 0, 0, 0.1)'
           : '0 2px 5px rgba(0, 0, 0, 0.05)',
-        border: isHovered ? `1px solid ${colors.grey4}` : '1px solid transparent',
+        border: isHovered && !disabled ? `1px solid ${colors.grey4}` : '1px solid transparent',
+        opacity: disabled ? 0.7 : 1, // Reduce opacity if disabled
       }}
     >
       <img
@@ -121,10 +124,33 @@ function SongCard({
           height: 'clamp(50px, 8vh, 70px)',
           objectFit: 'cover',
           transition: 'all 0.3s ease',
-          boxShadow: isHovered ? '0 4px 8px rgba(0, 0, 0, 0.15)' : 'none',
+          boxShadow: isHovered && !disabled ? '0 4px 8px rgba(0, 0, 0, 0.15)' : 'none',
+          filter: disabled ? 'grayscale(50%)' : 'none', // Add grayscale effect for disabled state
         }}
       />
-      <div style={{ flex: 1, marginLeft: 'clamp(0.8rem, 1.5vw, 1.5rem)', overflow: 'hidden' }}>
+      
+      {/* Warning icon for disabled songs */}
+      {disabled && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+          borderRadius: '50%',
+          width: '28px',
+          height: '28px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: colors.red,
+          zIndex: 2,
+        }}>
+          !
+        </div>
+      )}
+      
+      <div style={{ flex: 1, marginLeft: 'clamp(0.8rem, 1.5vw, 1.5rem)', overflow: 'hidden', opacity: disabled ? 0.7 : 1 }}>
         <div 
           ref={containerRef}
           style={{ 

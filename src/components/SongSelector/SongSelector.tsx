@@ -45,6 +45,8 @@ const SongSelector: React.FC<SongSelectorProps> = ({
   const navigate = useNavigate(); // Add navigation hook
   const [showParticleManager, setShowParticleManager] = useState<boolean>(false);
   const [selectedParticleSong, setSelectedParticleSong] = useState<string | null>(null);
+  const [showShaderWarning, setShowShaderWarning] = useState(false);
+  const [selectedInvalidSong, setSelectedInvalidSong] = useState<string | null>(null);
 
   // Initialize visualMode from localStorage or fall back to the prop
   const [visualMode, setVisualMode] = useState(() => {
@@ -160,6 +162,15 @@ const SongSelector: React.FC<SongSelectorProps> = ({
         audioSrc: selectedSong.dataValues.audioPath || '',
       };
       
+      // Check if in shader mode and missing shader files
+      if (visualMode && (!songWithAudio.shaderBackground || !songWithAudio.shaderTexture || 
+          songWithAudio.shaderBackground === "" || songWithAudio.shaderTexture === "")) {
+        // Show warning popup instead of navigating
+        setSelectedInvalidSong(songWithAudio.title);
+        setShowShaderWarning(true);
+        return;
+      }
+      
       // Navigate to the appropriate page based on the visualMode
       if (visualMode) {
         navigate(`/aiden/${encodeURIComponent(uri)}`, {
@@ -171,6 +182,12 @@ const SongSelector: React.FC<SongSelectorProps> = ({
         });
       }
     }
+  };
+
+  // Helper function to check if a song is missing shader files
+  const isMissingShaderFiles = (song: any) => {
+    return visualMode && (!song.dataValues.shaderBackground || !song.dataValues.shaderTexture || 
+            song.dataValues.shaderBackground === "" || song.dataValues.shaderTexture === "");
   };
 
   // Replace this function
@@ -440,6 +457,8 @@ const SongSelector: React.FC<SongSelectorProps> = ({
               onDetailsClick={handleSongDetailsOpen} // Pass the handleSongDetailsOpen function
               // Add particle management button
               onParticleClick={() => openParticleManager(song.dataValues.id)}
+              // Add disabled state for songs missing shader files in shader mode
+              disabled={isMissingShaderFiles(song)}
             />
           ))
         ) : (
@@ -507,6 +526,84 @@ const SongSelector: React.FC<SongSelectorProps> = ({
             <FaChevronRight />
           </button>
         </div>
+      )}
+      {/* Shader Warning Popup */}
+      {showShaderWarning && (
+        <>
+          <div 
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 1000,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              cursor: 'pointer',
+            }}
+            onClick={() => setShowShaderWarning(false)}
+          />
+          <div
+            style={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              backgroundColor: colors.white,
+              padding: '2rem',
+              borderRadius: '16px',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+              zIndex: 1001,
+              maxWidth: '400px',
+              width: '90%',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ marginTop: 0, color: colors.red }}>Missing Shader Files</h3>
+            <p style={{ color: colors.grey1, lineHeight: '1.5' }}>
+              The song "{selectedInvalidSong}" is missing required shader files.
+              To use Shader mode, please make sure this song has both a background shader and a texture shader assigned.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1.5rem' }}>
+              <button
+                style={{
+                  backgroundColor: colors.grey5,
+                  color: colors.grey1,
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '0.75rem 1.25rem',
+                  cursor: 'pointer',
+                }}
+                onClick={() => setShowShaderWarning(false)}
+              >
+                Close
+              </button>
+              <button
+                style={{
+                  backgroundColor: colors.blue,
+                  color: colors.white,
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '0.75rem 1.25rem',
+                  cursor: 'pointer',
+                }}
+                onClick={() => {
+                  // Find the song ID and open the song details
+                  const song = songs.find(s => s.dataValues.title === selectedInvalidSong);
+                  if (song) {
+                    setShowShaderWarning(false);
+                    handleSongDetailsOpen(song.dataValues.id);
+                  }
+                }}
+              >
+                Edit Song Details
+              </button>
+            </div>
+          </div>
+        </>
       )}
       {/* Song Details Popup */}
       {isSongDetailsOpen && selectedSongId && (
