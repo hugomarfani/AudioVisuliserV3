@@ -35,5 +35,12 @@
   "status": "Green",
   "title": "I Just Can't Wait to Be King (from The Lion King)",
   "updatedAt": "2025-02-24T17:26:31.827Z",
-  "uploader": "DisneySingItVideos"
+  "uploader": "DisneySingItVideos",
+  "shaderBackground": "shader/background/cHxCIQuWDd0.jpg",
+  "shaderTexture": "shader/texture/cHxCIQuWDd0.jpg",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ]
 }

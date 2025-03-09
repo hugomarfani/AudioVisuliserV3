@@ -9,6 +9,7 @@ import Login from '../components/Spotify/auth/Login';
 import SongDetails from '../components/SongDetails/SongDetails';
 import Particles from '../components/Particles/Particles';
 import ShaderVisuals from '../shader/ShaderVisuals';
+import PlayScene from '../shader/PlayScene';
 import { HueProvider } from '../hooks/useHue';
 
 const AppContent: FC = () => {
@@ -24,44 +25,55 @@ const AppContent: FC = () => {
   });
 
   return (
-    <div>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <div>
-              {accessToken === '123' ? (
-                <Login />
-              ) : (
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                }}>
-                  <SongSelector
-                    useShader={useShader}
-                    onTrackSelect={setSelectedTrackURI}
-                    accessToken={accessToken}
-                  />
-                </div>
-              )}
-            </div>
-          }
-        />
-        <Route path="/song-details/:id"
-          element={
-            <SongDetails
-              onClose={() => navigate('/')}
-              songId={selectedTrackURI || ''}
+      <>
+        <Router>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <MeshGradientBackground>
+                  {accessToken === '123' ? (
+                    <Login />
+                  ) : (
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <SongSelector
+                        useShader = {useShader}
+                        onTrackSelect={setSelectedTrackURI}
+                        accessToken={accessToken}
+                      />
+                    </div>
+                  )}
+                </MeshGradientBackground>
+              }
             />
-          }
-        />
-        <Route path="/particles/:id" element={<Particles />} />
-        <Route path="/aiden/:id" element={<ShaderVisuals />} />
-      </Routes>
-    </div>
-  );
-};
+            <Route path="/song-details/:id" element={<SongDetails />} />
+            <Route path="/particles/:id" element={<Particles />} />
+            <Route path="/aiden/:id" element={<ShaderVisuals />} />
+            {/* or something like:
+            <Route
+              path="/aiden/:id"
+              element={
+                <ShaderVisuals
+                  track={{
+                    title: 'Let It Go',
+                    artist: 'Idina Menzel',
+                    albumArt:
+                      'https://cdn-images.dzcdn.net/images/cover/f669aa7623ad8af5fbeb5a196346013a/500x500.jpg',
+                  }}
+                />
+              }
+            /> */}
+          </Routes>
+        </Router>
+      </>
+    );
+}
 
 const App: FC = () => {
   return (

@@ -33,6 +33,13 @@ const Particles: React.FC = () => {
           songDetails.jacket
         );
 
+        console.log("path test")
+        console.log(jacketPath, songDetails.jacket);''
+
+        console.log("path test")
+        console.log(jacketPath, songDetails.jacket);''
+
+        // Load all image paths with logging
         try {
           const imagePaths = await Promise.all(
             songDetails.images.map(async (imagePath: string) => {
@@ -50,6 +57,8 @@ const Particles: React.FC = () => {
 
         setFullAudioPath(audioPath);
         setFullJacketPath(jacketPath);
+        console.log(fullAudioPath, fullJacketPath);
+
       }
     };
     loadAssets();
@@ -132,8 +141,7 @@ const Particles: React.FC = () => {
   if (!songDetails) return null;
 
   return (
-    <div
-      className={`page-transition ${isVisible ? 'visible' : ''}`}
+    <div className={`page-transition ${isVisible ? 'visible' : ''}`}
       style={{
         width: '100vw',
         height: '100vh',
@@ -162,6 +170,7 @@ const Particles: React.FC = () => {
         />
       )}
 
+      {/* Particle container on top of background */}
       <div
         ref={containerRef}
         style={{
@@ -175,6 +184,7 @@ const Particles: React.FC = () => {
         }}
       />
 
+      {/* Back button and player with highest z-index */}
       <button
         onClick={handleBack}
         style={{
@@ -227,9 +237,7 @@ const Particles: React.FC = () => {
             key={index}
             src={imagePath}
             alt=""
-            onLoad={() =>
-              console.log(`Preloaded image ${index} loaded successfully:`, imagePath)
-            }
+            onLoad={() => console.log(`Preloaded image ${index} loaded successfully:`, imagePath)}
             onError={(e) => console.error(`Error loading image ${index}:`, e)}
           />
         ))}

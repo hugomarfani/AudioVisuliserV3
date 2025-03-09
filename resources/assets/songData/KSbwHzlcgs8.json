@@ -4,16 +4,29 @@
   "uploader": "7th Heaven",
   "audioPath": "audio/KSbwHzlcgs8.mp3",
   "jacket": "images/firework/firework.png",
-  "images": ["images/firework/firework.gif"],
+  "images": [
+    "images/firework/firework.gif"
+  ],
   "moods": [],
   "status": "Yellow",
   "colours": [],
   "colours_reason": [],
   "objects": [],
   "object_prompts": [],
-  "particles": ["fireworks"],
+  "particles": [
+    "fireworks",
+    "musicNotes",
+    "raindrops"
+  ],
   "backgrounds": [],
   "background_prompts": [],
+  "shaderBackground": "shader/background/KSbwHzlcgs8.jpg",
+  "shaderTexture": "shader/texture/KSbwHzlcgs8.jpg",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ],
   "createdAt": "2025-03-03T15:49:46.780Z",
   "updatedAt": "2025-03-03T15:49:46.781Z"
 }

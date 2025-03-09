@@ -1,0 +1,30 @@
+{
+    "audioPath": "audio/hRGIrrjuLYA.mp3",
+    "background_prompts": [],
+    "backgrounds": [],
+    "colours": [],
+    "colours_reason": [
+        "\n\nThe lyrics provided are repetitive and lack descriptive imagery to infer colors. \n\n\nTherefore, I cannot provide the requested output. \n"
+    ],
+    "createdAt": "2025-03-08T16:17:20.146Z",
+    "id": "hRGIrrjuLYA",
+    "images": [
+        "images/hRGIrrjuLYA/image_1741452270970.png"
+    ],
+    "jacket": "images/hRGIrrjuLYA/jacket.png",
+    "moods": [],
+    "object_prompts": [],
+    "objects": [],
+    "particleColour": [
+        "255",
+        "255",
+        "255"
+    ],
+    "particles": [],
+    "shaderBackground": "shader/background/hRGIrrjuLYA.jpg",
+    "shaderTexture": "shader/texture/hRGIrrjuLYA.jpg",
+    "status": "Green",
+    "title": "Endor - Pump It Up",
+    "updatedAt": "2025-03-08T16:44:30.973Z",
+    "uploader": "Selected."
+}

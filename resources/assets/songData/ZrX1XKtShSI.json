@@ -1,5 +1,5 @@
 {
-  "audioPath": "audio/ZrX1XKtShSI.wav",
+  "audioPath": "audio/ZrX1XKtShSI.mp3",
   "background_prompts": [
     ", style: cartoon, characters: a lonely robot, a sad clown, a tired dragon, a grumpy cat, a bored owl, a worried worm, a lost teddy bear, setting: a deserted ballroom, mood: melancholic, lighting: dim, soft, warm.\n\ncolour: colourful background, suitable for children and family, style: cartoon, characters: a lonely robot, a sad clown, a tired dragon, a grumpy cat, a bored owl, a worried worm, a lost teddy bear, setting: a deserted ballroom, mood: melancholic, lighting: dim, soft, warm \n",
     ", style: cartoon, characters: a family of four, a dog, a cat, a rabbit, a hamster, a goldfish, a snail, a bird, a butterfly, a ladybug, a spider, a worm, a frog, a turtle, a snake, a lizard, a monkey, a bear, a tiger, a lion, an elephant, a giraffe, a zebra, a hippopotamus, a rhinoceros, a panda, a koala, a kangaroo, a walrus, a dolphin, a whale, a shark, a crab, a lobster, a starfish, a seahorse, a jellyfish, a squid, a octopus, a clam, a snail, a sea turtle, a sea lion, a penguin, a polar bear, an arctic fox, a walrus, a seal, a narwhal, a manatee, a dugong, a platypus, a echidna, a wombat, a quokka, a sugar glider, a possum, a kangaroo, a koala, a wombat, a platypus, a echidna, a quokka, a sugar glider, a possum, a Tasmanian devil, a dingo, a kookaburra, a lorikeet, a cockatoo, a cassowary, a emu, a kiwi, a kea, a penguin, a albatross, a petrel, a shearwater, a gannet, a puffin, a tern, a pelican, a flamingo, a stork, a heron, a egret, a ibis, a crane, a owl, a hawk, a eagle, a vulture, a falcon, a kestrel, a buzzard, a raven, a crow, a magpie, a jay, a robin, a sparrow, a finch, a hummingbird, a woodpeck, a woodpecker, a nightingale, a lark, a swallow, a warbler, a wren, a titmouse, a chickadee, a nuthatch, a creeper, a gnatcatcher, a flycatcher, a thrasher, a mockingbird, a tanager, a cardinal, a grosbeak, a finch, a sparrow, a wren, a titmouse, a chickadee, a nuthatch, a creeper, a gnatcatcher, a flycatcher, a thrasher, a mockingbird, a tanager, a cardinal, a grosbeak, a finch, a sparrow, a wren, a tit",
@@ -43,6 +43,13 @@
   "particles": [],
   "status": "Red",
   "title": "Kristen Bell, Idina Menzel - For the First Time in Forever (From \"Frozen\"/Sing-Along)",
+  "shaderBackground": "shader/background/ZrX1XKtShSI.jpg",
+  "shaderTexture": "shader/texture/ZrX1XKtShSI.jpg",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ],
   "updatedAt": "2025-02-24T17:20:39.388Z",
   "uploader": "DisneyMusicVEVO"
 }

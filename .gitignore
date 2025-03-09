@@ -40,3 +40,4 @@ external/python/sd_env
 # Moved to AiResources folder
 AiResources/
 resources/AiResources/
+resources/SD.exe

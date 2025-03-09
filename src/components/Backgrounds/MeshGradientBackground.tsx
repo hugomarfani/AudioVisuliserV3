@@ -1,19 +1,25 @@
 import React from 'react';
 import '../../styles.css';
+import WindowControls from '../UI/WindowControls';
 
 const MeshGradientBackground: React.FC = ({ children }) => {
   return (
     <div
       style={{
-        position: 'relative',
-        width: '100vw', // Full width of the viewport
-        height: '100vh', // Full height of the viewport
-        display: 'flex', // Flexbox for centring
-        justifyContent: 'center', // Horizontally centre children
-        alignItems: 'center', // Vertically centre children
-        overflow: 'hidden', // Prevents content overflow
+        position: 'fixed', // Changed from 'relative' to 'fixed'
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
       }}
     >
+      {/* Window control buttons */}
+      <WindowControls />
+      
       {/* Background using ::before pseudo-element */}
       <div
         style={{
@@ -22,7 +28,7 @@ const MeshGradientBackground: React.FC = ({ children }) => {
           left: 0,
           width: '100%',
           height: '100%',
-          zIndex: -1, // Ensure background is behind content
+          zIndex: -1,
           backgroundColor: '#ff99df',
           backgroundImage: `
                 radial-gradient(circle at 52% 73%, hsla(310, 85%, 67%, 1) 0px, transparent 50%),
@@ -32,11 +38,20 @@ const MeshGradientBackground: React.FC = ({ children }) => {
                 radial-gradient(circle at 41% 88%, hsla(36, 83%, 61%, 1) 0px, transparent 50%),
                 radial-gradient(circle at 76% 73%, hsla(346, 69%, 70%, 1) 0px, transparent 50%),
                 radial-gradient(circle at 29% 37%, hsla(272, 96%, 64%, 1) 0px, transparent 50%)`,
-          backgroundSize: 'cover', // Covers the entire viewport
-          filter: 'blur(80px)', // Adds blur effect
+          backgroundSize: 'cover',
+          filter: 'blur(80px)',
         }}
       />
-      {children}
+      <div style={{ 
+        width: '100%', 
+        height: '100%', 
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'auto' // Allow content to be scrollable if necessary, while background remains fixed
+      }}>
+        {children}
+      </div>
     </div>
   );
 };

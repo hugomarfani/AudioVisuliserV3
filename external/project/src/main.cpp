@@ -62,7 +62,7 @@ std::string statusPrompt =
     "4. Green: calm and happy emotions";
 
 std::string particleSelectionPrompt =
-    "Analyze the lyrics of the song provided and choose 1 particle effect from "
+    "Analyze the lyrics of the song provided and choose 1-3 particle effect from "
     "the following list,"
     "that best fits the mood and theme of the song. Output the name of the "
     "selected particle effect and no other word. Here is the list of particle "
@@ -93,42 +93,117 @@ std::string imageSetup =
     "to generate an image of the song. There is no need to add more settings, "
     "only the prompt is required. The prompt should be in a text format and "
     "have no markdown or HTML tags. The prompt should be detailed and "
-    "specific, with each detail separated by a comma.";
+    "specific, with each detail separated by a comma. The maximum number of words is 55, do not go over that limit";
 
 std::string imageSettings =
     ". The prompt should include the following settings:";
 
-std::string objectSettings = "colour: black object with white background";
+std::string objectSettings = "black very simple object image with white background, minimalistic";
 
 std::string backgroundSettings =
     "colour: colourful background, "
-    "suitable for children and family";
+    "suitable for children and family, light pastel colours";
 
 // ----------------- paths -----------------
 std::filesystem::path currentDirectory = std::filesystem::current_path();
-std::string gemmaModelPath =
-    (currentDirectory / "AiResources" / "gemma-2-9b-it-int4-ov").string();
+std::string gemmaModelPath;
+std::string smallerLLMPath;
+std::string stableDiffusionModelPath;
+std::filesystem::path whisperModelPath;
+std::filesystem::path songDataPath;
+std::string particleListFilePath;
+std::string logPath;
+std::filesystem::path lyricsDirPath;
+std::filesystem::path wavDirPath;
+std::filesystem::path imageDirPath;
+
+void setPaths() {
+  gemmaModelPath =
+      (currentDirectory / "AiResources" / "gemma-2-9b-it-int4-ov").string();
+  smallerLLMPath =
+      (currentDirectory / "AiResources" / "Phi-3-mini-4k-instruct-int4-ov").string();
+  stableDiffusionModelPath =
+      (currentDirectory / "AiResources" / "dreamlike_anime_1_0_ov" / "FP16")
+          .string();
+  whisperModelPath =
+      (currentDirectory / "AiResources" / "distil-whisper-large-v3-int8-ov");
+  songDataPath = (currentDirectory / "assets" / "songData");
+  particleListFilePath =
+      (currentDirectory / "assets" / "particleList.json").string();
+  logPath = (currentDirectory / "assets" / "aiLog.txt").string();
+  lyricsDirPath = (currentDirectory / "assets" / "lyrics");
+  wavDirPath = (currentDirectory / "assets" / "audio");
+  imageDirPath = (currentDirectory / "assets" / "images");
+}
+
+
+// std::string gemmaModelPath =
+//     (currentDirectory / "AiResources" / "gemma-2-9b-it-int4-ov").string();
+// // std::string stableDiffusionModelPath =
+// //     (currentDirectory / "AiResources" / "FLUX.1-schnell-int8-ov").string();
 // std::string stableDiffusionModelPath =
-//     (currentDirectory / "AiResources" / "FLUX.1-schnell-int8-ov").string();
-std::string stableDiffusionModelPath =
-    (currentDirectory / "AiResources" / "dreamlike_anime_1_0_ov" / "FP16")
-        .string();
-// using whisper path again after this so needs to be filesystem::path
-std::filesystem::path whisperModelPath =
-    (currentDirectory / "AiResources" / "distil-whisper-large-v3-int8-ov");
-std::filesystem::path songDataPath = (currentDirectory / "assets" / "songData");
-std::string particleListFilePath =
-    (currentDirectory / "assets" / "particleList.json").string();
-std::string logPath = (currentDirectory / "assets" / "aiLog.txt").string();
-std::filesystem::path lyricsDirPath = (currentDirectory / "assets" / "lyrics");
-std::filesystem::path wavDirPath = (currentDirectory / "assets" / "audio");
-std::filesystem::path imageDirPath = (currentDirectory / "assets" / "images");
+//     (currentDirectory / "AiResources" / "dreamlike_anime_1_0_ov" / "FP16")
+//         .string();
+// // using whisper path again after this so needs to be filesystem::path
+// std::filesystem::path whisperModelPath =
+//     (currentDirectory / "AiResources" / "distil-whisper-large-v3-int8-ov");
+// std::filesystem::path songDataPath = (currentDirectory / "assets" / "songData");
+// std::string particleListFilePath =
+//     (currentDirectory / "assets" / "particleList.json").string();
+// std::string logPath = (currentDirectory / "assets" / "aiLog.txt").string();
+// std::filesystem::path lyricsDirPath = (currentDirectory / "assets" / "lyrics");
+// std::filesystem::path wavDirPath = (currentDirectory / "assets" / "audio");
+// std::filesystem::path imageDirPath = (currentDirectory / "assets" / "images");
 
 // ----------------- Temp ONNX Paths -----------------
 // std::filesystem::path sdPath =
 //     (currentDirectory / "AiResources" / "sd-v1-5-int8-onnx");
 // std::string textEncoderPath = (sdPath / "text_encoder" /
 // "model.onnx").string(); std::string
+
+
+// ----------------- Finish Functions -----------------
+// Specific Finish statements, which trigger flags in Super Happy Space
+void finishWhisper() {
+  std::cout << "Finished Whisper" << std::endl;
+}
+void finishLLM() {
+  std::cout << "Finished LLM" << std::endl;
+}
+void finishStableDiffusion() {
+  std::cout << "Finished Stable Diffusion" << std::endl;
+}
+
+void finishAISetup() {
+  std::cout << "Finished AI Setup" << std::endl;
+}
+
+void finishStatusExtraction() {
+  std::cout << "Finished Status Extraction" << std::endl;
+}
+void finishColourExtraction() {
+  std::cout << "Finished Colour Extraction" << std::endl;
+}
+void finishParticleExtraction() {
+  std::cout << "Finished Particle Extraction" << std::endl;
+}
+void finishObjectExtraction() {
+  std::cout << "Finished Object Extraction" << std::endl;
+}
+void finishBackgroundExtraction() {
+  std::cout << "Finished Background Extraction" << std::endl;
+}
+void finishObjectPrompts() {
+  std::cout << "Finished Object Prompts" << std::endl;
+}
+void finishBackgroundPrompts() {
+  std::cout << "Finished Background Prompts" << std::endl;
+}
+
+void finishJsonStorage() {
+  std::cout << "Finished Json Storage" << std::endl;
+}
+
 
 // ----------------- Log Functions -----------------
 void redirectConsoleOutput() {
@@ -286,7 +361,10 @@ enum LLMOutputType {
   OBJECTS,
   BACKGROUNDS,
   OBJECT_PROMPTS,
-  BACKGROUND_PROMPTS
+  BACKGROUND_PROMPTS,
+  SHADER_BACKGROUND,
+  SHADER_TEXTURE,
+  PARTICLE_COLOUR
 };
 
 const std::unordered_map<LLMOutputType, std::string> outputTypeMap = {
@@ -306,7 +384,11 @@ const std::unordered_map<LLMOutputType, std::string> outputTypeMap = {
     {OBJECTS, "objects"},
     {BACKGROUNDS, "backgrounds"},
     {OBJECT_PROMPTS, "object_prompts"},
-    {BACKGROUND_PROMPTS, "background_prompts"}};
+    {BACKGROUND_PROMPTS, "background_prompts"},
+    {SHADER_BACKGROUND, "shaderBackground"},
+    {SHADER_TEXTURE, "shaderTexture"},
+    {PARTICLE_COLOUR, "particleColour"}
+  };
 
 const std::unordered_map<std::string, LLMOutputType> outputTypeMapReverse = {
     {"id", ID},
@@ -325,7 +407,11 @@ const std::unordered_map<std::string, LLMOutputType> outputTypeMapReverse = {
     {"objects", OBJECTS},
     {"backgrounds", BACKGROUNDS},
     {"object_prompts", OBJECT_PROMPTS},
-    {"background_prompts", BACKGROUND_PROMPTS}};
+    {"background_prompts", BACKGROUND_PROMPTS},
+    {"shaderBackground", SHADER_BACKGROUND},
+    {"shaderTexture", SHADER_TEXTURE},
+    {"particleColour", PARTICLE_COLOUR}
+  };
 
 const std::unordered_map<LLMOutputType, bool> outputTypeIsVector = {
     {ID, false},
@@ -344,7 +430,11 @@ const std::unordered_map<LLMOutputType, bool> outputTypeIsVector = {
     {OBJECTS, true},
     {BACKGROUNDS, true},
     {OBJECT_PROMPTS, true},
-    {BACKGROUND_PROMPTS, true}};
+    {BACKGROUND_PROMPTS, true},
+    {SHADER_BACKGROUND, false},
+    {SHADER_TEXTURE, false},
+    {PARTICLE_COLOUR, true}
+  };
 
 // ----------------- LLM Class -----------------
 class LLM {
@@ -617,7 +707,7 @@ class Whisper {
     config.return_timestamps = true;
 
     // obtain raw speech input
-    std::cout << "Obtaining mp3 as raw input" << std::endl;
+    std::cout << "Obtaining wav as raw input" << std::endl;
     ov::genai::RawSpeechInput rawSpeech = utils::audio::read_wav(wavPath);
 
     std::string lyrics = pipe.generate(rawSpeech, config);
@@ -689,6 +779,7 @@ int main(int argc, char *argv[]) {
   -s, --song: specify song id
   --text_log: enable text logging
   -m, --model: specify model name
+  -e, --electron: enable electron mode, exe is run from Super Happy Space
 
   Whisper only options
     --fixSampleRate: fix sample rate of audio file to 16kHz
@@ -697,6 +788,8 @@ int main(int argc, char *argv[]) {
     --prompt <arg>: prompt to generate image
 
   LLM only options
+    --smallerLLM: use smaller LLM model, with less parameters
+    --status: extract status from lyrics
     -c, --extractColour: extract colours from lyrics
     -p, --extractParticle: extract particle effect from lyrics
     -o, --extractObject: extract objects from lyrics
@@ -706,13 +799,16 @@ int main(int argc, char *argv[]) {
     --all: extract all llm features
   */
   po::options_description general_options("Allowed options");
-  general_options.add_options()("help,h", "produce help message")(
-      "debug,d", "enable debug mode")("whisper,w", "use whisper mode")(
-      "llm,l", "use llm mode")("stable-diffusion,S",
-                               "use stable diffusion mode")(
-      "song,s", po::value<std::string>(), "specify song id")(
-      "text_log", "enable text logging")("model,m", po::value<std::string>(),
-                                         "specify model name");
+  general_options.add_options()
+      ("help,h", "produce help message")
+      ("debug,d", "enable debug mode")
+      ("whisper,w", "use whisper mode")
+      ("llm,l", "use llm mode")
+      ("stable-diffusion,S","use stable diffusion mode")
+      ("song,s", po::value<std::string>(), "specify song id")
+      ("text_log", "enable text logging")
+      ("model,m", po::value<std::string>(), "specify model name")
+      ("electron,e", "enable electron mode");
 
   po::options_description stable_diffusion_options(
       "Stable Diffusion only options");
@@ -725,7 +821,10 @@ int main(int argc, char *argv[]) {
 
   po::options_description llm_options("LLM only options");
 
-  llm_options.add_options()("extractColour,c", "extract colours from lyrics")(
+  llm_options.add_options()
+      ("status", "extract status from lyrics")
+      ("smallerLLM", "use smaller LLM model, with less parameters")
+      ("extractColour,c", "extract colours from lyrics")(
       "extractParticle,p", "extract particle effect from lyrics")(
       "extractObject,o", "extract objects from lyrics")(
       "extractBackground,b", "extract backgrounds from lyrics")(
@@ -756,6 +855,17 @@ int main(int argc, char *argv[]) {
     std::cout << llm_options << std::endl;
     return 0;
   }
+
+  if (vm.count("electron")) {
+    std::cout << "Running in electron mode" << std::endl;
+    // set current directory to electron directory
+    currentDirectory = (currentDirectory / "resources");
+  }
+
+  // set paths -> after current directory is set
+  setPaths();
+
+  std::cout << "Current Directory: " << currentDirectory << std::endl;
 
   /* ----------------- Check Flag Errors -----------------
   Checking flags for any errors before we go to main program
@@ -797,6 +907,7 @@ int main(int argc, char *argv[]) {
     std::string modelPath =
         (currentDirectory / "AiResources" / modelName).string();
     gemmaModelPath = modelPath;
+    smallerLLMPath = modelPath;
     stableDiffusionModelPath = modelPath;
     whisperModelPath = modelPath;
   }
@@ -828,13 +939,16 @@ int main(int argc, char *argv[]) {
       std::cout << "pipe created" << std::endl;
       // StableDiffusion stableDiffusion(t2iPipe, device, songId, debug);
       // stableDiffusion.generateImage(vm["prompt"].as<std::string>());
+      finishStableDiffusion();
     } catch (const std::exception &e) {
       std::cerr << "Error: " << e.what() << std::endl;
       cleanup();
+      finishStableDiffusion();
       return 1;
     } catch (...) {
       std::cerr << "Error: Unknown error" << std::endl;
       cleanup();
+      finishStableDiffusion();
       return 1;
     }
   }
@@ -855,7 +969,12 @@ int main(int argc, char *argv[]) {
       std::cout << "Starting Whisper Pipeline" << std::endl;
       try {
         Whisper whisper(songId, debug);
+        finishAISetup();
         whisper.generateLyrics();
+        finishWhisper();
+        // delete wav file after lyrics have been generated
+        std::string wavPath = (wavDirPath / (songId + ".wav")).string();
+        std::filesystem::remove(wavPath);
       } catch (const std::exception &e) {
         std::cerr << "Error: " << e.what() << std::endl;
         cleanup();
@@ -868,26 +987,42 @@ int main(int argc, char *argv[]) {
   if (vm.count("llm")) {
     std::cout << "Starting LLM Pipeline" << std::endl;
     try {
+      if (vm.count("smallerLLM")){
+        gemmaModelPath = smallerLLMPath;
+      }
       LLM llm(gemmaModelPath, songId, debug);
+      finishAISetup();
+      if (vm.count("status")) {
+        llm.extractStatus();
+        finishStatusExtraction();
+      }
       if (vm.count("extractColour")) {
         llm.extractColours();
+        finishColourExtraction();
       }
       if (vm.count("extractParticle")) {
         llm.extractParticleEffect();
+        finishParticleExtraction();
       }
       if (vm.count("extractObject")) {
         llm.extractObjects();
+        finishObjectExtraction();
       }
       if (vm.count("extractBackground")) {
         llm.extractBackgrounds();
+        finishBackgroundExtraction();
       }
       if (vm.count("generateObjectPrompts")) {
         llm.generateObjectPrompts();
+        finishObjectPrompts();
       }
       if (vm.count("generateBackgroundPrompts")) {
         llm.generateBackgroundPrompts();
+        finishBackgroundPrompts();
       }
       llm.jsonStoreData();
+      finishJsonStorage();
+      finishLLM();
     } catch (const std::exception &e) {
       std::cerr << "Error: " << e.what() << std::endl;
       cleanup();

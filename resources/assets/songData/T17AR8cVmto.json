@@ -1,0 +1,28 @@
+{
+  "id": "T17AR8cVmto",
+  "title": "Stray Kids \"Chk Chk Boom\" Performance Video",
+  "uploader": "Stray Kids",
+  "audioPath": "audio/T17AR8cVmto.mp3",
+  "jacket": "images/T17AR8cVmto/jacket.png",
+  "images": [
+    "images/T17AR8cVmto/image_1741452340642.png"
+  ],
+  "moods": [],
+  "status": "Red",
+  "colours": [],
+  "colours_reason": [],
+  "objects": [],
+  "object_prompts": [],
+  "particles": [],
+  "backgrounds": [],
+  "background_prompts": [],
+  "shaderBackground": "shader/background/T17AR8cVmto.jpg",
+  "shaderTexture": "shader/texture/T17AR8cVmto.jpg",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ],
+  "createdAt": "2025-03-08T15:42:44.582Z",
+  "updatedAt": "2025-03-08T16:45:40.646Z"
+}

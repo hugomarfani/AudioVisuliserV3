@@ -4,16 +4,27 @@
   "uploader": "Super Simple Songs - Kids Songs",
   "audioPath": "audio/5oYKonYBujg.mp3",
   "jacket": "images/Old MacDonald Had A Farm/OldMacdonalds.jpg",
-  "images": ["images/Old MacDonald Had A Farm/OldMacdonalds.jpg"],
+  "images": [
+    "images/Old MacDonald Had A Farm/OldMacdonalds.jpg"
+  ],
   "moods": [],
   "status": "Yellow",
   "colours": [],
   "colours_reason": [],
   "objects": [],
   "object_prompts": [],
-  "particles": ["animals"],
+  "particles": [
+    "animals"
+  ],
   "backgrounds": [],
   "background_prompts": [],
+  "shaderBackground": "shader/background/5oYKonYBujg.jpg",
+  "shaderTexture": "shader/texture/5oYKonYBujg.jpg",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ],
   "createdAt": "2025-03-03T11:32:21.546Z",
-  "updatedAt": "2025-03-03T11:32:21.547Z"
+  "updatedAt": "2025-03-06T20:08:01.269Z"
 }

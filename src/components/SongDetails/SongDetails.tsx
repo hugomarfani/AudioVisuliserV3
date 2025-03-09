@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
 import { SongModel } from '../../database/models/Song';
 import { useSongs } from '../../hooks/useSongs';
 import colors from '../../theme/colors';
-import { FaPlay, FaArrowLeft } from 'react-icons/fa'; // Import the play and arrow icons from react-icons
+import ParticleSelector from './ParticleSelector';
+import BackgroundSelector from './BackgroundSelector';
+import ImageGallery from './ImageGallery';
+import LLMRunner from './LLMRunner';
+import WhisperRunner from './WhisperRunner';
+import ShaderImageSelector from './ShaderImageSelector';
 
 interface SongDetailsProps {
   onClose: () => void;
@@ -13,27 +17,61 @@ interface SongDetailsProps {
 const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
   const { songs, refetch } = useSongs();
   const [song, setSong] = useState<SongModel | null>(null);
-  const [gemmaStatus, setGemmaStatus] = useState<string>('');
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [jacketImage, setJacketImage] = useState<string>("");
+  const [redownloading, setRedownloading] = useState(false);
+
+  const findImagePath = async (P: string) => {
+    const response = await window.electron.fileSystem.mergeAssetPath(P);
+    return response;
+  };
 
   useEffect(() => {
-    if (songs) {
-      const song = songs.find((s) => s.dataValues.id === songId);
-      setSong(song || null);
-    }
+    const loadSong = async () => {
+      if (songs) {
+        const song = songs.find((s) => s.dataValues.id === songId);
+        setSong(song || null);
+        if (song && song.dataValues.images) {
+          const imagePaths = song.dataValues.images;
+          const resolvedImagePaths = await Promise.all(
+            imagePaths.map(async (imagePath) => {
+              return await findImagePath(imagePath);
+            })
+          );
+          console.log('Song Images:', resolvedImagePaths);
+          setUploadedImages(resolvedImagePaths);
+        }
+      }
+    };
+
+    const loadJacketImage = async () => {
+      if (song) {
+        const jacketImagePath = await findImagePath(song.dataValues.jacket);
+        setJacketImage(jacketImagePath);
+      }
+    };
+
+    loadSong();
+    loadJacketImage();
   }, [songs, songId]);
 
-  const handleRunGemma = async () => {
-    setGemmaStatus('Running Gemma...');
+  const handleMp3Redownload = async () => {
+    // if (!song || !song.dataValues.youtubeUrl) {
+    //   alert("No YouTube URL found for this song");
+    //   return;
+    // }
+
     try {
-      // Replace with your actual Gemma run logic
-      const result = await window.electron.ipcRenderer.invoke(
-        'run-gemma',
-        songId,
-      );
-      setGemmaStatus(`Gemma running ... ${result}`);
+      setRedownloading(true);
+      await window.electron.ipcRenderer.invoke('redownload-mp3', songId);
+      setRedownloading(false);
+      alert("MP3 redownloaded successfully!");
+      // Refresh song data
       refetch();
     } catch (error) {
-      setGemmaStatus(`Error: ${error.message || 'Unknown error occurred'}`);
+      setRedownloading(false);
+      console.error("Error redownloading MP3:", error);
+      alert(`Failed to redownload MP3: ${error}`);
     }
   };
 
@@ -54,7 +92,9 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 1000,
+        overflowY: 'auto',
       }}
+      onClick={onClose}
     >
       <div
         style={{
@@ -65,7 +105,10 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
           maxWidth: '600px',
           boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
           position: 'relative',
+          maxHeight: '90vh',
+          overflowY: 'auto',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         <button
           style={{
@@ -82,9 +125,12 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
         >
           &times;
         </button>
-        <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>
+        <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
           {song.dataValues.title}
         </h1>
+        <p style={{ fontSize: '0.9rem', color: colors.grey2, marginBottom: '1rem' }}>
+          ID: {songId}
+        </p>
         <h2
           style={{
             fontSize: '1.5rem',
@@ -95,7 +141,7 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
           {song.dataValues.uploader}
         </h2>
         <img
-          src={song.dataValues.jacket}
+          src={jacketImage}
           alt={song.dataValues.title}
           style={{
             width: '100%',
@@ -119,31 +165,90 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
         <p style={{ fontSize: '1rem', color: colors.grey2 }}>
           Backgrounds: {song.dataValues.backgrounds.join(', ')}
         </p>
-        <button
-          onClick={handleRunGemma}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            backgroundColor: colors.blue,
-            color: colors.white,
-            border: 'none',
-            borderRadius: '9999px',
-            padding: '0.5rem 1rem',
-            cursor: 'pointer',
-            fontSize: '1rem',
-            marginTop: '1rem',
-          }}
-        >
-          <FaPlay style={{ marginRight: '0.5rem' }} />
-          Run Gemma
-        </button>
-        {gemmaStatus && (
-          <p
-            style={{ fontSize: '1rem', color: colors.grey2, marginTop: '1rem' }}
-          >
-            {gemmaStatus}
+        
+        {/* MP3 Redownload component */}
+        <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>
+          <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>
+            Redownload MP3
+          </h3>
+          <p style={{ fontSize: '0.9rem', color: colors.grey2, marginBottom: '1rem' }}>
+            If there was an issue with the original MP3 download, you can redownload it.
           </p>
-        )}
+          <button
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: redownloading ? colors.grey3 : colors.primary,
+              color: colors.white,
+              border: 'none',
+              borderRadius: '4px',
+              cursor: redownloading ? 'not-allowed' : 'pointer',
+              fontWeight: 'bold',
+            }}
+            onClick={handleMp3Redownload}
+            disabled={redownloading}
+          >
+            {redownloading ? 'Downloading...' : 'Redownload MP3'}
+          </button>
+        </div>
+        
+        {/* 
+        
+        DEPRECATED WARNING -> WHISPER NOW DELETES THE WAV FILE AFTER PROCESSING SO NO NEED TO RERUN WHISPER
+        HOWEVER, LEAVING THIS COMMENTED OUT IN CASE WE NEED TO REVERT BACK TO THIS
+        THIS WOULD REQUIRE SD.EXE BEING UPDATED WITH THE NEW WHISPER COMMANDS
+
+        Whisper Runner component - add this before LLM Runner
+        <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>
+          <WhisperRunner 
+            song={song} 
+            songId={songId} 
+            refetch={refetch}
+          />
+        </div> */}
+        
+        {/* LLM Runner component - add this before BackgroundSelector */}
+        <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>
+          <LLMRunner 
+            song={song} 
+            songId={songId} 
+            refetch={refetch}
+          />
+        </div>
+        
+        {/* Background selection component */}
+        <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>
+          <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>
+            Background Generation
+          </h3>
+          <BackgroundSelector 
+            song={song} 
+            songId={songId} 
+            refetch={refetch}
+          />
+        </div>
+        
+        {/* Shader Image Selector */}
+        <ShaderImageSelector 
+          song={song} 
+          songId={songId} 
+          refetch={refetch}
+        />
+        
+        {/* Particle selection component */}
+        <ParticleSelector 
+          song={song} 
+          songId={songId} 
+          refetch={refetch}
+        />
+        
+        {/* Image Gallery component */}
+        <ImageGallery
+          song={song}
+          songId={songId}
+          uploadedImages={uploadedImages}
+          setUploadedImages={setUploadedImages}
+          refetch={refetch}
+        />
       </div>
     </div>
   );

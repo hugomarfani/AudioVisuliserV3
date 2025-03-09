@@ -31,5 +31,12 @@
   "status": "Yellow",
   "title": "The Lion King - Can You Feel The Love Tonight",
   "updatedAt": "2025-02-24T17:28:03.087Z",
-  "uploader": "DisneyMusicVEVO"
+  "uploader": "DisneyMusicVEVO",
+  "shaderBackground": "shader/background/25QyCxVkXwQ.jpg",
+  "shaderTexture": "shader/texture/25QyCxVkXwQ.jpg",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ]
 }

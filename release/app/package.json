@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@types/sequelize": "^4.28.20",
-    "sequelize": "^6.37.5",
+    "sequelize": "^6.37.6",
     "sqlite3": "^5.1.7"
   }
 }

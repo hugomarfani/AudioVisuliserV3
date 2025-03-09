@@ -10,7 +10,7 @@ class Particle {
   img: p5.Image | null;
   p: p5;
 
-  constructor(p: p5, x: number, y: number, type: string) {
+  constructor(p: p5, x: number, y: number, type: string, imageNum?: number) {
     // console.log(`Creating particle of type: ${type} at position (${x}, ${y})`);
     this.p = p;
     this.pos = p.createVector(x, y);
@@ -30,10 +30,10 @@ class Particle {
     this.lifespan = physics.lifespan;
   }
 
-  async loadImage() {
+  async loadImage(imageNum?: number) {
     try {
       const imagePath = await getRandomParticleImage(this.type);
-      // console.log('Loading particle image from:', imagePath);
+      console.log('Loading particle image from:', imagePath);
 
       // Use p5's loadImage with a Promise wrapper
       this.img = await new Promise((resolve, reject) => {
@@ -69,6 +69,22 @@ class Particle {
     airResistance.mult(-physics.airResistance);
     this.applyForce(airResistance);
 
+    // Add edge repulsion force to prevent accumulation at edges
+    const edgeBuffer = 40; // Distance from edge where repulsion starts
+    const edgeForceStrength = 0.05; // Strength of the repulsion
+
+    // Left edge repulsion
+    if (this.pos.x < edgeBuffer) {
+      const force = edgeForceStrength * (1 - this.pos.x / edgeBuffer);
+      this.applyForce(this.p.createVector(force, 0));
+    }
+
+    // Right edge repulsion
+    if (this.pos.x > this.p.width - edgeBuffer) {
+      const force = edgeForceStrength * (1 - (this.p.width - this.pos.x) / edgeBuffer);
+      this.applyForce(this.p.createVector(-force, 0));
+    }
+
     this.vel.add(this.acc);
     this.pos.add(this.vel);
     this.acc.mult(0);
@@ -76,6 +92,9 @@ class Particle {
     // Only bounce off left and right edges
     if (this.pos.x < 0 || this.pos.x > this.p.width) {
       this.vel.x *= -physics.bounce;
+      // Push particles more firmly back into view if they've gone beyond the edge
+      if (this.pos.x < 0) this.pos.x = 5;
+      if (this.pos.x > this.p.width) this.pos.x = this.p.width - 5;
     }
 
     this.lifespan -= 2;
@@ -195,21 +214,32 @@ class Particle {
 class ParticleSystem {
   particles: Particle[] = [];
   p: p5;
-  maxParticles = 30;  // Changed from 50 to 10
+  maxParticles = 150;  // Changed from 50 to 10
 
   constructor(p: p5) {
     // console.log('Initializing ParticleSystem');
     this.p = p;
   }
 
-  async addParticle(x: number, y: number, type: string): Promise<Particle | null> {
+  async addParticle(x: number, y: number, type: string, imageNum?: number): Promise<Particle | null> {
     // console.log(`Adding particle: type=${type}, x=${x}, y=${y}`);
     if (this.particles.length >= this.maxParticles) {
       // console.log('Max particles reached, removing oldest');
       this.particles.shift();
     }
-    const particle = new Particle(this.p, x, y, type);
-    await particle.loadImage(); // Wait for image to load
+    let particle;
+    if (imageNum !== undefined) {
+      particle = new Particle(this.p, x, y, type, imageNum);
+    } else {
+      particle = new Particle(this.p, x, y, type);
+    }
+    // const particle = new Particle(this.p, x, y, type);
+    if (imageNum !== undefined) {
+      await particle.loadImage(imageNum);
+      // console.log("ImageNum is defined");
+    }else {
+      await particle.loadImage();
+    }
     this.particles.push(particle);
     // console.log(`Total particles: ${this.particles.length}`);
     return particle;

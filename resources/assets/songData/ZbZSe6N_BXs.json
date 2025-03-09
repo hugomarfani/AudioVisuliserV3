@@ -4,16 +4,27 @@
   "uploader": "Pharrell Williams",
   "audioPath": "audio/ZbZSe6N_BXs.mp3",
   "jacket": "images/happy/happy.png",
-  "images": ["images/happy/happy.gif"],
+  "images": [
+    "images/happy/happy.gif"
+  ],
   "moods": [],
   "status": "Green",
   "colours": [],
   "colours_reason": [],
   "objects": [],
   "object_prompts": [],
-  "particles": ["emojis"],
+  "particles": [
+    "emojis"
+  ],
   "backgrounds": [],
   "background_prompts": [],
+  "shaderBackground": "shader/background/ZbZSe6N_BXs.jpg",
+  "shaderTexture": "shader/texture/ZbZSe6N_BXs.jpg",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ],
   "createdAt": "2025-03-03T12:25:10.917Z",
-  "updatedAt": "2025-03-03T12:25:10.917Z"
+  "updatedAt": "2025-03-06T19:42:25.258Z"
 }

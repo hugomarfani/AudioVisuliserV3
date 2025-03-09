@@ -194,7 +194,7 @@ export const particlePhysics: Record<string, ParticlePhysics> = {
 
 // Function to get a random image for a given particle type
 export const getRandomParticleImage = async (type: string): Promise<string> => {
-    // console.log(`Getting image for particle type: ${type}`);
+    console.log(`Getting image for particle type: ${type}`);
 
     // Map particle types to their directory names and number of images
     const particleConfig: { [key: string]: { dir: string, count: number } } = {
