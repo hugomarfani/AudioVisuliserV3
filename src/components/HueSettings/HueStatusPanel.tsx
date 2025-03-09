@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { FaCog, FaLightbulb, FaPlay, FaPause, FaMicrophone } from 'react-icons/fa';
 import { IoMdClose } from 'react-icons/io';
 import { useHue } from '../../hooks/useHue';
@@ -27,14 +27,146 @@ const HueStatusPanel: React.FC<HueStatusPanelProps> = ({
   const [isTestingLights, setIsTestingLights] = useState(false);
   const [lastTestResult, setLastTestResult] = useState<string | null>(null);
   const [spectrumData, setSpectrumData] = useState<number[]>(Array(15).fill(0)); // For the mini spectrum analyzer
+  const [lastUpdate, setLastUpdate] = useState(Date.now()); // Track last update time
+
+  // Store previous state for comparison
+  const prevBeatStatusRef = useRef<string>('');
+  const frameCountRef = useRef(0);
+
+  // More aggressive polling mechanism with forced update
+  useEffect(() => {
+    if (!isStreamingActive) return;
+
+    // Create a serialized version of the current beatStatus for comparison
+    const serializeBeatStatus = () => {
+      try {
+        return JSON.stringify({
+          isDetected: beatStatus?.isDetected,
+          vocalActive: beatStatus?.vocalActive,
+          bassEnergy: beatStatus?.bassEnergy,
+          midEnergy: beatStatus?.midEnergy,
+          highEnergy: beatStatus?.highEnergy,
+          vocalEnergy: beatStatus?.vocalEnergy,
+          brightness: beatStatus?.brightness,
+          currentColor: beatStatus?.currentColor,
+        });
+      } catch (e) {
+        return '';
+      }
+    };
+
+    // Check for changes directly using request animation frame
+    const checkForChanges = () => {
+      const currentSerialized = serializeBeatStatus();
+
+      // Check if data has changed
+      if (currentSerialized !== prevBeatStatusRef.current && currentSerialized !== '') {
+        console.log('Detected change in beat status:', {
+          beat: beatStatus?.isDetected,
+          vocal: beatStatus?.vocalActive,
+          energy: {
+            bass: beatStatus?.bassEnergy,
+            mid: beatStatus?.midEnergy,
+            high: beatStatus?.highEnergy,
+            vocal: beatStatus?.vocalEnergy
+          }
+        });
+
+        prevBeatStatusRef.current = currentSerialized;
+        setLastUpdate(Date.now());
+
+        // Process spectrum data if available
+        if (beatStatus?.audioData && beatStatus.audioData.length > 0) {
+          processSpectrumData();
+        }
+      }
+
+      // Force an update every 30 frames regardless of detected changes
+      frameCountRef.current += 1;
+      if (frameCountRef.current >= 30) {
+        setLastUpdate(Date.now());
+        frameCountRef.current = 0;
+      }
+
+      // Continue the animation frame loop
+      requestAnimationFrame(checkForChanges);
+    };
+
+    // Initial call to start the loop
+    const animationFrameId = requestAnimationFrame(checkForChanges);
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [isStreamingActive]);
+
+  // Process spectrum data - moved to a separate function
+  const processSpectrumData = useCallback(() => {
+    if (!beatStatus?.audioData || beatStatus.audioData.length === 0) {
+      setSpectrumData(Array(15).fill(0));
+      return;
+    }
+
+    try {
+      const sampledData = [];
+      const step = Math.floor(beatStatus.audioData.length / 15);
+      for (let i = 0; i < 15; i++) {
+        const value = beatStatus.audioData[i * step] || 0;
+        sampledData.push(typeof value === 'number' ? value : 0);
+      }
+      setSpectrumData(sampledData);
+    } catch (err) {
+      console.error("Error processing audio data:", err);
+      setSpectrumData(Array(15).fill(0));
+    }
+  }, [beatStatus?.audioData]);
+
+  // Log data for debugging
+  useEffect(() => {
+    if (isStreamingActive) {
+      console.log('Hue Status Update:', {
+        beat: beatStatus.isDetected,
+        vocal: beatStatus.vocalActive,
+        energy: {
+          bass: beatStatus.bassEnergy,
+          mid: beatStatus.midEnergy,
+          high: beatStatus.highEnergy
+        },
+        color: beatStatus.currentColor,
+        brightness: beatStatus.brightness
+      });
+      setLastUpdate(Date.now());
+    }
+  }, [
+    beatStatus.isDetected,
+    beatStatus.vocalActive,
+    beatStatus.bassEnergy,
+    beatStatus.midEnergy,
+    beatStatus.highEnergy,
+    beatStatus.currentColor,
+    beatStatus.brightness,
+    isStreamingActive
+  ]);
+
+  // Polling fallback - ensure we get updates even if some events are missed
+  useEffect(() => {
+    if (!isStreamingActive) return;
+
+    const intervalId = setInterval(() => {
+      // Force a component update to refresh the display
+      setLastUpdate(Date.now());
+    }, 500); // Poll every 500ms
+
+    return () => clearInterval(intervalId);
+  }, [isStreamingActive]);
 
   // Beat animation reference
   const beatRef = useRef<HTMLDivElement>(null);
   const vocalRef = useRef<HTMLDivElement>(null);
 
-  // Effect for beat animation
+  // Effect for beat animation - improved with null checking
   useEffect(() => {
-    if (beatRef.current && beatStatus.isDetected) {
+    if (beatRef.current && beatStatus && beatStatus.isDetected) {
       // Add and remove animation class
       beatRef.current.classList.add('beat-pulse');
       const timer = setTimeout(() => {
@@ -44,43 +176,47 @@ const HueStatusPanel: React.FC<HueStatusPanelProps> = ({
       }, 300); // Animation duration
       return () => clearTimeout(timer);
     }
-  }, [beatStatus.isDetected]);
+  }, [beatStatus?.isDetected, lastUpdate]);
 
-  // Effect for vocal animation
+  // Effect for vocal animation - improved with null checking
   useEffect(() => {
-    if (vocalRef.current && beatStatus.vocalActive) {
+    if (!vocalRef.current || !beatStatus) return;
+
+    if (beatStatus.vocalActive) {
       vocalRef.current.classList.add('vocal-active');
-      if (!vocalRef.current.classList.contains('sustaining') && beatStatus.vocalEnergy > 80) {
+      if (!vocalRef.current.classList.contains('sustaining') &&
+          beatStatus.vocalEnergy > 80) {
         vocalRef.current.classList.add('sustaining');
       }
-
-      return () => {
-        if (vocalRef.current) {
-          vocalRef.current.classList.remove('vocal-active');
-          // Only remove sustaining if vocal is no longer active
-          if (!beatStatus.vocalActive) {
-            vocalRef.current.classList.remove('sustaining');
-          }
-        }
-      };
+    } else {
+      vocalRef.current.classList.remove('vocal-active');
+      vocalRef.current.classList.remove('sustaining');
     }
-  }, [beatStatus.vocalActive, beatStatus.vocalEnergy]);
+  }, [beatStatus?.vocalActive, beatStatus?.vocalEnergy, lastUpdate]);
 
-  // Update spectrum visualization data
+  // Update spectrum visualization data - enhanced with better checks
   useEffect(() => {
-    if (isStreamingActive && beatStatus.audioData && beatStatus.audioData.length > 0) {
-      // Sample the frequency data for visualization
-      const sampledData = [];
-      const step = Math.floor(beatStatus.audioData.length / 15);
-      for (let i = 0; i < 15; i++) {
-        sampledData.push(beatStatus.audioData[i * step] || 0);
+    if (isStreamingActive && beatStatus?.audioData &&
+        beatStatus.audioData.length > 0) {
+      try {
+        // Sample the frequency data for visualization
+        const sampledData = [];
+        const step = Math.floor(beatStatus.audioData.length / 15);
+        for (let i = 0; i < 15; i++) {
+          const value = beatStatus.audioData[i * step] || 0;
+          // Ensure values are always numeric
+          sampledData.push(typeof value === 'number' ? value : 0);
+        }
+        setSpectrumData(sampledData);
+      } catch (err) {
+        console.error("Error processing audio data:", err);
+        setSpectrumData(Array(15).fill(0));
       }
-      setSpectrumData(sampledData);
     } else {
       // Reset when not streaming
       setSpectrumData(Array(15).fill(0));
     }
-  }, [isStreamingActive, beatStatus.audioData]);
+  }, [isStreamingActive, beatStatus?.audioData, lastUpdate]);
 
   // If the panel isn't open, don't render anything
   if (!isOpen) return null;
@@ -118,10 +254,23 @@ const HueStatusPanel: React.FC<HueStatusPanelProps> = ({
     }
   };
 
-  // Format RGB color to CSS
+  // Format RGB color to CSS - enhanced with better checks
   const formatRGB = (rgb: number[] | undefined) => {
-    if (!rgb || rgb.length !== 3) return 'rgb(255, 255, 255)';
+    if (!rgb || rgb.length !== 3 || rgb.some(v => typeof v !== 'number')) {
+      return 'rgb(255, 255, 255)';
+    }
     return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+  };
+
+  // Get safe energy values with fallbacks
+  const safeEnergy = (value: number | undefined) => {
+    return typeof value === 'number' ? value.toFixed(0) : '0';
+  };
+
+  // Safe brightness calculation with fallback
+  const safeBrightness = () => {
+    const brightness = beatStatus?.brightness || 0;
+    return ((typeof brightness === 'number' ? brightness : 0) * 100).toFixed(0);
   };
 
   return (
@@ -320,17 +469,17 @@ const HueStatusPanel: React.FC<HueStatusPanelProps> = ({
                     </div>
                   </div>
 
-                  {/* Energy levels - Bass and Mid */}
+                  {/* Energy levels - Bass and Mid - updated with safe values */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#555' }}>
-                    <div>Bass: <strong>{beatStatus.bassEnergy?.toFixed(0) || 0}</strong></div>
-                    <div>Mid: <strong>{beatStatus.midEnergy?.toFixed(0) || 0}</strong></div>
-                    <div>High: <strong>{beatStatus.highEnergy?.toFixed(0) || 0}</strong></div>
+                    <div>Bass: <strong>{safeEnergy(beatStatus?.bassEnergy)}</strong></div>
+                    <div>Mid: <strong>{safeEnergy(beatStatus?.midEnergy)}</strong></div>
+                    <div>High: <strong>{safeEnergy(beatStatus?.highEnergy)}</strong></div>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Current light settings */}
+            {/* Current light settings - updated with safe values */}
             {isStreamingActive && (
               <div style={{
                 marginTop: '12px',
@@ -350,12 +499,12 @@ const HueStatusPanel: React.FC<HueStatusPanelProps> = ({
                     width: '24px',
                     height: '24px',
                     borderRadius: '50%',
-                    backgroundColor: formatRGB(beatStatus.currentColor),
+                    backgroundColor: formatRGB(beatStatus?.currentColor),
                     boxShadow: '0 0 5px rgba(0,0,0,0.2)',
                     border: '2px solid white',
                   }} />
                   <span style={{ fontSize: '13px', color: '#555' }}>
-                    Brightness: <strong>{((beatStatus.brightness || 0) * 100).toFixed(0)}%</strong>
+                    Brightness: <strong>{safeBrightness()}%</strong>
                   </span>
                 </div>
               </div>

@@ -163,19 +163,19 @@ interface ToastMessage {
 }
 
 const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
-  const { 
-    isConfigured, 
-    hueSettings, 
-    registerBridge, 
-    fetchGroups, 
-    startHueStreaming, 
-    stopHueStreaming, 
-    setLightColor, 
-    saveHueSettings, 
+  const {
+    isConfigured,
+    hueSettings,
+    registerBridge,
+    fetchGroups,
+    startHueStreaming,
+    stopHueStreaming,
+    setLightColor,
+    saveHueSettings,
     resetHueSettings,
     testLights // Use the new testLights function
   } = useHue();
-  
+
   const [activeStep, setActiveStep] = useState(isConfigured ? 3 : 0);
   const [ipAddress, setIpAddress] = useState<string>('');
   const [isIpValid, setIsIpValid] = useState<boolean>(false);
@@ -239,7 +239,7 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
       setCredentials(hueSettings.credentials);
       setSelectedGroup(hueSettings.selectedGroup);
       setActiveStep(3);
-      
+
       // Fetch the entertainment groups when the modal opens if already configured
       if (hueSettings.bridge && hueSettings.credentials) {
         // Load the entertainment groups to ensure we have the data for the test function
@@ -285,10 +285,10 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
     setError(null);
     try {
       showToast("Press the link button on your Hue Bridge now...", 'info');
-      
+
       // Wait 2 seconds to give user time to read the message
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       const newCredentials = await registerBridge(bridge.ip);
       setCredentials(newCredentials);
       const groups = await fetchGroups(bridge.ip, newCredentials.username, newCredentials.clientkey);
@@ -307,11 +307,11 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
   const handleGroupSelect = async (groupId: string) => {
     if (!bridge || !credentials) return;
     setSelectedGroup(groupId);
-    
+
     // Find the selected group to get its numeric ID
     const selectedGroupObj = groups.find(group => group.id === groupId);
     const numericId = selectedGroupObj?.numericId;
-    
+
     const settings = {
       bridge,
       credentials,
@@ -326,40 +326,40 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
   // Simplified function to handle light testing
   const handleStartTest = async () => {
     setIsLoading(true);
-    
+
     try {
       // Get actual light IDs from the selected group
       const selectedGroupObj = groups.find(group => group.id === selectedGroup);
-      
+
       if (!selectedGroupObj || !selectedGroupObj.lights || selectedGroupObj.lights.length === 0) {
         // If no group is found in loaded groups, try to reload them
         if (bridge && credentials) {
           console.log('No group found - attempting to reload entertainment groups');
           const reloadedGroups = await fetchGroups(bridge.ip, credentials.username, credentials.clientkey);
           setGroups(reloadedGroups);
-          
+
           // Find the group in the newly loaded list
           const reloadedGroup = reloadedGroups.find(group => group.id === selectedGroup);
-          
+
           if (!reloadedGroup || !reloadedGroup.lights || reloadedGroup.lights.length === 0) {
             showToast('No lights found in the selected entertainment area', 'error');
             setIsLoading(false);
             return;
           }
-          
+
           // Continue with the reloaded group
           const lightIndices = Array.from({ length: reloadedGroup.lights.length }, (_, i) => i);
           console.log(`Testing entertainment area "${reloadedGroup.name}" with ${lightIndices.length} lights`);
           showToast(`Testing ${lightIndices.length} lights...`, 'info');
-          
+
           const success = await testLights(lightIndices);
-          
+
           if (success) {
             showToast('Light test completed successfully', 'success');
           } else {
             showToast('Light test failed', 'error', 'Test Failed');
           }
-          
+
           setIsLoading(false);
           return;
         } else {
@@ -368,17 +368,17 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
           return;
         }
       }
-      
+
       // Convert light IDs - in Hue Entertainment API, lights are typically indexed from 0
       // We'll simply use indices 0 to N-1 where N is the number of lights
       const lightIndices = Array.from({ length: selectedGroupObj.lights.length }, (_, i) => i);
-      
+
       console.log(`Testing entertainment area "${selectedGroupObj.name}" with ${lightIndices.length} lights`);
       showToast(`Testing ${lightIndices.length} lights...`, 'info');
-      
+
       // Call the testLights function with the specific light indices
       const success = await testLights(lightIndices);
-      
+
       if (success) {
         showToast('Light test completed successfully', 'success');
       } else {
@@ -477,7 +477,7 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
       </AppleInfoCard>
     );
   };
-  
+
   // Render step content
   const getStepContent = (step: number) => {
     switch (step) {
@@ -535,7 +535,7 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
                 {bridge?.ip || ''}
               </Typography>
             </Box>
-            
+
             {error && (
               <Box sx={{
                 display: 'flex',
@@ -620,12 +620,12 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
               Your Phillips Hue entertainment area is now configured and ready to sync with your music.
               The lights will respond to the audio frequencies when you play songs.
             </Typography>
-            
+
             {bridge && (
-              <Box sx={{ 
-                mb: 3, 
-                p: 2, 
-                borderRadius: 2, 
+              <Box sx={{
+                mb: 3,
+                p: 2,
+                borderRadius: 2,
                 backgroundColor: 'rgba(142, 142, 147, 0.1)',
                 textAlign: 'left'
               }}>
@@ -640,13 +640,13 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
                 </Typography>
               </Box>
             )}
-            
+
             {/* Display Entertainment Area Details */}
             {selectedGroup && (
-              <Box sx={{ 
-                mb: 3, 
-                p: 2, 
-                borderRadius: 2, 
+              <Box sx={{
+                mb: 3,
+                p: 2,
+                borderRadius: 2,
                 backgroundColor: 'rgba(142, 142, 147, 0.1)',
                 textAlign: 'left'
               }}>
@@ -675,7 +675,7 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
                 })}
               </Box>
             )}
-            
+
             <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 3 }}>
               <AppleButton
                 variant="outlined"
@@ -693,7 +693,7 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
                 Reconfigure
               </AppleButton>
             </Box>
-            
+
             <AppleButton
               variant="contained"
               color="error"
@@ -749,10 +749,6 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
           <CloseRoundedIcon fontSize="small" />
         </Box>
 
-        <Typography variant="h4" sx={{ mb: 4, textAlign: 'center', fontWeight: 500 }}>
-          Phillips Hue Setup
-        </Typography>
-
         <AppleStepper activeStep={activeStep} sx={{ mb: 4 }} alternativeLabel>
           {steps.map((label) => (
             <Step key={label}>
@@ -783,11 +779,11 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
             endIcon={activeStep !== steps.length - 1 ? <ArrowForwardRoundedIcon /> : undefined}
           >
             {
-              isLoading ? 
+              isLoading ?
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <CircularProgress size={20} sx={{ color: 'white', mr: 1 }} /> 
+                  <CircularProgress size={20} sx={{ color: 'white', mr: 1 }} />
                   {activeStep === 0 ? 'Connecting...' : activeStep === 1 ? 'Registering...' : 'Processing...'}
-                </Box> : 
+                </Box> :
                 (activeStep === steps.length - 1 ? 'Finish' : 'Next')
             }
           </AppleButton>
