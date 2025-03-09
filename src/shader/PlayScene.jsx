@@ -7,30 +7,28 @@ const PlayScene = () => {
   const [track, setTrack] = useState(null);
 
   let songDetail = location.state?.songDetails;
-  console.log(songDetail);
+  console.log("songDetail is", songDetail);
 
   useEffect(() => {
     const loadTrack = async () => {
       // Parse the texture color string into an array of integers
-      const textureColorStr = '[255,255,255]';
-      const textureColor = textureColorStr
-        .replace(/[\[\]]/g, '')  // Remove brackets
-        .split(',')              // Split by comma
-        .map(num => parseInt(num, 10)); // Convert to integers
+      const convertColor = (color) => {
+        let colorData = color
+          .split(',')              // Split by comma
+          .map(num => parseFloat(num/255));
+        return colorData
+      }
 
       setTrack({
         title: songDetail.title,
         artist: songDetail.uploader,
         albumArt: await findCompletePath(songDetail.jacket),
-        // background: await findCompletePath(songDetail.shaderBackground),
-        background: await findCompletePath(`shader/background/${songDetail.id}.jpg`),
+        background: await findCompletePath(songDetail.shaderBackground),
         audioPath: await findCompletePath(songDetail.audioPath),
         texture: await findCompletePath(songDetail.shaderTexture),
-        texture: await findCompletePath(`shader/texture/${songDetail.id}.jpg`),
-        // texture: await findCompletePath(`icon.png`),
-        textureColor: textureColor
+        textureColor: convertColor(String(songDetail.particleColour))
       });
-      console.log('set track', track);
+      console.log('particleColour', String(songDetail.particleColour))
     };
 
     if (songDetail) {

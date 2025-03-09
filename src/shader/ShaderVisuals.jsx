@@ -439,21 +439,24 @@ class ShaderVisuals extends Component {
     const fragmentShader = `
       varying vec2 vUv;
       uniform sampler2D uTexture;
+      uniform vec3 uColor;
       void main(){
         vec4 color = texture2D( uTexture, vUv );
         vec2 uv = vUv;
         // gl_FragColor = color;
         // Create gradient blue color
 
-        gl_FragColor = vec4(1. , 1. , 1., 1.);
+        gl_FragColor = vec4(uColor, 1.);
       }
     `;
-
+    const color = this.state.track.textureColor;
+    console.log(color)
     this.material = new THREE.ShaderMaterial({
       uniforms: {
         time: { value: 0 },
         uTexture: { value: this.positions },
         uFrequency: { value: this.analyser.getAverageFrequency() },
+        uColor: {value: new THREE.Vector3(color[0], color[1], color[2])}
       },
       vertexShader: vertexShader,
       fragmentShader: fragmentShader,
