@@ -187,7 +187,7 @@ class ShaderVisuals extends Component {
     for (let i = 0; i < canvasData.length; i += 4) {
       let x = (i / 4) % img.width;
       let y = Math.floor(i / 4 / img.width);
-      if (canvasData[i] < 50) {
+      if (canvasData[i] < 100) {
         pixels.push({ x: x / canvas.width - 0.5, y: 0.5 - y / canvas.height });
       }
     }

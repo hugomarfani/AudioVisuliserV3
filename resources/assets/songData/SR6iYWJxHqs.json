@@ -7,10 +7,11 @@
         "#800080",
         "#008000",
         "#FFC0CB",
-        "#0000FF"
+        "#0000FF",
+        "#800080"
     ],
     "colours_reason": [
-        "\n\n```\nColor 1: #FFD700\nColor 2: #800080\nColor 3: #008000\nColor 4: #FFC0CB\nColor 5: #0000FF\n\nColor 1 reason:  The lyrics mention \"tossing something in the trash,\" which often evokes the image of a yellow garbage bag.\nColor 2: reason: The phrase \"black, black and blue\" strongly suggests the color purple, often associated with bruises.\nColor 3: reason: The line \"I'd catch a grenade for you\" implies a sense of selflessness and sacrifice, often associated with the color green, symbolizing nature and growth.\nColor 4: reason: The lyrics describe a woman who is \"smiling in my face and rip the brakes out my car,\" suggesting a sense of betrayal and manipulation, often associated with the color pink, representing innocence and fragility.\nColor 5: reason: The line \"You watched me burn down in flames\" evokes the image of a raging fire, which is often depicted in shades of blue. \n\n\n```\n\n"
+        "\n\n```\nColor 1: #FFD700\nColor 2: #800080\nColor 3: #008000\nColor 4: #FFC0CB\nColor 5: #0000FF\n\nColor 1 reason: The lyric \"You tossed it in the trash\" evokes the image of a bright yellow trash can, a common sight in many households.\nColor 2: #800080\nColor 3 reason: The lyric \"I'd catch a grenade for you\" implies a scene of intense conflict, where the green smoke from the grenade would be visible.\nColor 4 reason: The lyric \"Mad woman, bad woman\" suggests a woman who is angry and possibly dressed in a pink or magenta outfit, a color often associated with femininity and anger.\nColor 5 reason: The lyric \"You watched me burn down in flames\" evokes the image of a dark blue fire, a color often associated with destruction and pain. \n```\n\n\n\nLet me know if you'd like me to analyze another song!\n"
     ],
     "createdAt": "2025-03-08T16:35:12.470Z",
     "id": "SR6iYWJxHqs",

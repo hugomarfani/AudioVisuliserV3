@@ -25,8 +25,9 @@ const PlayScene = () => {
         // background: await findCompletePath(songDetail.shaderBackground),
         background: await findCompletePath(`shader/background/${songDetail.id}.jpg`),
         audioPath: await findCompletePath(songDetail.audioPath),
-        // texture: await findCompletePath(songDetail.shaderTexture),
+        texture: await findCompletePath(songDetail.shaderTexture),
         texture: await findCompletePath(`shader/texture/${songDetail.id}.jpg`),
+        // texture: await findCompletePath(`icon.png`),
         textureColor: textureColor
       });
       console.log('set track', track);
