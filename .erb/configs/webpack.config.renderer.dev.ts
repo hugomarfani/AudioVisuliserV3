@@ -179,20 +179,6 @@ const configuration: webpack.Configuration = {
     },
     historyApiFallback: {
       verbose: true,
-    //   rewrites: [
-    //     // Prevent rewriting for `/auth` routes, ensuring they are proxied to the backend
-    //     { from: /^\/auth\/.*/, to: (context) => context.parsedUrl.pathname },
-    //     // Catch-all rewrite rule for other paths
-    //     { from: /./, to: '/index.html' },
-    //   ],
-    // },
-    // proxy: {
-    //   // Proxy all `/auth` routes to the backend server
-    //   '/auth': {
-    //     target: 'http://localhost:5001', // Backend server
-    //     changeOrigin: true,
-    //     logLevel: 'debug', // Debug logs to confirm proxying
-    //   },
     },
     setupMiddlewares(middlewares) {
       console.log('Starting preload.js builder...');
@@ -200,8 +186,13 @@ const configuration: webpack.Configuration = {
         shell: true,
         stdio: 'inherit',
       })
-        .on('close', (code: number) => process.exit(code!))
-        .on('error', (spawnError) => console.error(spawnError));
+        .on('close', (code: number) => {
+          process.exit(code!);
+        })
+        .on('error', (error) => {
+          console.error(error);
+          process.exit(1);
+        });
 
       console.log('Starting Main Process...');
       let args = ['run', 'start:main'];
@@ -218,7 +209,11 @@ const configuration: webpack.Configuration = {
           preloadProcess.kill();
           process.exit(code!);
         })
-        .on('error', (spawnError) => console.error(spawnError));
+        .on('error', (error) => {
+          console.error(error);
+          preloadProcess.kill();
+          process.exit(1);
+        });
       return middlewares;
     },
   },

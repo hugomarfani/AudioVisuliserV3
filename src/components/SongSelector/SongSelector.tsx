@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import FilterButton from './FilterButton';
 import SongCard from './SongCard';
 import { SongModel } from '../../database/models/Song'; // Import Song type
 import { useSongs } from '../../hooks/useSongs';
+import { useHue } from '../../hooks/useHue';
 import colors from '../../theme/colors';
 import axios from 'axios';
-import { FaMusic, FaDatabase, FaSync, FaChevronLeft, FaChevronRight, FaParticle } from 'react-icons/fa'; // Import music notes icon
+import { FaMusic, FaDatabase, FaSync, FaChevronLeft, FaChevronRight, FaParticle, FaCog } from 'react-icons/fa'; // Added FaCog
 import { GiParticleAccelerator } from 'react-icons/gi'; // Import particle icon
 import { SiGLTF } from 'react-icons/si'; // Import shader-like icon
 import Database from '../Database/Database'; // Import Database component
 import Library from '../Library/Library'; // Import Library component
 import SongDetails from '../SongDetails/SongDetails'; // Import SongDetails component
 import { useNavigate } from 'react-router-dom';
+import HueSettings from '../HueSettings/HueSettings'; // Import HueSettings component
 
 interface SongSelectorProps {
   onTrackSelect: (uri: string) => void;
@@ -29,6 +32,8 @@ const SongSelector: React.FC<SongSelectorProps> = ({
   onTrackSelect,
   accessToken,
 }) => {
+  const navigate = useNavigate();
+  const { isConfigured } = useHue();
   const [selectedFilters, setSelectedFilters] = useState<
     Array<'Blue' | 'Green' | 'Yellow' | 'Red'>
   >([]);
@@ -39,6 +44,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
   const [isLibraryOpen, setIsLibraryOpen] = useState(false); // State to manage library popup
   const [isSongDetailsOpen, setIsSongDetailsOpen] = useState(false); // State to manage song details popup
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null); // State to store selected song ID
+  const [isHueSettingsOpen, setIsHueSettingsOpen] = useState(false); // State to manage Hue settings modal
   const { songs, loading, error, refetch } = useSongs();
   const [currentPage, setCurrentPage] = useState(1);
   const songsPerPage = 8;
@@ -155,22 +161,22 @@ const SongSelector: React.FC<SongSelectorProps> = ({
   const handleSongSelect = (uri: string) => {
     // Find the song details
     const selectedSong = songs.find(song => song.dataValues.id === uri);
-    
+
     if (selectedSong) {
       const songWithAudio = {
         ...selectedSong.dataValues,
         audioSrc: selectedSong.dataValues.audioPath || '',
       };
-      
+
       // Check if in shader mode and missing shader files
-      if (visualMode && (!songWithAudio.shaderBackground || !songWithAudio.shaderTexture || 
+      if (visualMode && (!songWithAudio.shaderBackground || !songWithAudio.shaderTexture ||
           songWithAudio.shaderBackground === "" || songWithAudio.shaderTexture === "")) {
         // Show warning popup instead of navigating
         setSelectedInvalidSong(songWithAudio.title);
         setShowShaderWarning(true);
         return;
       }
-      
+
       // Navigate to the appropriate page based on the visualMode
       if (visualMode) {
         navigate(`/aiden/${encodeURIComponent(uri)}`, {
@@ -186,7 +192,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
 
   // Helper function to check if a song is missing shader files
   const isMissingShaderFiles = (song: any) => {
-    return visualMode && (!song.dataValues.shaderBackground || !song.dataValues.shaderTexture || 
+    return visualMode && (!song.dataValues.shaderBackground || !song.dataValues.shaderTexture ||
             song.dataValues.shaderBackground === "" || song.dataValues.shaderTexture === "");
   };
 
@@ -212,32 +218,44 @@ const SongSelector: React.FC<SongSelectorProps> = ({
         overflowX: 'hidden', // Explicitly prevent horizontal scrolling
       }}
     >
-      {/* Database Button
+      {/* Settings Button */}
       <button
         style={{
           position: 'absolute',
           top: '1rem',
-          right: '7rem',
-          backgroundColor: colors.grey2,
+          right: isLibraryOpen ? '13rem' : '13rem',
+          backgroundColor: isConfigured ? colors.blue : colors.grey2,
           color: colors.white,
           border: 'none',
-          borderRadius: '9999px', // Change to pill shape
-          padding: '0.5rem 1rem', // Adjust padding for pill shape
+          borderRadius: '9999px',
+          padding: '0.5rem 1rem',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}
-        onClick={() => setIsDatabaseOpen(true)} // Open library popup on click
+        onClick={() => setIsHueSettingsOpen(true)}
       >
-        <FaDatabase />
-        <span style={{ marginLeft: '0.5rem' }}>Database</span>
+        <FaCog />
+        <span style={{ marginLeft: '0.5rem' }}>Hue Settings</span>
+        {isConfigured && (
+          <div
+            style={{
+              width: '8px',
+              height: '8px',
+              backgroundColor: '#4ade80',
+              borderRadius: '50%',
+              marginLeft: '6px'
+            }}
+          />
+        )}
       </button>
-      {/* Database Popup */}
-      {/* {isDatabaseOpen && (
-        <Database onClose={() => setIsDatabaseOpen(false)} />
-      )}{' '} */}
-      {/* Render Database component when isDatabaseOpen */}
+
+      {/* Hue Settings Modal */}
+      {isHueSettingsOpen && (
+        <HueSettings onClose={() => setIsHueSettingsOpen(false)} />
+      )}
+
       {/* Library Button */}
       <button
         style={{
@@ -247,8 +265,8 @@ const SongSelector: React.FC<SongSelectorProps> = ({
           backgroundColor: colors.grey2,
           color: colors.white,
           border: 'none',
-          borderRadius: '9999px', // Change to pill shape
-          padding: '0.5rem 1rem', // Adjust padding for pill shape
+          borderRadius: '9999px',
+          padding: '0.5rem 1rem',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
@@ -319,10 +337,10 @@ const SongSelector: React.FC<SongSelectorProps> = ({
           marginTop: 0, // Remove margin above
         }}
       >
-        <h1 style={{ 
-          fontSize: 'clamp(1.2rem, 3vw, 1.5rem)', 
-          fontWeight: 'bold', 
-          marginTop: 0 
+        <h1 style={{
+          fontSize: 'clamp(1.2rem, 3vw, 1.5rem)',
+          fontWeight: 'bold',
+          marginTop: 0
         }}>
           Welcome Back
         </h1>
@@ -345,7 +363,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
           />
         </div>
       </div>
-      
+
       {/* Filter Buttons and Mode Toggle */}
       <div
         style={{
@@ -376,7 +394,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
             />
           ))}
         </div>
-        
+
         {/* Visualization Mode Toggle Slider - moved to be inline with filters */}
         <div style={{
           display: 'flex',
@@ -393,12 +411,12 @@ const SongSelector: React.FC<SongSelectorProps> = ({
           }}>
             Particles
           </span>
-          
-          <div 
-            onClick={() => setVisualMode(!visualMode)} 
+
+          <div
+            onClick={() => setVisualMode(!visualMode)}
             style={{
               width: '48px', // Slightly smaller for inline presentation
-              height: '24px', 
+              height: '24px',
               backgroundColor: visualMode ? colors.green : colors.blue,
               borderRadius: '12px',
               position: 'relative',
@@ -418,7 +436,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
               boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
             }}></div>
           </div>
-          
+
           <span style={{
             display: 'flex',
             alignItems: 'center',
@@ -431,7 +449,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
           </span>
         </div>
       </div>
-      
+
       {/* Song List with No Results Message */}
       <div
         style={{
@@ -530,7 +548,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
       {/* Shader Warning Popup */}
       {showShaderWarning && (
         <>
-          <div 
+          <div
             style={{
               position: 'fixed',
               top: 0,

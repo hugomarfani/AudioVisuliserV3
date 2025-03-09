@@ -36,6 +36,9 @@ const Particles: React.FC = () => {
         console.log("path test")
         console.log(jacketPath, songDetails.jacket);''
 
+        console.log("path test")
+        console.log(jacketPath, songDetails.jacket);''
+
         // Load all image paths with logging
         try {
           const imagePaths = await Promise.all(
@@ -62,7 +65,6 @@ const Particles: React.FC = () => {
   }, [songDetails]);
 
   useEffect(() => {
-    // Trigger entrance animation
     const timer = setTimeout(() => setIsVisible(true), 100);
     return () => clearTimeout(timer);
   }, []);
@@ -73,13 +75,12 @@ const Particles: React.FC = () => {
         p5Instance.remove();
       }
 
-      // Ensure particles array exists and is not empty
-      const particleTypes = songDetails.particles && songDetails.particles.length > 0
-        ? songDetails.particles
-        : ['musicNote'];
+      const particleTypes =
+        songDetails.particles && songDetails.particles.length > 0
+          ? songDetails.particles
+          : ['musicNote'];
 
-      // Initialize sketch with song's particle types
-      const sketch = initializeSketch(particleTypes, isActive); // Pass isActive to sketch
+      const sketch = initializeSketch(particleTypes, isActive);
       const newP5 = new p5(sketch, containerRef.current);
       setP5Instance(newP5);
     }
@@ -91,7 +92,6 @@ const Particles: React.FC = () => {
     };
   }, [songDetails, isActive]);
 
-  // Add effect to set initial image when images are loaded
   useEffect(() => {
     if (backgroundImages.length > 0) {
       console.log('Setting initial background image:', backgroundImages[0]);
@@ -99,17 +99,15 @@ const Particles: React.FC = () => {
     }
   }, [backgroundImages]);
 
-  // Handle leaving the page
   const handleBack = () => {
-    setIsActive(false); // Stop particle generation
+    setIsActive(false);
     setIsVisible(false);
     if (p5Instance) {
-      p5Instance.remove(); // Remove p5 instance immediately
+      p5Instance.remove();
     }
     setTimeout(() => navigate('/'), 300);
   };
 
-  // Handle image rotation based on current time
   const handleTimeUpdate = (currentTime: number, duration: number) => {
     if (backgroundImages.length === 0) {
       console.log('No background images available');
@@ -135,6 +133,11 @@ const Particles: React.FC = () => {
     }
   };
 
+  // Handle player state changes (if needed for other purposes)
+  const handlePlayerStateChange = (isPlayingNow: boolean) => {
+    // You can add logic here if necessary.
+  };
+
   if (!songDetails) return null;
 
   return (
@@ -146,9 +149,9 @@ const Particles: React.FC = () => {
         top: 0,
         left: 0,
         overflow: 'hidden',
-        background: 'transparent', // Change to transparent
-    }}>
-      {/* Replace background div with full-screen image */}
+        background: 'transparent',
+      }}
+    >
       {backgroundImages.length > 0 && (
         <img
           src={backgroundImages[currentImageIndex]}
@@ -185,7 +188,7 @@ const Particles: React.FC = () => {
       <button
         onClick={handleBack}
         style={{
-          position: 'fixed', // Change to fixed
+          position: 'fixed',
           top: 20,
           left: 20,
           zIndex: 10,
@@ -195,7 +198,7 @@ const Particles: React.FC = () => {
           border: 'none',
           cursor: 'pointer',
           width: 'fit-content',
-          color: 'black'
+          color: 'black',
         }}
       >
         Back
@@ -205,11 +208,11 @@ const Particles: React.FC = () => {
         <div
           className={`player-wrapper ${isVisible ? 'visible' : ''}`}
           style={{
-            position: 'fixed', // Change to fixed
+            position: 'fixed',
             bottom: 20,
             left: 0,
             right: 0,
-            zIndex: 10
+            zIndex: 10,
           }}
         >
           <Player
@@ -222,6 +225,7 @@ const Particles: React.FC = () => {
             }}
             autoPlay={true}
             onTimeUpdate={handleTimeUpdate}
+            onPlayStateChange={handlePlayerStateChange}
           />
         </div>
       )}

@@ -36,11 +36,48 @@ const configuration: webpack.Configuration = {
     },
   },
 
+  module: {
+    rules: [
+      // Add support for native node modules
+      {
+        // We're now also including native modules that contain `.node` file extensions
+        test: /native_modules[/\\].+\.node$/,
+        use: 'node-loader',
+      },
+      {
+        test: /[/\\]node_modules[/\\].+\.(m?js|node)$/,
+        parser: { amd: false },
+        use: {
+          loader: '@vercel/webpack-asset-relocator-loader',
+          options: {
+            outputAssetBase: 'native_modules',
+          },
+        },
+      },
+    ],
+  },
+
+  // List native modules to be excluded from bundling
   externals: {
     'sqlite3': 'commonjs sqlite3',
+    'node-aead-crypto': 'commonjs node-aead-crypto',
+    'node-dtls-client': 'commonjs node-dtls-client',
+    'phea': 'commonjs phea',
   },
 
   plugins: [
+    new webpack.EnvironmentPlugin({
+      NODE_ENV: 'development',
+    }),
+
+    new webpack.DefinePlugin({
+      __nccwpck_require__: "require"
+    }),
+
+    new webpack.LoaderOptionsPlugin({
+      debug: true,
+    }),
+
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     new BundleAnalyzerPlugin({

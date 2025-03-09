@@ -49,20 +49,20 @@ export interface ParticlePhysics {
 
 // Example storage structure
 export const particlePhysics: Record<string, ParticlePhysics> = {
-  musicNote: { 
-    name: "musicNote", 
-    weight: 1.0, gravity: 0.15, bounce: 0.6, airResistance: 0.01, lifespan: 5000, 
+  musicNote: {
+    name: "musicNote",
+    weight: 1.0, gravity: 0.15, bounce: 0.6, airResistance: 0.01, lifespan: 5000,
     images: [musicNote1, musicNote2],
     moods: ['happy', 'energetic']
   },
-  bubble: { 
-    name: "bubble", 
-    weight: 0.3, gravity: 0.05, bounce: 0.8, airResistance: 0.02, lifespan: 4000, 
+  bubble: {
+    name: "bubble",
+    weight: 0.3, gravity: 0.05, bounce: 0.8, airResistance: 0.02, lifespan: 4000,
     images: [bubble1],
     moods: ['calm', 'happy']
   },
-  star: { 
-    name: "star", 
+  star: {
+    name: "star",
     weight: 2.8, gravity: 0.1, bounce: 0.7, airResistance: 0.015, lifespan: 6000, glow: true,
     images: [star1, star2],
     moods: ['happy', 'magical', 'festive']
@@ -189,54 +189,46 @@ export const particlePhysics: Record<string, ParticlePhysics> = {
     images: [defaultParticle], // Replace with actual emoji images
     moods: ['happy', 'playful', 'fun']
   }
-  
-};
 
-export const particleConfig: { [key: string]: { dir: string, count: number } } = {
-  musicNote: { dir: 'musicNotes', count: 2 }, 
-  star: { dir: 'stars', count: 2 },
-  bubble: { dir: 'bubbles', count: 1 },
-  snowflake: { dir: 'snowflakes', count: 1 },
-  heart: { dir: 'hearts', count: 3},
-  leaves: { dir: 'leaves', count: 1 },
-  butterfly: { dir: 'butterflies', count: 1 },
-  confetti: { dir: 'confetti', count: 1 },
-  raindrop: { dir: 'raindrops', count: 1 },
-  firefly: { dir: 'fireflies', count: 1 },
-  balloon: { dir: 'balloons', count: 2},
-  flower: { dir: 'flowers', count: 1 },
-  firework: { dir: 'fireworks', count: 2 },
-  crown: { dir: 'crowns', count: 1 },
-  animal: { dir: 'animals', count: 6 },
-  emoji: { dir: 'emojis', count: 4 }
 };
-
 
 // Function to get a random image for a given particle type
-export const getRandomParticleImage = async (type: string, imageNumberDet?: number): Promise<string> => {
+export const getRandomParticleImage = async (type: string): Promise<string> => {
     console.log(`Getting image for particle type: ${type}`);
-    
+
     // Map particle types to their directory names and number of images
+    const particleConfig: { [key: string]: { dir: string, count: number } } = {
+        musicNote: { dir: 'musicNotes', count: 2 }, // Assuming you have 4 music note images
+        star: { dir: 'stars', count: 2 },
+        bubble: { dir: 'bubbles', count: 1 },
+        snowflake: { dir: 'snowflakes', count: 1 },
+        heart: { dir: 'hearts', count: 3},
+        leaves: { dir: 'leaves', count: 1 },
+        butterfly: { dir: 'butterflies', count: 1 },
+        confetti: { dir: 'confetti', count: 1 },
+        raindrop: { dir: 'raindrops', count: 1 },
+        firefly: { dir: 'fireflies', count: 1 },
+        balloon: { dir: 'balloons', count: 2},
+        flower: { dir: 'flowers', count: 1 },
+        firework: { dir: 'fireworks', count: 2 },
+        crown: { dir: 'crowns', count: 1 },
+        animal: { dir: 'animals', count: 6 },
+        emoji: { dir: 'emojis', count: 4 }
+    };
 
     const config = particleConfig[type] || particleConfig.musicNote;
-    
-    let imageNumber
 
-    if (imageNumberDet !== undefined) {
-      imageNumber = imageNumberDet;
-      // console.log("ImageNum is defined in getRandomParticleImage");
-    } else {
-      imageNumber = Math.floor(Math.random() * config.count) + 1;
-    }
-    
+    // Get random image number
+    const imageNumber = Math.floor(Math.random() * config.count) + 1;
+
     // Construct the relative path
     const imageName = type === 'bubble' ? 'bubbles1.png' : `${type}${imageNumber}.png`;
     const relativePath = `particles/${config.dir}/${imageName}`;
-    
+
     try {
         // Use electron to get the correct absolute path
         const fullPath = await window.electron.fileSystem.mergeAssetPath(relativePath);
-        console.log(`Selected image path: ${fullPath}`);
+        // console.log(`Selected image path: ${fullPath}`);
         return fullPath;
     } catch (error) {
         console.error(`Error loading image: ${relativePath}`, error);
