@@ -218,12 +218,12 @@ ipcMain.handle('merge-asset-path', async (_, pathToAdd) => {
 
 ipcMain.handle('reload-songs', async () => {
   try {
-    initDatabase();
-    const songs = await Song.findAll({
-      order: [['createdAt', 'DESC']],
-    });
+    await initDatabase();
+    // const songs = await Song.findAll({
+    //   order: [['createdAt', 'DESC']],
+    // });
     // console.log('Reloaded songs:', JSON.stringify(songs, null, 2));
-    return songs;
+    // return songs;
   } catch (error) {
     console.error('Error reloading songs:', error);
     throw error;
@@ -337,6 +337,7 @@ function buildGemmaCommand(songId: string, options: Record<string, boolean>) {
   if (options.extractBackground) command += ' -b';
   if (options.generateObjectPrompts) command += ' --generateObjectPrompts';
   if (options.generateBackgroundPrompts) command += ' --generateBackgroundPrompts';
+  if (options.extractStatus) command += ' --status';
   if (options.all) command += ' --all';
 
   if (options.rerunWhisper) command = `${exePath} -e -w -s ${songId}`;

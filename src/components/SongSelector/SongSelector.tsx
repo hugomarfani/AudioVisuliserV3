@@ -273,7 +273,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
           justifyContent: 'center',
           fontSize: 'clamp(0.75rem, 1vw, 1rem)', // Responsive font size
         }}
-        onClick={reload} // Changed from setIsLibraryOpen(true) to reload
+        onClick={() => {reload(); reloadSongs();}} // Changed from setIsLibraryOpen(true) to reload
       >
         <span style={{ marginLeft: '0.5rem' }}>Reload</span>
       </button>

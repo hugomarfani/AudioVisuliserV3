@@ -108,6 +108,7 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
           maxHeight: '90vh',
           overflowY: 'auto',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         <button
           style={{
