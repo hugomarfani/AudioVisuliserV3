@@ -60,6 +60,28 @@ export default class HueService {
   private streamingInterval: NodeJS.Timeout | null = null;
   private currentColors: { [id: number]: number[] } = {}; // Track current colors for each light
 
+  // New properties for light management
+  private currentRgbValues: number[][] = []; // Current RGB values being sent to lights
+  private targetRgbValues: number[][] = [];  // Target RGB values for transitions
+  private lightCount: number = 0;            // Number of lights in the entertainment group
+  private streamingFrameRate: number = 50;   // Hz - Frame rate for streaming
+  private streamingInterval: NodeJS.Timeout | null = null;
+
+  // Beat visualization settings
+  private beatFlashBrightness: number = 1.0; // Maximum brightness on beat
+  private beatDecayRate: number = 0.95;      // Rate at which brightness decays after beat
+  private lastBeatTime: number = 0;
+  private currentBeatColor: number[] = [255, 255, 255]; // Default flash color
+  private beatColorIndex: number = 0;
+  private beatColors: number[][] = [
+    [255, 0, 0],    // Red
+    [0, 255, 0],    // Green
+    [0, 0, 255],    // Blue
+    [255, 255, 0],  // Yellow
+    [0, 255, 255],  // Cyan
+    [255, 0, 255],  // Magenta
+  ];
+
   constructor() {
     this.registerIpcHandlers();
     console.log('HueService initialized');
@@ -453,7 +475,6 @@ export default class HueService {
         this.socket = await this.createDtlsSocket(ip, username, psk);
       } catch (error) {
         console.error('Failed to create DTLS socket:', error);
-        // Stop entertainment group that we started
         await this.stopEntertainmentGroup(ip, username, groupId);
         return false;
       }
@@ -461,70 +482,36 @@ export default class HueService {
       // Connection was established successfully
       this.isStreaming = true;
 
-      // Retrieve info about the group to determine how many lights it contains
+      // Get group info and initialize light arrays
       try {
-        // Try to get light information from the bridge
         const groupInfo = await this.fetchGroupInfo(ip, username, groupId, numericGroupId);
         if (groupInfo && groupInfo.lights && groupInfo.lights.length > 0) {
-          // Create activeLightIds array with indices from 0 to n-1
           this.numberOfLights = groupInfo.lights.length;
           this.activeLightIds = Array.from({ length: this.numberOfLights }, (_, i) => i);
-          console.log(`Set up control for ${this.numberOfLights} lights: [${this.activeLightIds.join(', ')}]`);
+          // Initialize the new RGB arrays system
+          this.initializeLightArrays(this.numberOfLights);
+          console.log(`Initialized ${this.numberOfLights} lights for streaming`);
         } else {
-          // Fallback to default if we couldn't get light info
+          console.warn('Could not determine number of lights, using default of 5');
+          this.numberOfLights = 5;
           this.activeLightIds = [0, 1, 2, 3, 4];
-          console.log('Could not determine number of lights, using default range:', this.activeLightIds);
+          this.initializeLightArrays(5);
         }
       } catch (error) {
-        console.error('Error determining number of lights, using defaults:', error);
+        console.error('Error determining number of lights:', error);
+        this.numberOfLights = 5;
         this.activeLightIds = [0, 1, 2, 3, 4];
+        this.initializeLightArrays(5);
       }
 
-      // Initialize current colors for all lights to black
-      this.activeLightIds.forEach(id => {
-        this.currentColors[id] = [0, 0, 0];
-      });
+      // Start the streaming manager for continuous updates
+      this.startStreamingManager();
 
-      // Start continuous streaming at specified frame rate
-      this.streamingInterval = setInterval(() => {
-        if (this.isStreaming && this.socket && this.entertainmentId) {
-          try {
-            // Create commands for all active lights with their current colors
-            const lightCommands = this.activeLightIds.map(id => ({
-              id,
-              rgb: this.currentColors[id] || [0, 0, 0]
-            }));
-
-            // Create and send the command buffer
-            const commandBuffer = this.createCommandBuffer(this.entertainmentId, lightCommands);
-            this.socket.send(commandBuffer, (error) => {
-              if (error) {
-                console.error('Error sending streaming data:', error);
-              }
-            });
-          } catch (error) {
-            console.error('Error in streaming interval:', error);
-          }
-        }
-      }, Math.floor(1000 / this.streamingFrameRate));
-
-      // Send a test color to verify the connection
-      if (this.socket && this.entertainmentId) {
-        // Updated: Use all active lights for the test color
-        const testCommands = this.activeLightIds.map(id => ({ id, rgb: [255, 0, 0] })); // Red color
-        const testCommand = this.createCommandBuffer(
-          this.entertainmentId,
-          testCommands
-        );
-
-        this.socket.send(testCommand, (error) => {
-          if (error) {
-            console.error('Failed to send test color:', error);
-          } else {
-            console.log('Successfully sent test color to lights');
-          }
-        });
-      }
+      // Send initial black color to all lights
+      const blackColor = [0, 0, 0];
+      this.currentRgbValues = Array(this.numberOfLights).fill([...blackColor]);
+      this.targetRgbValues = Array(this.numberOfLights).fill([...blackColor]);
+      await this.sendCurrentValuesToLights();
 
       console.log('Streaming started successfully');
       return true;
@@ -1126,4 +1113,108 @@ export default class HueService {
       });
     });
   }
+
+  /**
+   * Initialize light arrays when starting streaming
+   */
+  private initializeLightArrays(numLights: number) {
+    this.lightCount = numLights;
+    this.currentRgbValues = Array(numLights).fill([0, 0, 0]);
+    this.targetRgbValues = Array(numLights).fill([0, 0, 0]);
+    console.log(`Initialized arrays for ${numLights} lights`);
+  }
+
+  /**
+   * The main streaming management function that runs at high frequency
+   */
+  private startStreamingManager() {
+    if (this.streamingInterval) {
+      clearInterval(this.streamingInterval);
+    }
+
+    this.streamingInterval = setInterval(() => {
+      if (!this.isStreaming || !this.socket || !this.entertainmentId) return;
+
+      // Update current values based on targets and decay
+      const now = Date.now();
+      const timeSinceLastBeat = now - this.lastBeatTime;
+
+      // Apply decay effect after beat
+      if (timeSinceLastBeat > 50) { // Small delay for flash to be visible
+        for (let i = 0; i < this.lightCount; i++) {
+          for (let j = 0; j < 3; j++) {
+            // Decay the current values toward the target
+            const diff = this.targetRgbValues[i][j] - this.currentRgbValues[i][j];
+            this.currentRgbValues[i][j] += diff * 0.1; // Smooth transition
+          }
+        }
+      }
+
+      // Send current values to lights
+      this.sendCurrentValuesToLights();
+    }, Math.floor(1000 / this.streamingFrameRate));
+  }
+
+  /**
+   * Sends the current RGB values to the lights
+   */
+  private sendCurrentValuesToLights() {
+    if (!this.socket || !this.entertainmentId) return;
+
+    const lightCommands = this.currentRgbValues.map((rgb, id) => ({
+      id,
+      rgb: rgb.map(Math.round) // Ensure integer values
+    }));
+
+    const commandBuffer = this.createCommandBuffer(this.entertainmentId, lightCommands);
+    this.sendCommandToLights(commandBuffer);
+  }
+
+  /**
+   * Handle beat detection with new flash effect system
+   */
+  private handleProcessBeat = async (_: any, beatData: BeatData): Promise<boolean> => {
+    try {
+      if (!this.isStreaming || !this.socket || !this.entertainmentId) {
+        return false;
+      }
+
+      const now = Date.now();
+
+      // Process beat detection and update lights
+      if (beatData.isBeat && now - this.lastBeatTime > 100) { // Minimum time between beats
+        console.log('=======FLASH=======');
+        this.lastBeatTime = now;
+
+        // Select next beat color
+        const beatColor = this.beatColors[this.beatColorIndex];
+        this.beatColorIndex = (this.beatColorIndex + 1) % this.beatColors.length;
+
+        // Calculate flash intensity based on beat energy
+        const intensity = 0.5 + (beatData.energy / 2);
+        const flashColor = beatColor.map(c => Math.min(255, Math.round(c * intensity)));
+
+        // Set flash color as current for immediate effect
+        this.currentRgbValues = Array(this.lightCount).fill(flashColor);
+
+        // Set darker target for decay
+        const targetColor = beatColor.map(c => Math.round(c * 0.2)); // 20% brightness
+        this.targetRgbValues = Array(this.lightCount).fill(targetColor);
+      }
+      else if (!beatData.isBeat) {
+        // Update ambient colors based on frequency distribution
+        const ambient = [
+          Math.min(255, Math.round(beatData.bassEnergy * 0.7)),
+          Math.min(255, Math.round(beatData.midEnergy * 0.7)),
+          Math.min(255, Math.round(beatData.highEnergy * 0.7))
+        ];
+        this.targetRgbValues = Array(this.lightCount).fill(ambient);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error processing beat data:', error);
+      return false;
+    }
+  };
 }
