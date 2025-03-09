@@ -24,6 +24,8 @@ interface BeatData {
   bassEnergy: number;
   midEnergy: number;
   highEnergy: number;
+  color?: number[]; // Optional color parameter
+  vocalEnergy?: number; // Optional vocal energy parameter
 }
 
 /**
@@ -1034,44 +1036,78 @@ export default class HueService {
 
       const now = Date.now();
 
-      // Process beat detection and update lights
-      if (beatData.isBeat && now - this.lastBeatTime > 100) { // Minimum time between beats
-        this.lastBeatDetected = true;
-        this.lastBeatTime = now;
+      // Check if we have a specific color from the renderer
+      let targetColor: number[];
+      let flashColor: number[];
 
-        // Always log the flash
+      // If specific color is provided, use it instead of cycling through colors
+      if (beatData.color && beatData.color.length === 3) {
+        // Use the provided color
+        flashColor = [...beatData.color];
+        // Create a dimmer version for between beats
+        targetColor = beatData.color.map(c => Math.round(c * 0.2)); // 20% brightness
+
+        // Skip normal color cycling logic since color is specified
+        this.currentBeatColor = flashColor;
+      } else {
+        // Process beat detection and update lights with original cycling color logic
+        if (beatData.isBeat && now - this.lastBeatTime > 100) { // Minimum time between beats
+          this.lastBeatDetected = true;
+          this.lastBeatTime = now;
+
+          // Select next beat color
+          const beatColor = this.beatColors[this.beatColorIndex];
+          this.beatColorIndex = (this.beatColorIndex + 1) % this.beatColors.length;
+          flashColor = beatColor;
+          targetColor = beatColor.map(c => Math.round(c * 0.2)); // 20% brightness
+        } else {
+          // Use ambient lighting based on audio energy if no beat detected
+          flashColor = [
+            Math.min(255, Math.round(beatData.bassEnergy * 0.7)),
+            Math.min(255, Math.round(beatData.midEnergy * 0.7)),
+            Math.min(255, Math.round(beatData.highEnergy * 0.7))
+          ];
+          targetColor = flashColor.map(c => Math.round(c * 0.5)); // 50% dimmer
+        }
+      }
+
+      // Check for high vocal energy - improved handling
+      if (beatData.vocalEnergy && beatData.vocalEnergy > 30) {
+        // More responsive scaling of brightness based on energy level
+        const baseVocalBoost = beatData.vocalEnergy / 200; // 0-1.275 range for typical values
+        const vocalBoostFactor = Math.min(2.0, 1.0 + baseVocalBoost); // Cap at 200% brightness
+
+        // Apply vocal boost - stronger effect
+        flashColor = flashColor.map(c => Math.min(255, Math.round(c * vocalBoostFactor)));
+
+        // Also boost the target color for between beats
+        targetColor = targetColor.map(c => Math.min(255, Math.round(c * (1 + baseVocalBoost * 0.5))));
+
+        // Log the vocal boost for significant changes
+        if (vocalBoostFactor > 1.3) {
+          console.log(`🎤 Strong vocal boost: ${vocalBoostFactor.toFixed(2)}, Energy: ${beatData.vocalEnergy.toFixed(1)}`);
+        }
+      }
+
+      // If a beat is detected, flash with the chosen color
+      if (beatData.isBeat && now - this.lastBeatTime < 100) {
         console.log('\n=======FLASH=======');
         console.log(`Beat Energy: ${beatData.energy.toFixed(2)}`);
-        console.log(`Bass: ${beatData.bassEnergy.toFixed(2)}, Mid: ${beatData.midEnergy.toFixed(2)}, High: ${beatData.highEnergy.toFixed(2)}`);
-
-        // Select next beat color
-        const beatColor = this.beatColors[this.beatColorIndex];
-        this.beatColorIndex = (this.beatColorIndex + 1) % this.beatColors.length;
-        console.log('Flash color:', beatColor);
-
-        // Calculate flash intensity based on beat energy
-        const intensity = 0.5 + (beatData.energy / 2);
-        const flashColor = beatColor.map(c => Math.min(255, Math.round(c * intensity)));
+        console.log(`Flash color: ${flashColor.join(', ')}`);
 
         // Set flash color as current for immediate effect
         this.currentRgbValues = Array(this.lightCount).fill(flashColor);
-
-        // Set darker target for decay
-        const targetColor = beatColor.map(c => Math.round(c * 0.2)); // 20% brightness
         this.targetRgbValues = Array(this.lightCount).fill(targetColor);
 
         // Send the flash immediately
         await this.sendCurrentValuesToLights();
       }
-      else if (!beatData.isBeat) {
+      else {
         this.lastBeatDetected = false;
-        // Update ambient colors based on frequency distribution
-        const ambient = [
-          Math.min(255, Math.round(beatData.bassEnergy * 0.7)),
-          Math.min(255, Math.round(beatData.midEnergy * 0.7)),
-          Math.min(255, Math.round(beatData.highEnergy * 0.7))
-        ];
-        this.targetRgbValues = Array(this.lightCount).fill(ambient);
+
+        // Smoother transitions between non-beat frames
+        // Use the provided color or our calculated color
+        this.targetRgbValues = Array(this.lightCount).fill(flashColor.map(c => Math.round(c * 0.5))); // Half brightness between beats
       }
 
       return true;

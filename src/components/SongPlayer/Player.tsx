@@ -39,12 +39,37 @@ const Player = forwardRef<any, PlayerProps>(({
 
   // Beat detection state (moved from HueVisualizer)
   const energyHistory = useRef<number[]>([]);
+  const vocalEnergyHistory = useRef<number[]>([]);
   const beatThreshold = useRef(1.2); // More sensitive threshold
   const beatHoldTime = useRef(100); // How long to hold a beat (ms)
   const lastBeatTime = useRef(0);
   const debugCounter = useRef(0);
   const lastUpdateTime = useRef(0);
   const updateIntervalMs = useRef(50); // Milliseconds between updates
+
+  // Enhanced music reactive lighting
+  const currentColorIndex = useRef(0); // Current color index
+  const colorChangeCount = useRef(0); // Count beats before changing color
+  const colorChangeThreshold = useRef(8); // Change color every X beats
+  const baseColors = useRef<number[][]>([
+    [255, 0, 0],     // Red
+    [255, 165, 0],   // Orange
+    [255, 255, 0],   // Yellow
+    [0, 255, 0],     // Green
+    [0, 0, 255],     // Blue
+    [128, 0, 128],   // Purple
+    [255, 105, 180], // Pink
+  ]);
+  const lastColorChangeTime = useRef(0); // Time of last color change
+  const minTimeBetweenColorChanges = useRef(5000); // Minimum 5 seconds between color changes
+
+  // Vocal/energy detection - MODIFIED for better tracking
+  const vocalEnergyThreshold = useRef(60); // Threshold for identifying high vocal energy
+  const vocalEnergyReleaseThreshold = useRef(40); // Lower threshold to maintain vocal state (hysteresis)
+  const isHighVocalEnergy = useRef(false);
+  const vocalEnergyDuration = useRef(0); // How long high vocal energy has been sustained
+  const vocalDetectionCounter = useRef(0); // Counter to ignore brief drops in vocal energy
+  const vocalDropoutTolerance = useRef(3); // Number of frames to maintain vocal state despite energy drop
 
   // Get Hue services directly in the Player component
   const { isConfigured, isStreamingActive, startHueStreaming, stopHueStreaming } = useHue();
@@ -141,19 +166,83 @@ const Player = forwardRef<any, PlayerProps>(({
 
         const data = dataArrayRef.current;
 
-        // Split frequency data into segments - focus more on bass frequencies
-        const bassRange = Math.floor(data.length * 0.15); // Increased bass range
+        // Split frequency data into segments with focus on different frequency ranges
+        const bassRange = Math.floor(data.length * 0.15); // Lower frequencies (bass)
         const bassSegment = data.slice(0, bassRange);
-        const midSegment = data.slice(bassRange, Math.floor(data.length * 0.6));
-        const highSegment = data.slice(Math.floor(data.length * 0.6));
+
+        const midLowRange = Math.floor(data.length * 0.3); // Lower mid frequencies
+        const midLowSegment = data.slice(bassRange, midLowRange);
+
+        const midHighRange = Math.floor(data.length * 0.6); // Higher mid frequencies (where vocals often are)
+        const midHighSegment = data.slice(midLowRange, midHighRange);
+
+        const highSegment = data.slice(midHighRange); // High frequencies
 
         // Calculate energy levels
         const bassEnergy = bassSegment.reduce((sum, val) => sum + val, 0) / bassSegment.length;
-        const midEnergy = midSegment.reduce((sum, val) => sum + val, 0) / midSegment.length;
+        const midLowEnergy = midLowSegment.reduce((sum, val) => sum + val, 0) / midLowSegment.length;
+        const midHighEnergy = midHighSegment.reduce((sum, val) => sum + val, 0) / midHighSegment.length;
         const highEnergy = highSegment.reduce((sum, val) => sum + val, 0) / highSegment.length;
 
-        // Calculate total energy with higher emphasis on bass
-        const totalEnergy = (bassEnergy * 4 + midEnergy + highEnergy) / 6;
+        // Specific detection for vocal range (mid-high frequencies)
+        const vocalEnergy = midHighEnergy * 1.2; // Emphasize vocal range
+
+        // Update vocal energy history with longer history for stability
+        vocalEnergyHistory.current.push(vocalEnergy);
+        if (vocalEnergyHistory.current.length > 40) { // Increased from 30 for more stability
+          vocalEnergyHistory.current.shift();
+        }
+
+        // Calculate average vocal energy from history
+        const avgVocalEnergy = vocalEnergyHistory.current.reduce((sum, e) => sum + e, 0) /
+                              Math.max(1, vocalEnergyHistory.current.length);
+
+        // Modified vocal energy detection with hysteresis
+        const previousHighVocalEnergy = isHighVocalEnergy.current;
+
+        if (isHighVocalEnergy.current) {
+          // If already in high vocal state, use lower threshold to maintain it (hysteresis)
+          if (vocalEnergy < vocalEnergyReleaseThreshold.current) {
+            vocalDetectionCounter.current++;
+            // Only exit vocal state if energy stays low for multiple consecutive frames
+            if (vocalDetectionCounter.current >= vocalDropoutTolerance.current) {
+              isHighVocalEnergy.current = false;
+              vocalDetectionCounter.current = 0;
+            }
+          } else {
+            // Reset dropout counter if energy is above threshold
+            vocalDetectionCounter.current = 0;
+          }
+        } else {
+          // If not in high vocal state, need higher threshold to enter
+          isHighVocalEnergy.current = vocalEnergy > (avgVocalEnergy * 1.4) && vocalEnergy > vocalEnergyThreshold.current;
+          if (isHighVocalEnergy.current) {
+            // Reset counter when entering vocal state
+            vocalDetectionCounter.current = 0;
+          }
+        }
+
+        // Track duration of high vocal energy for sustained notes
+        if (isHighVocalEnergy.current) {
+          vocalEnergyDuration.current += updateIntervalMs.current;
+
+          // Add additional logging for long sustained notes
+          if (vocalEnergyDuration.current % 500 === 0) {
+            console.log(`🎵 Sustained vocal energy: ${vocalEnergyDuration.current}ms at energy level ${vocalEnergy.toFixed(1)}`);
+          }
+        } else if (previousHighVocalEnergy) {
+          // Only log when state changes from high to low
+          console.log(`🎤 Vocal energy ended. Duration: ${vocalEnergyDuration.current}ms`);
+          vocalEnergyDuration.current = 0;
+        }
+
+        // Log when vocal energy state changes from low to high
+        if (isHighVocalEnergy.current && !previousHighVocalEnergy) {
+          console.log(`🎤 VOCAL ENERGY DETECTED! Energy: ${vocalEnergy.toFixed(1)}, Threshold: ${(avgVocalEnergy * 1.4).toFixed(1)}`);
+        }
+
+        // Calculate total energy with higher emphasis on bass for beat detection
+        const totalEnergy = (bassEnergy * 4 + midLowEnergy + midHighEnergy + highEnergy) / 7;
 
         // Update energy history (keep last 20 samples)
         energyHistory.current.push(totalEnergy);
@@ -176,34 +265,80 @@ const Player = forwardRef<any, PlayerProps>(({
         // Log energy levels every 20 iterations for debugging
         if (debugCounter.current % 20 === 0) {
           console.log(
-            `🔊 Energy levels - Bass: ${bassEnergy.toFixed(1)}, ` +
-            `Mid: ${midEnergy.toFixed(1)}, ` +
+            `🔊 Energy - Bass: ${bassEnergy.toFixed(1)}, ` +
+            `Mid-Low: ${midLowEnergy.toFixed(1)}, ` +
+            `Mid-High: ${midHighEnergy.toFixed(1)}, ` +
             `High: ${highEnergy.toFixed(1)}, ` +
-            `Total: ${totalEnergy.toFixed(1)}, ` +
-            `Avg: ${avgEnergy.toFixed(1)}, ` +
-            `Threshold: ${(avgEnergy * dynamicThreshold).toFixed(1)}`
+            `Vocal: ${vocalEnergy.toFixed(1)}`
           );
+        }
+
+        // Determine if we should change the active color
+        let shouldChangeColor = false;
+
+        // Change color if:
+        // 1. We've detected enough beats since the last change, AND
+        // 2. Enough time has passed since the last change
+        if (isBeat) {
+          colorChangeCount.current++;
+
+          if (colorChangeCount.current >= colorChangeThreshold.current &&
+              now - lastColorChangeTime.current > minTimeBetweenColorChanges.current) {
+            shouldChangeColor = true;
+            colorChangeCount.current = 0;
+            lastColorChangeTime.current = now;
+
+            // Choose next color
+            currentColorIndex.current = (currentColorIndex.current + 1) % baseColors.current.length;
+            console.log(`🎨 Changing to new color: ${currentColorIndex.current}`);
+          }
         }
 
         if (isBeat) {
           lastBeatTime.current = now;
           console.log(`🥁 BEAT DETECTED! 🎵 Energy: ${totalEnergy.toFixed(1)} vs Threshold: ${(avgEnergy * dynamicThreshold).toFixed(1)}`);
-          console.log(`   Bass: ${bassEnergy.toFixed(1)}, Mid: ${midEnergy.toFixed(1)}, High: ${highEnergy.toFixed(1)}`);
         }
 
-        // Scale energy values for better visualization (0-255 range)
+        // Current color based on the current index
+        const currentColor = baseColors.current[currentColorIndex.current];
+
+        // Calculate brightness based on beat or vocal intensity
+        let brightness = 0.5; // Base brightness
+
+        if (isBeat) {
+          // Pulse brightness higher on beat
+          brightness = Math.min(1.0, 0.7 + (totalEnergy / 256) * 0.3);
+        }
+
+        // Enhanced vocal brightness calculation - smoother ramp-up
+        if (isHighVocalEnergy.current) {
+          // More dramatic brightness increase for longer sustained notes
+          const vocalBrightnessFactor = Math.min(1.0, 0.85 + (vocalEnergyDuration.current / 1500) * 0.15);
+          // Add extra boost for very high vocal energy
+          const energyBoost = Math.max(0, (vocalEnergy - vocalEnergyThreshold.current) / 100);
+          const totalBrightness = Math.min(1.0, vocalBrightnessFactor + energyBoost);
+          brightness = Math.max(brightness, totalBrightness);
+        }
+
+        // Apply brightness to the current color
+        const finalColor = currentColor.map(c => Math.round(c * brightness));
+
+        // Scale energy values for the Hue API
         const scaledBassEnergy = Math.min(255, bassEnergy * 2);
-        const scaledMidEnergy = Math.min(255, midEnergy * 2);
+        const scaledMidEnergy = Math.min(255, (midLowEnergy + midHighEnergy) / 2 * 2);
         const scaledHighEnergy = Math.min(255, highEnergy * 2);
 
-        // Send beat data to HueService if connected
+        // Send beat and color data to HueService if connected
         if (isHueConnected && isStreamingActive) {
           await window.electron.hue.processBeat({
             isBeat,
             energy: totalEnergy,
             bassEnergy: scaledBassEnergy,
             midEnergy: scaledMidEnergy,
-            highEnergy: scaledHighEnergy
+            highEnergy: scaledHighEnergy,
+            // Add additional data for enhanced lighting
+            color: finalColor,
+            vocalEnergy: isHighVocalEnergy.current ? vocalEnergy : 0
           });
         }
 
