@@ -72,7 +72,14 @@ const Player = forwardRef<any, PlayerProps>(({
   const vocalDropoutTolerance = useRef(3); // Number of frames to maintain vocal state despite energy drop
 
   // Get Hue services directly in the Player component
-  const { isConfigured, isStreamingActive, startHueStreaming, stopHueStreaming } = useHue();
+  const {
+    isConfigured,
+    isStreamingActive,
+    startHueStreaming,
+    stopHueStreaming,
+    processBeat,
+    updateBeatStatusDirectly  // Add the new direct update function
+  } = useHue();
   const [isHueConnected, setIsHueConnected] = useState(false);
 
   useImperativeHandle(ref, () => ({
@@ -329,26 +336,54 @@ const Player = forwardRef<any, PlayerProps>(({
         const scaledHighEnergy = Math.min(255, highEnergy * 2);
 
         // Send beat and color data to HueService if connected
-        if (isHueConnected && isStreamingActive) {
+        if (isStreamingActive) {
           // Create a streamlined version of the frequency data for visualization
           const visualizationData = new Uint8Array(dataArrayRef.current.length);
           dataArrayRef.current.forEach((value, index) => {
             visualizationData[index] = value;
           });
 
-          await window.electron.hue.processBeat({
+          const beatData = {
             isBeat,
             energy: totalEnergy,
             bassEnergy: scaledBassEnergy,
             midEnergy: scaledMidEnergy,
             highEnergy: scaledHighEnergy,
-            // Add additional data for enhanced lighting
             color: finalColor,
             vocalEnergy: vocalEnergy,
-            audioData: visualizationData, // Send the frequency data for visualization
+            audioData: visualizationData,
             brightness: brightness,
             vocalActive: isHighVocalEnergy.current
+          };
+
+          // Use both methods - direct update for UI and process for backend
+          updateBeatStatusDirectly({
+            isDetected: isBeat,
+            energy: totalEnergy,
+            bassEnergy: scaledBassEnergy,
+            midEnergy: scaledMidEnergy,
+            highEnergy: scaledHighEnergy,
+            vocalEnergy: vocalEnergy,
+            currentColor: finalColor,
+            brightness: brightness,
+            vocalActive: isHighVocalEnergy.current,
+            audioData: visualizationData
           });
+
+          // Also send to Electron main process
+          await processBeat(beatData);
+
+          // Force debug output every 10 frames
+          if (debugCounter.current % 10 === 0) {
+            console.log("Audio data sent to Hue:", {
+              beat: isBeat,
+              bass: scaledBassEnergy.toFixed(0),
+              mid: scaledMidEnergy.toFixed(0),
+              high: scaledHighEnergy.toFixed(0),
+              vocal: vocalEnergy.toFixed(0),
+              active: isHighVocalEnergy.current
+            });
+          }
         }
 
         lastUpdateTime.current = now;

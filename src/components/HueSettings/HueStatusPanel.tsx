@@ -28,6 +28,7 @@ const HueStatusPanel: React.FC<HueStatusPanelProps> = ({
   const [lastTestResult, setLastTestResult] = useState<string | null>(null);
   const [spectrumData, setSpectrumData] = useState<number[]>(Array(15).fill(0)); // For the mini spectrum analyzer
   const [lastUpdate, setLastUpdate] = useState(Date.now()); // Track last update time
+  const [tick, setTick] = useState(0); // NEW: dummy tick state to force re-rendering
 
   // Store previous state for comparison
   const prevBeatStatusRef = useRef<string>('');
@@ -145,7 +146,8 @@ const HueStatusPanel: React.FC<HueStatusPanelProps> = ({
     beatStatus.highEnergy,
     beatStatus.currentColor,
     beatStatus.brightness,
-    isStreamingActive
+    isStreamingActive,
+    tick  // added to force update
   ]);
 
   // Polling fallback - ensure we get updates even if some events are missed
@@ -158,6 +160,15 @@ const HueStatusPanel: React.FC<HueStatusPanelProps> = ({
     }, 500); // Poll every 500ms
 
     return () => clearInterval(intervalId);
+  }, [isStreamingActive]);
+
+  // NEW: Establish an interval to update tick when streaming is active
+  useEffect(() => {
+    if (!isStreamingActive) return;
+    const interval = setInterval(() => {
+      setTick(t => t + 1);
+    }, 100); // Update every 100ms
+    return () => clearInterval(interval);
   }, [isStreamingActive]);
 
   // Beat animation reference

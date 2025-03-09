@@ -98,6 +98,7 @@ export interface HueContextType {
   testLights: (lightIds?: number[]) => Promise<boolean>;
   processBeat: (beatData: BeatData) => Promise<boolean>;
   refreshBeatStatus: () => Promise<BeatStatus>;
+  updateBeatStatusDirectly: (data: Partial<BeatStatus>) => void;
 }
 
 // Local storage key for Hue settings
@@ -186,19 +187,19 @@ export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     // This handles the data coming back from the main process
     const handleBeatUpdate = (_: any, data: any) => {
-      setBeatStatus({
-        isDetected: data.isBeat || false,
-        energy: data.energy || 0,
-        bassEnergy: data.bassEnergy || 0,
-        midEnergy: data.midEnergy || 0,
-        highEnergy: data.highEnergy || 0,
-        vocalEnergy: data.vocalEnergy || 0,
-        vocalActive: data.vocalActive || false,
-        currentColor: data.color || [255, 255, 255],
-        brightness: data.brightness || 0.5,
+      setBeatStatus(prev => ({
+        isDetected: data.isBeat ?? false,
+        energy: data.energy ?? 0,
+        bassEnergy: data.bassEnergy ?? 0,
+        midEnergy: data.midEnergy ?? 0,
+        highEnergy: data.highEnergy ?? 0,
+        vocalEnergy: data.vocalEnergy ?? 0,
+        vocalActive: data.vocalActive ?? false,
+        currentColor: (Array.isArray(data.color) && data.color.length === 3) ? data.color : (prev.currentColor ?? [255, 255, 255]),
+        brightness: data.brightness ?? (prev.brightness ?? 0.5),
         audioData: data.audioData,
         lastTime: Date.now()
-      });
+      }));
     };
 
     // Subscribe to beat detection updates
@@ -362,20 +363,53 @@ export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, []);
 
-  // Process beat data
+  // NEW: Direct update function that bypasses Electron IPC
+  const updateBeatStatusDirectly = useCallback((data: Partial<BeatStatus>) => {
+    console.log("Direct beat status update:", data);
+
+    setBeatStatus(prev => ({
+      ...prev,
+      isDetected: data.isDetected ?? prev.isDetected,
+      energy: data.energy ?? prev.energy,
+      bassEnergy: data.bassEnergy ?? prev.bassEnergy,
+      midEnergy: data.midEnergy ?? prev.midEnergy,
+      highEnergy: data.highEnergy ?? prev.highEnergy,
+      vocalEnergy: data.vocalEnergy ?? prev.vocalEnergy,
+      vocalActive: data.vocalActive ?? prev.vocalActive,
+      currentColor: data.currentColor ?? prev.currentColor,
+      brightness: data.brightness ?? prev.brightness,
+      audioData: data.audioData ?? prev.audioData,
+      lastTime: Date.now()
+    }));
+  }, []);
+
+  // Process beat data - MODIFIED to use direct update as well
   const processBeat = useCallback(async (beatData: BeatData): Promise<boolean> => {
     if (!isStreamingActive) return false;
 
     try {
+      // First update the UI directly for immediate feedback
+      updateBeatStatusDirectly({
+        isDetected: beatData.isBeat,
+        energy: beatData.energy,
+        bassEnergy: beatData.bassEnergy,
+        midEnergy: beatData.midEnergy,
+        highEnergy: beatData.highEnergy,
+        vocalEnergy: beatData.vocalEnergy,
+        vocalActive: beatData.vocalActive,
+        currentColor: beatData.color,
+        brightness: beatData.brightness,
+        audioData: beatData.audioData
+      });
+
+      // Then send to main process
       const result = await window.electron.hue.processBeat(beatData);
-      // After processing beat, refresh the beat status
-      refreshBeatStatus();
       return result;
     } catch (error) {
       console.error('Failed to process beat data:', error);
       return false;
     }
-  }, [isStreamingActive]);
+  }, [isStreamingActive, updateBeatStatusDirectly]);
 
   // Refresh beat detection status
   const refreshBeatStatus = useCallback(async (): Promise<BeatStatus> => {
@@ -447,7 +481,8 @@ export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     resetHueSettings,
     testLights,
     processBeat,
-    refreshBeatStatus
+    refreshBeatStatus,
+    updateBeatStatusDirectly  // Add the new method to the context
   };
 
   return <HueContext.Provider value={value}>{children}</HueContext.Provider>;
