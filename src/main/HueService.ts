@@ -56,6 +56,9 @@ export default class HueService {
   private numberOfLights: number = 0;
   // New: Track beat detection status for UI
   private lastBeatDetected: boolean = false;
+  private streamingFrameRate = 50; // Hz - Frame rate for continuous streaming
+  private streamingInterval: NodeJS.Timeout | null = null;
+  private currentColors: { [id: number]: number[] } = {}; // Track current colors for each light
 
   constructor() {
     this.registerIpcHandlers();
@@ -477,24 +480,33 @@ export default class HueService {
         this.activeLightIds = [0, 1, 2, 3, 4];
       }
 
-      // Start a keepalive interval to keep the connection alive
-      this.streamInterval = setInterval(() => {
+      // Initialize current colors for all lights to black
+      this.activeLightIds.forEach(id => {
+        this.currentColors[id] = [0, 0, 0];
+      });
+
+      // Start continuous streaming at specified frame rate
+      this.streamingInterval = setInterval(() => {
         if (this.isStreaming && this.socket && this.entertainmentId) {
           try {
-            // Send a black color to all lights as a keepalive
-            const keepaliveCommand = this.createCommandBuffer(
-              this.entertainmentId,
-              [{ id: 0, rgb: [0, 0, 0] }]
-            );
+            // Create commands for all active lights with their current colors
+            const lightCommands = this.activeLightIds.map(id => ({
+              id,
+              rgb: this.currentColors[id] || [0, 0, 0]
+            }));
 
-            this.socket.send(keepaliveCommand, (error) => {
-              if (error) console.error('Error sending keepalive:', error);
+            // Create and send the command buffer
+            const commandBuffer = this.createCommandBuffer(this.entertainmentId, lightCommands);
+            this.socket.send(commandBuffer, (error) => {
+              if (error) {
+                console.error('Error sending streaming data:', error);
+              }
             });
           } catch (error) {
-            console.error('Error in keepalive interval:', error);
+            console.error('Error in streaming interval:', error);
           }
         }
-      }, 5000);
+      }, Math.floor(1000 / this.streamingFrameRate));
 
       // Send a test color to verify the connection
       if (this.socket && this.entertainmentId) {
@@ -602,6 +614,11 @@ export default class HueService {
 
       // Create and send the command buffer
       const commandBuffer = this.createCommandBuffer(this.entertainmentId, lightCommands);
+
+      // Update current colors for specified lights
+      lightIds.forEach(id => {
+        this.currentColors[id] = validRgb;
+      });
 
       return new Promise((resolve) => {
         this.socket!.send(commandBuffer, (error) => {
@@ -973,6 +990,14 @@ export default class HueService {
    * Internal helper to stop streaming and clean up
    */
   private async stopStreaming(): Promise<void> {
+    if (this.streamingInterval) {
+      clearInterval(this.streamingInterval);
+      this.streamingInterval = null;
+    }
+
+    // Reset current colors
+    this.currentColors = {};
+
     if (this.isStreaming && this.socket) {
       console.log('Stopping Hue streaming...');
 
@@ -1039,25 +1064,17 @@ export default class HueService {
         this.lastBeatTime = now;
         this.lastBeatDetected = true;
 
-        // For beats, flash all lights with the next color in our sequence
+        // For beats, update all lights with the next color in our sequence
         const beatColor = this.beatColors[this.currentBeatColorIndex];
-
-        // Scale color intensity based on beat energy
         const scaledColor = beatColor.map(c => Math.min(255, Math.round(c * (0.5 + beatData.energy / 200))));
 
-        // Create commands for each active light - use all of them!
-        const lightCommands = this.activeLightIds.map(id => ({ id, rgb: scaledColor }));
-
-        console.log(`Beat detected! Energy: ${beatData.energy.toFixed(2)}, Color: [${scaledColor.join(',')}], Lights: ${this.activeLightIds.length}`);
-
-        // Create and send the command buffer
-        const commandBuffer = this.createCommandBuffer(this.entertainmentId, lightCommands);
-        await this.sendCommandToLights(commandBuffer);
+        // Update current colors for all lights
+        this.activeLightIds.forEach(id => {
+          this.currentColors[id] = scaledColor;
+        });
 
         // Update to next color for next beat
         this.currentBeatColorIndex = (this.currentBeatColorIndex + 1) % this.beatColors.length;
-
-        return true;
       }
       else if (!beatData.isBeat && now - this.lastBeatTime > 200) {
         // Reset beat detected status between beats
@@ -1075,12 +1092,10 @@ export default class HueService {
           Math.min(255, bassColor[2] + midColor[2] + highColor[2])
         ];
 
-        // Create commands for each active light
-        const lightCommands = this.activeLightIds.map(id => ({ id, rgb: mixedColor }));
-
-        // Create and send the command buffer
-        const commandBuffer = this.createCommandBuffer(this.entertainmentId, lightCommands);
-        await this.sendCommandToLights(commandBuffer);
+        // Update current colors for all lights
+        this.activeLightIds.forEach(id => {
+          this.currentColors[id] = mixedColor;
+        });
       }
 
       return true;
