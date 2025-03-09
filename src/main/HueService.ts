@@ -31,32 +31,23 @@ interface BeatData {
  * using the Entertainment API via direct DTLS communication
  */
 export default class HueService {
+  // DTLS and streaming connection
   private socket: any | null = null;
   private selectedGroup: string | null = null;
-  private isStreaming = false;
-  private streamInterval: NodeJS.Timeout | null = null;
+  private isStreaming: boolean = false;
   private groupIdMap: Map<string, string> = new Map(); // Map to store UUID to numeric ID mapping
   private entertainmentId: string | null = null;
-  private sequenceNumber = 1;
+  private sequenceNumber: number = 1;
   // Beat detection state
-  private lastBeatTime = 0;
-  private beatHoldTime = 100; // ms
-  private beatColors: number[][] = [
-    [255, 0, 0],    // Red
-    [0, 255, 0],    // Green
-    [0, 0, 255],    // Blue
-    [255, 255, 0],  // Yellow
-    [0, 255, 255],  // Cyan
-    [255, 0, 255],  // Magenta
-  ];
-  private currentBeatColorIndex = 0;
-  // Updated: Initialize with empty array instead of just [0]
+  private lastBeatTime: number = 0;
+  private beatHoldTime: number = 100; // ms
+  private currentBeatColorIndex: number = 0;
+  // Removed faulty beatColors declaration; the proper one is defined later
+  // Light management
   private activeLightIds: number[] = [];
-  // New: Store the number of lights in the selected group
-  private numberOfLights: number = 0;
-  // New: Track beat detection status for UI
+  private numberOfLights: number = 0; // for UI
   private lastBeatDetected: boolean = false;
-  private streamingFrameRate = 50; // Hz - Frame rate for continuous streaming
+  private streamingFrameRate: number = 50; // Hz - Frame rate for continuous streaming
   private streamingInterval: NodeJS.Timeout | null = null;
   private currentColors: { [id: number]: number[] } = {}; // Track current colors for each light
 
@@ -64,13 +55,10 @@ export default class HueService {
   private currentRgbValues: number[][] = []; // Current RGB values being sent to lights
   private targetRgbValues: number[][] = [];  // Target RGB values for transitions
   private lightCount: number = 0;            // Number of lights in the entertainment group
-  private streamingFrameRate: number = 50;   // Hz - Frame rate for streaming
-  private streamingInterval: NodeJS.Timeout | null = null;
 
   // Beat visualization settings
   private beatFlashBrightness: number = 1.0; // Maximum brightness on beat
   private beatDecayRate: number = 0.95;      // Rate at which brightness decays after beat
-  private lastBeatTime: number = 0;
   private currentBeatColor: number[] = [255, 255, 255]; // Default flash color
   private beatColorIndex: number = 0;
   private beatColors: number[][] = [
@@ -1039,6 +1027,7 @@ export default class HueService {
   private handleProcessBeat = async (_: any, beatData: BeatData): Promise<boolean> => {
     try {
       if (!this.isStreaming || !this.socket || !this.entertainmentId) {
+        console.log('Beat received but not streaming');
         this.lastBeatDetected = false;
         return false;
       }
@@ -1046,43 +1035,43 @@ export default class HueService {
       const now = Date.now();
 
       // Process beat detection and update lights
-      if (beatData.isBeat && now - this.lastBeatTime > this.beatHoldTime) {
-        // Update the last beat time and beat detected status
-        this.lastBeatTime = now;
+      if (beatData.isBeat && now - this.lastBeatTime > 100) { // Minimum time between beats
         this.lastBeatDetected = true;
+        this.lastBeatTime = now;
 
-        // For beats, update all lights with the next color in our sequence
-        const beatColor = this.beatColors[this.currentBeatColorIndex];
-        const scaledColor = beatColor.map(c => Math.min(255, Math.round(c * (0.5 + beatData.energy / 200))));
+        // Always log the flash
+        console.log('\n=======FLASH=======');
+        console.log(`Beat Energy: ${beatData.energy.toFixed(2)}`);
+        console.log(`Bass: ${beatData.bassEnergy.toFixed(2)}, Mid: ${beatData.midEnergy.toFixed(2)}, High: ${beatData.highEnergy.toFixed(2)}`);
 
-        // Update current colors for all lights
-        this.activeLightIds.forEach(id => {
-          this.currentColors[id] = scaledColor;
-        });
+        // Select next beat color
+        const beatColor = this.beatColors[this.beatColorIndex];
+        this.beatColorIndex = (this.beatColorIndex + 1) % this.beatColors.length;
+        console.log('Flash color:', beatColor);
 
-        // Update to next color for next beat
-        this.currentBeatColorIndex = (this.currentBeatColorIndex + 1) % this.beatColors.length;
+        // Calculate flash intensity based on beat energy
+        const intensity = 0.5 + (beatData.energy / 2);
+        const flashColor = beatColor.map(c => Math.min(255, Math.round(c * intensity)));
+
+        // Set flash color as current for immediate effect
+        this.currentRgbValues = Array(this.lightCount).fill(flashColor);
+
+        // Set darker target for decay
+        const targetColor = beatColor.map(c => Math.round(c * 0.2)); // 20% brightness
+        this.targetRgbValues = Array(this.lightCount).fill(targetColor);
+
+        // Send the flash immediately
+        await this.sendCurrentValuesToLights();
       }
-      else if (!beatData.isBeat && now - this.lastBeatTime > 200) {
-        // Reset beat detected status between beats
+      else if (!beatData.isBeat) {
         this.lastBeatDetected = false;
-
-        // Between beats, create ambient light based on frequency distribution
-        const bassColor = [beatData.bassEnergy, 0, 0]; // Red for bass
-        const midColor = [0, beatData.midEnergy, 0];   // Green for mids
-        const highColor = [0, 0, beatData.highEnergy]; // Blue for highs
-
-        // Mix the colors together
-        const mixedColor = [
-          Math.min(255, bassColor[0] + midColor[0] + highColor[0]),
-          Math.min(255, bassColor[1] + midColor[1] + highColor[1]),
-          Math.min(255, bassColor[2] + midColor[2] + highColor[2])
+        // Update ambient colors based on frequency distribution
+        const ambient = [
+          Math.min(255, Math.round(beatData.bassEnergy * 0.7)),
+          Math.min(255, Math.round(beatData.midEnergy * 0.7)),
+          Math.min(255, Math.round(beatData.highEnergy * 0.7))
         ];
-
-        // Update current colors for all lights
-        this.activeLightIds.forEach(id => {
-          this.currentColors[id] = mixedColor;
-        });
+        this.targetRgbValues = Array(this.lightCount).fill(ambient);
       }
 
       return true;
@@ -1169,52 +1158,4 @@ export default class HueService {
     const commandBuffer = this.createCommandBuffer(this.entertainmentId, lightCommands);
     this.sendCommandToLights(commandBuffer);
   }
-
-  /**
-   * Handle beat detection with new flash effect system
-   */
-  private handleProcessBeat = async (_: any, beatData: BeatData): Promise<boolean> => {
-    try {
-      if (!this.isStreaming || !this.socket || !this.entertainmentId) {
-        return false;
-      }
-
-      const now = Date.now();
-
-      // Process beat detection and update lights
-      if (beatData.isBeat && now - this.lastBeatTime > 100) { // Minimum time between beats
-        console.log('=======FLASH=======');
-        this.lastBeatTime = now;
-
-        // Select next beat color
-        const beatColor = this.beatColors[this.beatColorIndex];
-        this.beatColorIndex = (this.beatColorIndex + 1) % this.beatColors.length;
-
-        // Calculate flash intensity based on beat energy
-        const intensity = 0.5 + (beatData.energy / 2);
-        const flashColor = beatColor.map(c => Math.min(255, Math.round(c * intensity)));
-
-        // Set flash color as current for immediate effect
-        this.currentRgbValues = Array(this.lightCount).fill(flashColor);
-
-        // Set darker target for decay
-        const targetColor = beatColor.map(c => Math.round(c * 0.2)); // 20% brightness
-        this.targetRgbValues = Array(this.lightCount).fill(targetColor);
-      }
-      else if (!beatData.isBeat) {
-        // Update ambient colors based on frequency distribution
-        const ambient = [
-          Math.min(255, Math.round(beatData.bassEnergy * 0.7)),
-          Math.min(255, Math.round(beatData.midEnergy * 0.7)),
-          Math.min(255, Math.round(beatData.highEnergy * 0.7))
-        ];
-        this.targetRgbValues = Array(this.lightCount).fill(ambient);
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error processing beat data:', error);
-      return false;
-    }
-  };
 }
