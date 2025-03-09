@@ -239,9 +239,24 @@ ipcMain.handle('reload-songs', async () => {
 //   }
 // });
 
+ipcMain.handle('redownload-mp3', async (_, songId) => {
+  try {
+    const url = "https://www.youtube.com/watch?v=" + songId;
+    const id = await downloadYoutubeAudioWav(url, true);
+    // const { title, artist, thumbnailPath } = await getYoutubeMetadata(url);
+    // console.log(
+    //   `Redownloaded WAV with id: ${id}, title: ${title}, artist: ${artist}, thumbnail: ${thumbnailPath}`,
+    // );
+    return id;
+  } catch (error) {
+    console.error('Error in redownload-wav handler:', error);
+    throw error;
+  }
+});
+
 ipcMain.handle('download-wav', async (_, url) => {
   try {
-    const id = await downloadYoutubeAudioWav(url);
+    const id = await downloadYoutubeAudioWav(url, false);
     const { title, artist, thumbnailPath } = await getYoutubeMetadata(url);
     console.log(
       `Downloaded WAV with id: ${id}, title: ${title}, artist: ${artist}, thumbnail: ${thumbnailPath}`,

@@ -18,6 +18,7 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
   const [song, setSong] = useState<SongModel | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [jacketImage, setJacketImage] = useState<string>("");
+  const [redownloading, setRedownloading] = useState(false);
 
   const findImagePath = async (P: string) => {
     const response = await window.electron.fileSystem.mergeAssetPath(P);
@@ -52,6 +53,26 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
     loadSong();
     loadJacketImage();
   }, [songs, songId]);
+
+  const handleMp3Redownload = async () => {
+    // if (!song || !song.dataValues.youtubeUrl) {
+    //   alert("No YouTube URL found for this song");
+    //   return;
+    // }
+
+    try {
+      setRedownloading(true);
+      await window.electron.ipcRenderer.invoke('redownload-mp3', songId);
+      setRedownloading(false);
+      alert("MP3 redownloaded successfully!");
+      // Refresh song data
+      refetch();
+    } catch (error) {
+      setRedownloading(false);
+      console.error("Error redownloading MP3:", error);
+      alert(`Failed to redownload MP3: ${error}`);
+    }
+  };
 
   if (song === null) {
     return <div>Song not found</div>;
@@ -141,6 +162,31 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
         <p style={{ fontSize: '1rem', color: colors.grey2 }}>
           Backgrounds: {song.dataValues.backgrounds.join(', ')}
         </p>
+        
+        {/* MP3 Redownload component */}
+        <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>
+          <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>
+            Redownload MP3
+          </h3>
+          <p style={{ fontSize: '0.9rem', color: colors.grey2, marginBottom: '1rem' }}>
+            If there was an issue with the original MP3 download, you can redownload it.
+          </p>
+          <button
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: redownloading ? colors.grey3 : colors.primary,
+              color: colors.white,
+              border: 'none',
+              borderRadius: '4px',
+              cursor: redownloading ? 'not-allowed' : 'pointer',
+              fontWeight: 'bold',
+            }}
+            onClick={handleMp3Redownload}
+            disabled={redownloading}
+          >
+            {redownloading ? 'Downloading...' : 'Redownload MP3'}
+          </button>
+        </div>
         
         {/* 
         

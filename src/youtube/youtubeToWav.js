@@ -24,7 +24,7 @@ if (!fs.existsSync(ffprobePath)) {
 ffmpeg.setFfmpegPath(ffmpegPath);
 ffmpeg.setFfprobePath(ffprobePath);
 
-const downloadYoutubeAudio = async (url) => {
+const downloadYoutubeAudio = async (url, onlyMp3) => {
   const downloadsPath = getResourcePath('assets', 'audio');
 
   if (!fs.existsSync(downloadsPath)) {
@@ -49,16 +49,18 @@ const downloadYoutubeAudio = async (url) => {
     });
 
     // Convert directly to 16kHz WAV
-    await new Promise((resolve, reject) => {
-      ffmpeg(tempFile)
-        .audioFrequency(16000)
-        .toFormat('wav')
-        .on('error', (err) => {
-          reject(new Error(`FFmpeg conversion error: ${err.message}`));
-        })
-        .on('end', resolve)
-        .save(outputFile);
-    });
+    if (!onlyMp3) {
+      await new Promise((resolve, reject) => {
+        ffmpeg(tempFile)
+          .audioFrequency(16000)
+          .toFormat('wav')
+          .on('error', (err) => {
+            reject(new Error(`FFmpeg conversion error: ${err.message}`));
+          })
+          .on('end', resolve)
+          .save(outputFile);
+      });
+    }
 
     // Convert to MP3
     await new Promise((resolve, reject) => {

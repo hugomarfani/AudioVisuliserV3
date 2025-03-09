@@ -20,8 +20,8 @@ export type Channels =
   | 'delete-image'
   | 'ai-progress-update'  // New channel for progress updates
   | 'ai-error'           // New channel for error reporting
-  | 'ai-process-complete'; // New channel for process completion
-
+  | 'ai-process-complete' // New channel for process completion
+  | 'redownload-mp3';
 
 const electronHandler = {
   ipcRenderer: {
