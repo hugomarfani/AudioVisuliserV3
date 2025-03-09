@@ -330,6 +330,12 @@ const Player = forwardRef<any, PlayerProps>(({
 
         // Send beat and color data to HueService if connected
         if (isHueConnected && isStreamingActive) {
+          // Create a streamlined version of the frequency data for visualization
+          const visualizationData = new Uint8Array(dataArrayRef.current.length);
+          dataArrayRef.current.forEach((value, index) => {
+            visualizationData[index] = value;
+          });
+
           await window.electron.hue.processBeat({
             isBeat,
             energy: totalEnergy,
@@ -339,7 +345,7 @@ const Player = forwardRef<any, PlayerProps>(({
             // Add additional data for enhanced lighting
             color: finalColor,
             vocalEnergy: vocalEnergy,
-            audioData: dataArrayRef.current, // Send full audio data for visualization
+            audioData: visualizationData, // Send the frequency data for visualization
             brightness: brightness,
             vocalActive: isHighVocalEnergy.current
           });

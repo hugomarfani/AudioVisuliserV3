@@ -88,18 +88,11 @@ const electronHandler = {
       ipcRenderer.invoke('hue-process-beat', data), // Add new method to expose beat detection
     getBeatStatus: () =>
       ipcRenderer.invoke('hue-get-beat-status'), // Add the new method to get beat status
-    onStreamingStateChanged: (callback) => {
-      ipcRenderer.on('hue:streamingStateChanged', callback);
-    },
-    removeStreamingStateListener: (callback) => {
-      ipcRenderer.removeListener('hue:streamingStateChanged', callback);
-    },
-    onBeatDetected: (callback) => {
-      ipcRenderer.on('hue:beatDetected', callback);
-    },
-    removeBeatListener: (callback) => {
-      ipcRenderer.removeListener('hue:beatDetected', callback);
-    },
+    getSettings: () => ipcRenderer.invoke('hue:getSettings'),
+    onBeatDetected: (callback) => ipcRenderer.on('hue:beatDetected', callback),
+    removeBeatListener: () => ipcRenderer.removeAllListeners('hue:beatDetected'),
+    onStreamingStateChanged: (callback) => ipcRenderer.on('hue:streamingStateChanged', callback),
+    removeStreamingStateListener: () => ipcRenderer.removeAllListeners('hue:streamingStateChanged'),
   },
 };
 

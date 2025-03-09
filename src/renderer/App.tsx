@@ -48,13 +48,13 @@ const AppContent: FC = () => {
             </div>
           }
         />
-        <Route path="/song-details/:id" 
+        <Route path="/song-details/:id"
           element={
-            <SongDetails 
-              onClose={() => navigate('/')} 
-              songId={selectedTrackURI || ''} 
+            <SongDetails
+              onClose={() => navigate('/')}
+              songId={selectedTrackURI || ''}
             />
-          } 
+          }
         />
         <Route path="/particles/:id" element={<Particles />} />
         <Route path="/aiden/:id" element={<ShaderVisuals />} />
