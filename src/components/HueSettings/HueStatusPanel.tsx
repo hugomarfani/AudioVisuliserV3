@@ -62,16 +62,6 @@ const HueStatusPanel: React.FC<HueStatusPanelProps> = ({
 
       // Check if data has changed
       if (currentSerialized !== prevBeatStatusRef.current && currentSerialized !== '') {
-        console.log('Detected change in beat status:', {
-          beat: beatStatus?.isDetected,
-          vocal: beatStatus?.vocalActive,
-          energy: {
-            bass: beatStatus?.bassEnergy,
-            mid: beatStatus?.midEnergy,
-            high: beatStatus?.highEnergy,
-            vocal: beatStatus?.vocalEnergy
-          }
-        });
 
         prevBeatStatusRef.current = currentSerialized;
         setLastUpdate(Date.now());

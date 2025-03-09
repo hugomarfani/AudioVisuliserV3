@@ -376,10 +376,10 @@ export default class HueService {
    */
   private createCommandBuffer(entertainmentId: string, lightCommands: { id: number, rgb: number[] }[]): Buffer {
     // Detailed logging of light commands
-    console.log(`Creating command for entertainment ID: ${entertainmentId}`);
-    console.log(`Light commands (${lightCommands.length} lights):`);
+    // console.log(`Creating command for entertainment ID: ${entertainmentId}`);
+    // console.log(`Light commands (${lightCommands.length} lights):`);
     lightCommands.forEach(cmd => {
-      console.log(`  Light ID: ${cmd.id}, Color: RGB(${cmd.rgb.join(',')})`);
+      // console.log(`  Light ID: ${cmd.id}, Color: RGB(${cmd.rgb.join(',')})`);
     });
 
     // Static protocol name used by the API
@@ -395,7 +395,7 @@ export default class HueService {
     ]);
 
     // Log sequence number for debugging
-    console.log(`Using sequence number: ${this.sequenceNumber}`);
+    // console.log(`Using sequence number: ${this.sequenceNumber}`);
 
     // Increment sequence number for next command
     this.sequenceNumber = (this.sequenceNumber + 1) % 256;
@@ -422,7 +422,7 @@ export default class HueService {
 
     // Concat everything together to build the command
     const finalBuffer = Buffer.concat([protocolName, restOfHeader, entertainmentConfigurationId, ...lightBuffers]);
-    console.log(`Command buffer created, total length: ${finalBuffer.length} bytes`);
+    // console.log(`Command buffer created, total length: ${finalBuffer.length} bytes`);
 
     return finalBuffer;
   }
@@ -569,7 +569,7 @@ export default class HueService {
   private handleSetColor = async (_: any, { lightIds, rgb, transitionTime }: { lightIds: number[]; rgb: number[]; transitionTime: number }): Promise<boolean> => {
     try {
       if (!this.isStreaming || !this.socket || !this.entertainmentId) {
-        console.log('Cannot set color - not streaming or no socket connection');
+        // console.log('Cannot set color - not streaming or no socket connection');
         return false;
       }
 
@@ -577,7 +577,7 @@ export default class HueService {
       const validRgb = rgb.map(val => Math.max(0, Math.min(255, Math.round(val))));
 
       // Add more debugging
-      console.log(`Setting colors for lights ${lightIds.join(', ')}: RGB(${validRgb.join(', ')}), transition: ${transitionTime}ms`);
+      // console.log(`Setting colors for lights ${lightIds.join(', ')}: RGB(${validRgb.join(', ')}), transition: ${transitionTime}ms`);
 
       // For longer transitions, we need to stream multiple commands over time
       if (transitionTime > 100) {
@@ -623,7 +623,7 @@ export default class HueService {
     transitionTime: number,
     startRgb: number[] = [255, 255, 255] // Default starting from white
   ): Promise<void> {
-    console.log(`Creating smooth transition from RGB(${startRgb.join(',')}) to RGB(${targetRgb.join(',')}) over ${transitionTime}ms`);
+    // console.log(`Creating smooth transition from RGB(${startRgb.join(',')}) to RGB(${targetRgb.join(',')}) over ${transitionTime}ms`);
 
     // Create more steps for smoother transition
     const steps = Math.max(Math.floor(transitionTime / 30), 30); // At least 30 steps
@@ -640,7 +640,7 @@ export default class HueService {
         (targetRgb[2] - startRgb[2]) / steps
       ];
 
-      console.log(`Step sizes: R: ${stepSize[0]}, G: ${stepSize[1]}, B: ${stepSize[2]}`);
+      // console.log(`Step sizes: R: ${stepSize[0]}, G: ${stepSize[1]}, B: ${stepSize[2]}`);
 
       // Create interval to send commands at specified frame rate
       const interval = setInterval(() => {
@@ -658,7 +658,7 @@ export default class HueService {
 
         // Log every few steps to reduce console output
         if (currentStep % 5 === 0 || currentStep === steps) {
-          console.log(`Transition step ${currentStep}/${steps}: RGB(${clampedRgb.join(',')})`);
+          // console.log(`Transition step ${currentStep}/${steps}: RGB(${clampedRgb.join(',')})`);
         }
 
         // Create commands for each light
@@ -679,7 +679,7 @@ export default class HueService {
         // Check if we've reached the end
         if (currentStep >= steps) {
           clearInterval(interval);
-          console.log('Transition complete');
+          // console.log('Transition complete');
 
           // Send one final command with exact target color for precision
           try {
@@ -1029,7 +1029,7 @@ export default class HueService {
   private handleProcessBeat = async (_: any, beatData: BeatData): Promise<boolean> => {
     try {
       if (!this.isStreaming || !this.socket || !this.entertainmentId) {
-        console.log('Beat received but not streaming');
+        // console.log('Beat received but not streaming');
         this.lastBeatDetected = false;
         return false;
       }
@@ -1085,15 +1085,15 @@ export default class HueService {
 
         // Log the vocal boost for significant changes
         if (vocalBoostFactor > 1.3) {
-          console.log(`🎤 Strong vocal boost: ${vocalBoostFactor.toFixed(2)}, Energy: ${beatData.vocalEnergy.toFixed(1)}`);
+          // console.log(`🎤 Strong vocal boost: ${vocalBoostFactor.toFixed(2)}, Energy: ${beatData.vocalEnergy.toFixed(1)}`);
         }
       }
 
       // If a beat is detected, flash with the chosen color
       if (beatData.isBeat && now - this.lastBeatTime < 100) {
-        console.log('\n=======FLASH=======');
-        console.log(`Beat Energy: ${beatData.energy.toFixed(2)}`);
-        console.log(`Flash color: ${flashColor.join(', ')}`);
+        // console.log('\n=======FLASH=======');
+        // console.log(`Beat Energy: ${beatData.energy.toFixed(2)}`);
+        // console.log(`Flash color: ${flashColor.join(', ')}`);
 
         // Set flash color as current for immediate effect
         this.currentRgbValues = Array(this.lightCount).fill(flashColor);
