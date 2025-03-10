@@ -288,6 +288,7 @@ const Particles: React.FC = () => {
               artist: songDetails.uploader,
               albumArt: fullJacketPath,
               audioSrc: fullAudioPath,
+              id: songDetails.id, // Add the song ID here
             }}
             autoPlay={true}
             onTimeUpdate={handleTimeUpdate}
