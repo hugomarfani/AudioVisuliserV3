@@ -36,26 +36,26 @@ const configuration: webpack.Configuration = {
     },
   },
 
-  module: {
-    rules: [
-      // Add support for native node modules
-      {
-        // Including native modules with `.node` file extensions
-        test: /native_modules[/\\].+\.node$/,
-        use: 'node-loader',
-      },
-      {
-        test: /[/\\]node_modules[/\\].+\.(m?js|node)$/,
-        parser: { amd: false },
-        use: {
-          loader: '@vercel/webpack-asset-relocator-loader',
-          options: {
-            outputAssetBase: 'native_modules',
-          },
-        },
-      },
-    ],
-  },
+  //module: {
+  //  rules: [
+  //    // Add support for native node modules
+  //    {
+  //      // Including native modules with `.node` file extensions
+  //      test: /native_modules[/\\].+\.node$/,
+  //      use: 'node-loader',
+  //    },
+  //    {
+  //      test: /[/\\]node_modules[/\\].+\.(m?js|node)$/,
+  //      parser: { amd: false },
+  //      use: {
+  //        loader: '@vercel/webpack-asset-relocator-loader',
+  //        options: {
+  //          outputAssetBase: 'native_modules',
+  //        },
+  //      },
+  //    },
+  //  ],
+  //},
 
   // Externals from both configurations
   externals: {
@@ -66,17 +66,17 @@ const configuration: webpack.Configuration = {
   },
 
   plugins: [
-    new webpack.EnvironmentPlugin({
-      NODE_ENV: 'development',
-    }),
-
-    new webpack.DefinePlugin({
-      __nccwpck_require__: "require"
-    }),
-
-    new webpack.LoaderOptionsPlugin({
-      debug: true,
-    }),
+    //new webpack.EnvironmentPlugin({
+    //  NODE_ENV: 'development',
+    //}),
+//
+    //new webpack.DefinePlugin({
+    //  __nccwpck_require__: "require"
+    //}),
+//
+    //new webpack.LoaderOptionsPlugin({
+    //  debug: true,
+    //}),
 
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
