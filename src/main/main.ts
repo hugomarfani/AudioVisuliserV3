@@ -531,7 +531,6 @@ function terminateAllProcesses() {
 // Function to clean up ports
 function cleanupPorts() {
   console.log('Cleaning up ports...');
-
   try {
     if (process.platform === 'win32') {
       // Windows
@@ -541,28 +540,25 @@ function cleanupPorts() {
           // Find process using this port
           const findCmd = `netstat -ano | findstr :${port}`;
           let output;
-
           try {
             output = execSync(findCmd, { encoding: 'utf8' });
           } catch (e) {
             // No process using this port, which is fine
             return;
           }
-
           if (output) {
             const lines = output.split('\n');
             const pids = new Set();
-
             lines.forEach(line => {
               const parts = line.trim().split(/\s+/);
               if (parts.length > 4) {
                 const pid = parts[4];
-                if (/^\d+$/.test(pid)) {
+                // Make sure the PID is valid (a positive number)
+                if (/^[1-9]\d*$/.test(pid)) {
                   pids.add(pid);
                 }
               }
             });
-
             // Kill each process found
             pids.forEach(pid => {
               console.log(`Killing process ${pid} using port ${port}`);
@@ -586,17 +582,16 @@ function cleanupPorts() {
           // Find process using this port
           const cmd = `lsof -i :${port} -t`;
           let pids;
-
           try {
             pids = execSync(cmd, { encoding: 'utf8' }).trim();
           } catch (e) {
             // No process using this port
             return;
           }
-
           if (pids) {
             pids.split('\n').forEach(pid => {
-              if (pid) {
+              // Make sure the PID is valid (not empty and a number > 0)
+              if (pid && /^[1-9]\d*$/.test(pid)) {
                 console.log(`Killing process ${pid} using port ${port}`);
                 try {
                   execSync(`kill -9 ${pid}`, { stdio: 'ignore' });
@@ -619,17 +614,16 @@ function cleanupPorts() {
           // Find process using this port
           const cmd = `fuser -n tcp ${port} 2>/dev/null`;
           let pids;
-
           try {
             pids = execSync(cmd, { encoding: 'utf8' }).trim();
           } catch (e) {
             // No process using this port
             return;
           }
-
           if (pids) {
             pids.split(' ').forEach(pid => {
-              if (pid) {
+              // Make sure the PID is valid (not empty and a number > 0)
+              if (pid && /^[1-9]\d*$/.test(pid)) {
                 console.log(`Killing process ${pid} using port ${port}`);
                 try {
                   execSync(`kill -9 ${pid}`, { stdio: 'ignore' });
@@ -645,7 +639,6 @@ function cleanupPorts() {
         }
       });
     }
-
     console.log('Port cleanup completed.');
   } catch (error) {
     console.error('Error in port cleanup:', error);
