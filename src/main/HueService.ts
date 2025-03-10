@@ -112,6 +112,9 @@ export default class HueService {
     [255, 0, 255],  // Magenta
   ];
 
+  // Add a flag to track when test sequence is running
+  private isTestSequenceRunning: boolean = false;
+
   // Cursor position tracking
   private cursorPosition: CursorPositionData = {
     x: 0.5, // Normalized positions (0-1)
@@ -520,10 +523,10 @@ export default class HueService {
    */
   private createCommandBuffer(entertainmentId: string, lightCommands: { id: number, rgb: number[] }[]): Buffer {
     // Detailed logging of light commands
-    // console.log(`Creating command for entertainment ID: ${entertainmentId}`);
-    // console.log(`Light commands (${lightCommands.length} lights):`);
+    console.log(`Creating command for entertainment ID: ${entertainmentId}`);
+    console.log(`Light commands (${lightCommands.length} lights):`);
     lightCommands.forEach(cmd => {
-      // console.log(`  Light ID: ${cmd.id}, Color: RGB(${cmd.rgb.join(',')})`);
+      console.log(`  Light ID: ${cmd.id}, Color: RGB(${cmd.rgb.join(',')})`);
     });
 
     // Static protocol name used by the API
@@ -930,6 +933,9 @@ export default class HueService {
         return false;
       }
 
+      // Set the test sequence flag to prevent streaming manager interference
+      this.isTestSequenceRunning = true;
+
       // Use the provided light IDs, or fall back to a single light if none provided
       const targetLightIds = lightIds && lightIds.length > 0
         ? lightIds
@@ -1114,8 +1120,14 @@ export default class HueService {
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       console.log('====== ENHANCED LIGHT TEST SEQUENCE COMPLETED ======');
+
+      // Reset the test sequence flag when done
+      this.isTestSequenceRunning = false;
+
       return true;
     } catch (error) {
+      // Make sure to reset the flag even if there's an error
+      this.isTestSequenceRunning = false;
       console.error('Error during light test sequence:', error);
       return false;
     }
@@ -1436,6 +1448,9 @@ export default class HueService {
 
     this.streamingInterval = setInterval(() => {
       if (!this.isStreaming || !this.socket || !this.entertainmentId) return;
+
+      // Skip updates if test sequence is running
+      if (this.isTestSequenceRunning) return;
 
       // Update current values based on targets and decay
       const now = Date.now();
