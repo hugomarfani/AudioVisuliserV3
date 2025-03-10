@@ -351,9 +351,17 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
           const lightIndices = Array.from({ length: reloadedGroup.lights.length }, (_, i) => i);
           console.log(`Testing entertainment area "${reloadedGroup.name}" with ${lightIndices.length} lights`);
           showToast(`Testing ${lightIndices.length} lights...`, 'info');
-
+          
+          // Start streaming first - important!
+          showToast("Starting streaming session for test...", 'info');
+          await startHueStreaming();
+          
+          // Run the test
           const success = await testLights(lightIndices);
 
+          // Stop streaming when done
+          await stopHueStreaming();
+          
           if (success) {
             showToast('Light test completed successfully', 'success');
           } else {
@@ -375,9 +383,16 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
 
       console.log(`Testing entertainment area "${selectedGroupObj.name}" with ${lightIndices.length} lights`);
       showToast(`Testing ${lightIndices.length} lights...`, 'info');
+      
+      // Start streaming first - important!
+      showToast("Starting streaming session for test...", 'info');
+      await startHueStreaming();
 
       // Call the testLights function with the specific light indices
       const success = await testLights(lightIndices);
+      
+      // Stop streaming when done
+      await stopHueStreaming();
 
       if (success) {
         showToast('Light test completed successfully', 'success');
@@ -387,6 +402,12 @@ const HueConfigModal: React.FC<HueConfigModalProps> = ({ onClose }) => {
     } catch (error) {
       console.error('Error during light test:', error);
       showToast('Error testing lights', 'error');
+      // Make sure to stop streaming even if there's an error
+      try {
+        await stopHueStreaming();
+      } catch (e) {
+        console.error('Error stopping streaming after test failure:', e);
+      }
     } finally {
       setIsLoading(false);
     }
