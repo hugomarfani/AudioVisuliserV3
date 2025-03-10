@@ -11,6 +11,7 @@ import { FaPlay, FaPause, FaCog } from 'react-icons/fa';
 import HueStatusPanel from '../HueSettings/HueStatusPanel';
 import HueSettings from '../HueSettings/HueSettings';
 import { useHue } from '../../hooks/useHue';
+import { useSongs } from '../../hooks/useSongs';
 
 interface PlayerProps {
   track: {
@@ -18,6 +19,7 @@ interface PlayerProps {
     artist: string;
     albumArt: string;
     audioSrc: string;
+    id?: string; // Add id to identify which song is playing
   };
   autoPlay?: boolean;
   onTimeUpdate?: (currentTime: number, duration: number) => void;
@@ -33,6 +35,12 @@ const Player = forwardRef<any, PlayerProps>(
     const [isHueStatusOpen, setIsHueStatusOpen] = useState(false);
     const [isHueSettingsOpen, setIsHueSettingsOpen] = useState(false);
     const [isHueConnected, setIsHueConnected] = useState(false);
+
+    // Get songs from database to access their colors
+    const { songs, loading } = useSongs();
+
+    // Debug: Log the track ID we received
+    console.log('🔍 Track ID received in Player:', track.id);
 
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
@@ -82,6 +90,62 @@ const Player = forwardRef<any, PlayerProps>(
       processBeat,
       updateBeatStatusDirectly,
     } = useHue();
+
+    // Load colors from the database for the current track
+    useEffect(() => {
+      if (track.id) {
+        console.log('🔍 Trying to find song with ID:', track.id);
+        console.log('🔍 Available songs:', songs.map(song => ({
+          id: song.dataValues.id,
+          title: song.dataValues.title,
+          hasColors: song.dataValues.colours && song.dataValues.colours.length > 0
+        })));
+
+        const currentSong = songs.find(song => song.dataValues.id === track.id);
+
+        console.log('🔍 Found song:', currentSong ? {
+          id: currentSong.dataValues.id,
+          title: currentSong.dataValues.title,
+          colours: currentSong.dataValues.colours
+        } : 'Not found');
+
+        if (currentSong && currentSong.dataValues.colours && currentSong.dataValues.colours.length > 0) {
+          // Convert hex colors to RGB arrays
+          const rgbColors: number[][] = currentSong.dataValues.colours.map((hexColor: string) => {
+            // Remove '#' if present
+            const hex = hexColor.startsWith('#') ? hexColor.substring(1) : hexColor;
+
+            // Parse RGB components
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+
+            return [r, g, b];
+          });
+
+          if (rgbColors.length > 0) {
+            baseColors.current = rgbColors;
+            console.log('🎨 Loaded colors from database:', rgbColors);
+          }
+        } else {
+          console.log('⚠️ No colors found for this song or song not found, using default colors');
+          if (currentSong) {
+            console.log('🔍 Song found but no colors:',
+              currentSong.dataValues.id,
+              currentSong.dataValues.title,
+              'Has colours property:', !!currentSong.dataValues.colours,
+              'Colours length:', currentSong.dataValues.colours ? currentSong.dataValues.colours.length : 0
+            );
+          }
+        }
+      } else {
+        console.log('⚠️ Cannot load colors: Track ID missing or songs not loaded yet',
+          'Track ID:', track.id,
+          'Songs loaded:', songs.length,
+          'Songs loading state:', loading
+        );
+      }
+    }, [track.id, songs, loading]);
 
     useImperativeHandle(ref, () => ({
       play: () => audioRef.current?.play(),
