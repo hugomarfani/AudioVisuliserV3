@@ -39,6 +39,14 @@ interface CursorPositionData {
   screenHeight: number;
 }
 
+// Interface for light position data
+interface LightPosition {
+  id: number;
+  x: number;
+  y: number;
+  z: number;
+}
+
 // Interface for Hue settings
 interface HueSettings {
   username?: string;
@@ -86,6 +94,9 @@ export default class HueService {
   private currentRgbValues: number[][] = []; // Current RGB values being sent to lights
   private targetRgbValues: number[][] = [];  // Target RGB values for transitions
   private lightCount: number = 0;            // Number of lights in the entertainment group
+
+  // New property to store light positions
+  private lightPositions: LightPosition[] = [];
 
   // Beat visualization settings
   private beatFlashBrightness: number = 1.0; // Maximum brightness on beat
@@ -611,6 +622,22 @@ export default class HueService {
         if (groupInfo && groupInfo.lights && groupInfo.lights.length > 0) {
           this.numberOfLights = groupInfo.lights.length;
           this.activeLightIds = Array.from({ length: this.numberOfLights }, (_, i) => i);
+
+          // If we didn't get any position data, create default positions
+          if (this.lightPositions.length === 0) {
+            console.log('No position data available, creating default positions');
+            this.lightPositions = Array.from({ length: this.numberOfLights }, (_, i) => ({
+              id: i,
+              x: (i / (this.numberOfLights - 1)) * 2 - 1, // Spread from -1 to 1 on x-axis
+              y: 0,
+              z: 0
+            }));
+          }
+
+          // Sort light positions by x coordinate (left to right)
+          this.lightPositions.sort((a, b) => a.x - b.x);
+          console.log('Sorted light positions:', this.lightPositions);
+
           // Initialize the new RGB arrays system
           this.initializeLightArrays(this.numberOfLights);
           console.log(`Initialized ${this.numberOfLights} lights for streaming`);
@@ -618,12 +645,30 @@ export default class HueService {
           console.warn('Could not determine number of lights, using default of 5');
           this.numberOfLights = 5;
           this.activeLightIds = [0, 1, 2, 3, 4];
+
+          // Create default positions
+          this.lightPositions = Array.from({ length: 5 }, (_, i) => ({
+            id: i,
+            x: (i / 4) * 2 - 1, // Spread from -1 to 1 on x-axis
+            y: 0,
+            z: 0
+          }));
+
           this.initializeLightArrays(5);
         }
       } catch (error) {
         console.error('Error determining number of lights:', error);
         this.numberOfLights = 5;
         this.activeLightIds = [0, 1, 2, 3, 4];
+
+        // Create default positions
+        this.lightPositions = Array.from({ length: 5 }, (_, i) => ({
+          id: i,
+          x: (i / 4) * 2 - 1, // Spread from -1 to 1 on x-axis
+          y: 0,
+          z: 0
+        }));
+
         this.initializeLightArrays(5);
       }
 
@@ -646,10 +691,10 @@ export default class HueService {
     }
   };
 
-  // New method to fetch group information to determine number of lights
+  // New method to fetch group information to determine number of lights and their positions
   private async fetchGroupInfo(ip: string, username: string, groupId: string, numericGroupId?: string): Promise<any> {
     try {
-      // Try using the CLIP v2 API first
+      // First try using the CLIP v2 API to get detailed location information
       try {
         const url = `https://${ip}/clip/v2/resource/entertainment_configuration/${groupId}`;
         const response = await axios.get(url, {
@@ -659,20 +704,65 @@ export default class HueService {
 
         if (response.data && response.data.data && response.data.data.length > 0) {
           console.log('Retrieved group info from CLIP v2 API');
+
+          // Store light positions if available
+          const groupData = response.data.data[0];
+          this.lightPositions = [];
+
+          if (groupData.channels && Array.isArray(groupData.channels)) {
+            groupData.channels.forEach(channel => {
+              if (channel.position && typeof channel.channel_id === 'number') {
+                this.lightPositions.push({
+                  id: channel.channel_id,
+                  x: channel.position.x || 0,
+                  y: channel.position.y || 0,
+                  z: channel.position.z || 0
+                });
+              }
+            });
+
+            console.log('Extracted light positions:', this.lightPositions);
+          }
+
           return {
-            lights: response.data.data[0].light_services || []
+            lights: response.data.data[0].light_services || [],
+            positions: this.lightPositions
           };
         }
       } catch (error) {
-        console.warn('Failed to get group info via CLIP v2 API, trying v1');
+        console.warn('Failed to get group info via CLIP v2 API, trying v1:', error);
       }
 
       // Fallback to CLIP v1 API if needed
       if (numericGroupId) {
-        const v1Url = `http://${ip}/api/${username}/groups/${numericGroupId}`;
-        const response = await axios.get(v1Url);
-        console.log('Retrieved group info from CLIP v1 API');
-        return response.data;
+        try {
+          const v1Url = `http://${ip}/api/${username}/groups/${numericGroupId}`;
+          const response = await axios.get(v1Url);
+          console.log('Retrieved group info from CLIP v1 API');
+
+          // Try to get light positions from V1 API if available
+          const groupData = response.data;
+          this.lightPositions = [];
+
+          if (groupData && groupData.locations) {
+            Object.entries(groupData.locations).forEach(([lightId, location]: [string, any], index) => {
+              if (location && typeof location.x === 'number' && typeof location.y === 'number') {
+                this.lightPositions.push({
+                  id: parseInt(lightId, 10) || index,
+                  x: location.x,
+                  y: location.y,
+                  z: location.z || 0
+                });
+              }
+            });
+
+            console.log('Extracted light positions from V1 API:', this.lightPositions);
+          }
+
+          return response.data;
+        } catch (error) {
+          console.warn('Failed to get group info via CLIP v1 API:', error);
+        }
       }
 
       return null;
@@ -1276,23 +1366,32 @@ export default class HueService {
     // x position normalized between 0-1
     const xPosition = this.cursorPosition.x;
 
+    // Convert cursor position from 0-1 range to -1 to 1 range to match Hue positions
+    const cursorXNormalized = xPosition * 2 - 1;
+
+    console.log(`Cursor position: ${cursorXNormalized.toFixed(2)} | Light positions: [${this.lightPositions.map(p => p.x.toFixed(2)).join(', ')}]`);
+
     // Update each light based on its position relative to the cursor
     for (let i = 0; i < this.lightCount; i++) {
-      // Calculate normalized position of this light from 0 to 1 (left to right)
-      const lightPosition = i / (this.lightCount - 1);
+      // Find the corresponding position for this light
+      const lightPos = this.lightPositions[i] || { id: i, x: 0, y: 0, z: 0 };
 
-      // Calculate a brightness factor based on distance from cursor
-      // The closer the light position to the cursor position, the brighter it should be
-      const distance = Math.abs(lightPosition - xPosition);
+      // Calculate distance between cursor and this light on X axis
+      // Using absolute distance to ensure lights close to cursor are brighter
+      const distance = Math.abs(lightPos.x - cursorXNormalized);
+
       // Convert distance to brightness (closer = brighter)
-      const brightness = Math.max(0.2, 1 - distance);
+      // 1.5 is a good normalization factor since positions range from -1 to 1
+      // giving a max distance of 2, we want to ensure full brightness is possible
+      const normalizedDistance = Math.min(distance / 1.5, 1);
+      const brightness = Math.max(0.2, 1 - normalizedDistance);
 
       // Apply the brightness factor to the base color
       this.currentRgbValues[i] = baseColor.map(c => Math.min(255, Math.round(c * brightness)));
       this.targetRgbValues[i] = targetColor.map(c => Math.min(255, Math.round(c * brightness * 0.8)));
 
-      // Console log the brightness being applied (uncomment for debugging)
-      // console.log(`Light ${i}: position=${lightPosition.toFixed(2)}, brightness=${brightness.toFixed(2)}`);
+      // Log for debugging
+      // console.log(`Light ${i} at x=${lightPos.x.toFixed(2)}: distance=${distance.toFixed(2)}, brightness=${brightness.toFixed(2)}`);
     }
   }
 
