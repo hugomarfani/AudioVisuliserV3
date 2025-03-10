@@ -31,6 +31,14 @@ interface BeatData {
   vocalEnergy?: number; // Optional vocal energy parameter
 }
 
+// Interface for cursor position data
+interface CursorPositionData {
+  x: number;
+  y: number;
+  screenWidth: number;
+  screenHeight: number;
+}
+
 // Interface for Hue settings
 interface HueSettings {
   username?: string;
@@ -93,6 +101,15 @@ export default class HueService {
     [255, 0, 255],  // Magenta
   ];
 
+  // Cursor position tracking
+  private cursorPosition: CursorPositionData = {
+    x: 0.5, // Normalized positions (0-1)
+    y: 0.5,
+    screenWidth: 1920, // Default values
+    screenHeight: 1080
+  };
+  private useCursorControl: boolean = false;
+
   // Add a new property to store the settings file path
   private settingsFilePath: string;
 
@@ -120,8 +137,45 @@ export default class HueService {
     // New handlers for persistent settings
     ipcMain.handle('hue-save-settings', this.handleSaveSettings);
     ipcMain.handle('hue-get-settings', this.handleGetSettings);
+    // New handler for cursor position
+    ipcMain.handle('hue-update-cursor', this.handleUpdateCursorPosition);
+    // New handler to toggle cursor control
+    ipcMain.handle('hue-toggle-cursor-control', this.handleToggleCursorControl);
+
     console.log('Registered Hue IPC handlers');
   }
+
+  /**
+   * Handle updates to cursor position
+   */
+  private handleUpdateCursorPosition = async (_: any, positionData: CursorPositionData): Promise<boolean> => {
+    try {
+      this.cursorPosition = {
+        x: positionData.x / positionData.screenWidth,  // Normalize to 0-1
+        y: positionData.y / positionData.screenHeight, // Normalize to 0-1
+        screenWidth: positionData.screenWidth,
+        screenHeight: positionData.screenHeight
+      };
+      return true;
+    } catch (error) {
+      console.error('Error updating cursor position:', error);
+      return false;
+    }
+  };
+
+  /**
+   * Toggle cursor control on/off
+   */
+  private handleToggleCursorControl = async (_: any, enabled: boolean): Promise<boolean> => {
+    try {
+      this.useCursorControl = enabled;
+      console.log(`Cursor control ${enabled ? 'enabled' : 'disabled'}`);
+      return true;
+    } catch (error) {
+      console.error('Error toggling cursor control:', error);
+      return false;
+    }
+  };
 
   /**
    * Save Hue settings to a persistent file
@@ -1175,8 +1229,14 @@ export default class HueService {
         // console.log(`Flash color: ${flashColor.join(', ')}`);
 
         // Set flash color as current for immediate effect
-        this.currentRgbValues = Array(this.lightCount).fill(flashColor);
-        this.targetRgbValues = Array(this.lightCount).fill(targetColor);
+        if (this.useCursorControl) {
+          // Apply cursor position effect to the flash when cursor control is enabled
+          this.applyCursorPositionEffect(flashColor, targetColor);
+        } else {
+          // Set the same color for all lights if cursor control is disabled
+          this.currentRgbValues = Array(this.lightCount).fill(flashColor);
+          this.targetRgbValues = Array(this.lightCount).fill(targetColor);
+        }
 
         // Send the flash immediately
         await this.sendCurrentValuesToLights();
@@ -1186,7 +1246,15 @@ export default class HueService {
 
         // Smoother transitions between non-beat frames
         // Use the provided color or our calculated color
-        this.targetRgbValues = Array(this.lightCount).fill(flashColor.map(c => Math.round(c * 0.5))); // Half brightness between beats
+        if (this.useCursorControl) {
+          // Apply cursor position effect between beats too
+          this.applyCursorPositionEffect(
+            flashColor.map(c => Math.round(c * 0.5)), // Half brightness between beats
+            targetColor
+          );
+        } else {
+          this.targetRgbValues = Array(this.lightCount).fill(flashColor.map(c => Math.round(c * 0.5)));
+        }
       }
 
       return true;
@@ -1196,6 +1264,37 @@ export default class HueService {
       return false;
     }
   };
+
+  /**
+   * Apply cursor position effect to lights
+   * Left side of screen = left lights brighter
+   * Right side of screen = right lights brighter
+   */
+  private applyCursorPositionEffect(baseColor: number[], targetColor: number[]) {
+    if (!this.isStreaming || this.lightCount < 2) return;
+
+    // x position normalized between 0-1
+    const xPosition = this.cursorPosition.x;
+
+    // Update each light based on its position relative to the cursor
+    for (let i = 0; i < this.lightCount; i++) {
+      // Calculate normalized position of this light from 0 to 1 (left to right)
+      const lightPosition = i / (this.lightCount - 1);
+
+      // Calculate a brightness factor based on distance from cursor
+      // The closer the light position to the cursor position, the brighter it should be
+      const distance = Math.abs(lightPosition - xPosition);
+      // Convert distance to brightness (closer = brighter)
+      const brightness = Math.max(0.2, 1 - distance);
+
+      // Apply the brightness factor to the base color
+      this.currentRgbValues[i] = baseColor.map(c => Math.min(255, Math.round(c * brightness)));
+      this.targetRgbValues[i] = targetColor.map(c => Math.min(255, Math.round(c * brightness * 0.8)));
+
+      // Console log the brightness being applied (uncomment for debugging)
+      // console.log(`Light ${i}: position=${lightPosition.toFixed(2)}, brightness=${brightness.toFixed(2)}`);
+    }
+  }
 
   /**
    * Send a command to the lights via DTLS

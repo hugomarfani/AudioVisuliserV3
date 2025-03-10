@@ -20,6 +20,9 @@ const Particles: React.FC = () => {
   const [songDuration, setSongDuration] = useState(0);
   const playerRef = useRef<any>(null);
 
+  // Add state for cursor control
+  const [cursorControlActive, setCursorControlActive] = useState(false);
+
   useEffect(() => {
     const loadAssets = async () => {
       if (songDetails) {
@@ -98,6 +101,47 @@ const Particles: React.FC = () => {
       setCurrentImageIndex(0);
     }
   }, [backgroundImages]);
+
+  // Add cursor tracking effect
+  useEffect(() => {
+    // Only track cursor position if cursor control is active
+    if (!cursorControlActive) return;
+
+    // Function to track mouse/cursor position and send to the Hue service
+    const handleMouseMove = (e: MouseEvent) => {
+      // Get screen dimensions
+      const screenWidth = window.innerWidth;
+      const screenHeight = window.innerHeight;
+
+      // Send position to HueService
+      window.electron.hue.updateCursorPosition({
+        x: e.clientX,
+        y: e.clientY,
+        screenWidth,
+        screenHeight
+      });
+    };
+
+    // Add event listener for mouse movement
+    window.addEventListener('mousemove', handleMouseMove);
+
+    // Cleanup function
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [cursorControlActive]);
+
+  // Toggle cursor control on/off
+  const toggleCursorControl = () => {
+    const newState = !cursorControlActive;
+    setCursorControlActive(newState);
+
+    // Update HueService
+    window.electron.hue.toggleCursorControl(newState);
+
+    // Log status for debugging
+    console.log(`Cursor control ${newState ? 'enabled' : 'disabled'}`);
+  };
 
   // Handle leaving the page
   const handleBack = () => {
@@ -199,6 +243,31 @@ const Particles: React.FC = () => {
         }}
       >
         Back
+      </button>
+
+      {/* Cursor Control Toggle Button */}
+      <button
+        onClick={toggleCursorControl}
+        style={{
+          position: 'fixed',
+          top: 20,
+          right: 20,
+          zIndex: 10,
+          background: cursorControlActive ? 'rgba(0,255,128,0.4)' : 'rgba(255,255,255,0.2)',
+          borderRadius: '50%',
+          width: 40,
+          height: 40,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          border: cursorControlActive ? '2px solid rgba(0,255,128,0.8)' : 'none',
+          cursor: 'pointer',
+          transition: 'all 0.3s ease',
+        }}
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill={cursorControlActive ? "rgb(0,255,128)" : "white"}>
+          <path d="M13 6v15h-2V6H5l7-5 7 5h-6z" />
+        </svg>
       </button>
 
       {fullAudioPath && (

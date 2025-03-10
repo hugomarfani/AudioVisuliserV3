@@ -32,7 +32,9 @@ export type Channels =
   | 'hue-process-beat'
   | 'hue-get-beat-status'
   | 'hue-save-settings'
-  | 'hue-get-settings';
+  | 'hue-get-settings'
+  | 'hue-update-cursor'
+  | 'hue-toggle-cursor-control';
 
 const electronHandler = {
   ipcRenderer: {
@@ -120,6 +122,11 @@ const electronHandler = {
       bassEnergy: number;
       midEnergy: number;
       highEnergy: number;
+      color?: number[];
+      vocalEnergy?: number;
+      audioData?: Uint8Array;
+      brightness?: number;
+      vocalActive?: boolean;
     }) =>
       ipcRenderer.invoke('hue-process-beat', data),
     getBeatStatus: () =>
@@ -128,6 +135,17 @@ const electronHandler = {
       ipcRenderer.invoke('hue-save-settings', settings),
     getSettings: () =>
       ipcRenderer.invoke('hue-get-settings'),
+    // New method to update cursor position
+    updateCursorPosition: (data: {
+      x: number;
+      y: number;
+      screenWidth: number;
+      screenHeight: number;
+    }) =>
+      ipcRenderer.invoke('hue-update-cursor', data),
+    // New method to toggle cursor control
+    toggleCursorControl: (enabled: boolean) =>
+      ipcRenderer.invoke('hue-toggle-cursor-control', enabled),
     onStreamingStateChanged: (callback) => {
       ipcRenderer.on('hue:streamingStateChanged', callback);
     },
