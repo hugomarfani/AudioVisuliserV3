@@ -395,7 +395,7 @@ export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // NEW: Direct update function that bypasses Electron IPC
   const updateBeatStatusDirectly = useCallback((data: Partial<BeatStatus>) => {
-    console.log("Direct beat status update:", data);
+    // console.log("Direct beat status update:", data);
 
     setBeatStatus(prev => ({
       ...prev,

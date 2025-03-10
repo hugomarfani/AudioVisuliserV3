@@ -183,7 +183,7 @@ const ShaderImageSelector: React.FC<ShaderImageSelectorProps> = ({
             style={{
               display: 'flex',
               alignItems: 'center',
-              backgroundColor: colors.grey3,
+              backgroundColor: colors.blue,
               color: colors.white,
               border: 'none',
               borderRadius: '9999px',

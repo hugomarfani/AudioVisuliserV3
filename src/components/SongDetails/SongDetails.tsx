@@ -8,6 +8,7 @@ import ImageGallery from './ImageGallery';
 import LLMRunner from './LLMRunner';
 import WhisperRunner from './WhisperRunner';
 import ShaderImageSelector from './ShaderImageSelector';
+import DeleteSongButton from './DeleteSongButton';
 
 interface SongDetailsProps {
   onClose: () => void;
@@ -165,7 +166,7 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
         <p style={{ fontSize: '1rem', color: colors.grey2 }}>
           Backgrounds: {song.dataValues.backgrounds.join(', ')}
         </p>
-        
+
         {/* MP3 Redownload component */}
         <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>
@@ -177,7 +178,7 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
           <button
             style={{
               padding: '0.5rem 1rem',
-              backgroundColor: redownloading ? colors.grey3 : colors.primary,
+              backgroundColor: redownloading ? colors.blue : colors.grey2,
               color: colors.white,
               border: 'none',
               borderRadius: '4px',
@@ -190,57 +191,59 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
             {redownloading ? 'Downloading...' : 'Redownload MP3'}
           </button>
         </div>
-        
-        {/* 
-        
+
+
+
+        {/*
+
         DEPRECATED WARNING -> WHISPER NOW DELETES THE WAV FILE AFTER PROCESSING SO NO NEED TO RERUN WHISPER
         HOWEVER, LEAVING THIS COMMENTED OUT IN CASE WE NEED TO REVERT BACK TO THIS
         THIS WOULD REQUIRE SD.EXE BEING UPDATED WITH THE NEW WHISPER COMMANDS
 
         Whisper Runner component - add this before LLM Runner
         <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>
-          <WhisperRunner 
-            song={song} 
-            songId={songId} 
+          <WhisperRunner
+            song={song}
+            songId={songId}
             refetch={refetch}
           />
         </div> */}
-        
+
         {/* LLM Runner component - add this before BackgroundSelector */}
         <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>
-          <LLMRunner 
-            song={song} 
-            songId={songId} 
+          <LLMRunner
+            song={song}
+            songId={songId}
             refetch={refetch}
           />
         </div>
-        
+
         {/* Background selection component */}
         <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>
             Background Generation
           </h3>
-          <BackgroundSelector 
-            song={song} 
-            songId={songId} 
+          <BackgroundSelector
+            song={song}
+            songId={songId}
             refetch={refetch}
           />
         </div>
-        
+
         {/* Shader Image Selector */}
-        <ShaderImageSelector 
-          song={song} 
-          songId={songId} 
+        <ShaderImageSelector
+          song={song}
+          songId={songId}
           refetch={refetch}
         />
-        
+
         {/* Particle selection component */}
-        <ParticleSelector 
-          song={song} 
-          songId={songId} 
+        <ParticleSelector
+          song={song}
+          songId={songId}
           refetch={refetch}
         />
-        
+
         {/* Image Gallery component */}
         <ImageGallery
           song={song}
@@ -248,6 +251,13 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
           uploadedImages={uploadedImages}
           setUploadedImages={setUploadedImages}
           refetch={refetch}
+        />
+
+        {/* Delete Song Button component */}
+        <DeleteSongButton
+          songId={songId}
+          songTitle={song.dataValues.title}
+          onSuccess={onClose}
         />
       </div>
     </div>
