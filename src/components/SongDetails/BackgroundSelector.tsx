@@ -125,7 +125,7 @@ const BackgroundSelector: React.FC<BackgroundSelectorProps> = ({ song, songId, r
           style={{
             display: 'flex',
             alignItems: 'center',
-            backgroundColor: song?.dataValues.backgrounds?.length ? '#5856D6' : colors.grey3, // Apple purple for active, grey for disabled
+            backgroundColor: song?.dataValues.backgrounds?.length ? colors.mint : colors.grey3, // Apple purple for active, grey for disabled
             color: colors.white,
             border: 'none',
             borderRadius: '9999px',

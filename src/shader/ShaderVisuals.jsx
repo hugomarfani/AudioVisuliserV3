@@ -516,6 +516,7 @@ class ShaderVisuals extends Component {
 
   // This is the React lifecycle render method that returns the component's JSX.
   render() {
+    console.log('render', this.state);
     return (
       <>
         {/* BACK BUTTON */}

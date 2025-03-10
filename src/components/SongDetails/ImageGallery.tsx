@@ -175,7 +175,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
           style={{
             display: 'flex',
             alignItems: 'center',
-            backgroundColor: colors.grey3,
+            backgroundColor: colors.blue,
             color: colors.white,
             border: 'none',
             borderRadius: '9999px',

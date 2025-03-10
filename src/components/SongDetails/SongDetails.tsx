@@ -177,7 +177,7 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
           <button
             style={{
               padding: '0.5rem 1rem',
-              backgroundColor: redownloading ? colors.grey3 : colors.primary,
+              backgroundColor: redownloading ? colors.blue : colors.grey2,
               color: colors.white,
               border: 'none',
               borderRadius: '4px',
