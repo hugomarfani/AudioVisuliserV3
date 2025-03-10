@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaImage, FaUpload } from 'react-icons/fa';
+import { FaImage, FaUpload, FaPalette } from 'react-icons/fa';
 import { SongModel } from '../../database/models/Song';
 import colors from '../../theme/colors';
 
@@ -19,6 +19,24 @@ const ShaderImageSelector: React.FC<ShaderImageSelectorProps> = ({
   const [uploadStatus, setUploadStatus] = useState<string>('');
   const [shaderBackgroundUrl, setShaderBackgroundUrl] = useState<string>('');
   const [shaderTextureUrl, setShaderTextureUrl] = useState<string>('');
+  const [textureColor, setTextureColor] = useState<string>('#ffffff');
+
+  // Convert RGB array to hex color string
+  const rgbArrayToHex = (rgbArray: string[]) => {
+    if (!rgbArray || rgbArray.length < 3) return '#ffffff';
+    const r = parseInt(rgbArray[0]).toString(16).padStart(2, '0');
+    const g = parseInt(rgbArray[1]).toString(16).padStart(2, '0');
+    const b = parseInt(rgbArray[2]).toString(16).padStart(2, '0');
+    return `#${r}${g}${b}`;
+  };
+
+  // Convert hex color string to RGB array
+  const hexToRgbArray = (hex: string) => {
+    const r = parseInt(hex.substring(1, 3), 16).toString();
+    const g = parseInt(hex.substring(3, 5), 16).toString();
+    const b = parseInt(hex.substring(5, 7), 16).toString();
+    return [r, g, b];
+  };
 
   useEffect(() => {
     loadShaderImages();
@@ -42,6 +60,11 @@ const ShaderImageSelector: React.FC<ShaderImageSelectorProps> = ({
         } catch (error) {
           console.error("Failed to load shader texture:", error);
         }
+      }
+      
+      // Load particle color if available
+      if (song.dataValues.particleColour && Array.isArray(song.dataValues.particleColour)) {
+        setTextureColor(rgbArrayToHex(song.dataValues.particleColour));
       }
     }
   };
@@ -111,6 +134,28 @@ const ShaderImageSelector: React.FC<ShaderImageSelectorProps> = ({
       } else {
         setUploadStatus(`Upload failed: ${result.error}`);
       }
+    } catch (error) {
+      setUploadStatus(`Error: ${error.message || 'Unknown error occurred'}`);
+    }
+  };
+
+  const saveTextureColor = async () => {
+    if (!song) return;
+    
+    setUploadStatus('Updating texture color...');
+    try {
+      const rgbArray = hexToRgbArray(textureColor);
+      
+      await window.electron.ipcRenderer.invoke('update-song', {
+        id: songId,
+        particleColour: rgbArray
+      });
+      
+      // Save the updated song as JSON
+      await window.electron.ipcRenderer.invoke('save-song-as-json', { id: songId });
+      
+      setUploadStatus('Texture color updated successfully!');
+      refetch();
     } catch (error) {
       setUploadStatus(`Error: ${error.message || 'Unknown error occurred'}`);
     }
@@ -279,6 +324,7 @@ const ShaderImageSelector: React.FC<ShaderImageSelectorProps> = ({
             border: `1px solid ${colors.grey4}`,
             borderRadius: '8px',
             padding: '10px',
+            marginBottom: '1rem'
           }}>
             <p style={{ fontSize: '0.8rem', marginBottom: '5px', color: colors.grey2 }}>Current Texture Shader:</p>
             <img 
@@ -293,10 +339,92 @@ const ShaderImageSelector: React.FC<ShaderImageSelectorProps> = ({
             />
           </div>
         ) : (
-          <p style={{ color: colors.grey2, fontStyle: 'italic', fontSize: '0.8rem' }}>
+          <p style={{ color: colors.grey2, fontStyle: 'italic', fontSize: '0.8rem', marginBottom: '1rem' }}>
             No texture shader image set
           </p>
         )}
+        
+        {/* Texture Color Picker */}
+        <div style={{ marginTop: '1rem' }}>
+          <h4 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Texture Color</h4>
+          
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '10px',
+            marginBottom: '1rem'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: colors.grey3,
+              borderRadius: '9999px',
+              padding: '0.5rem 1rem',
+              fontSize: '0.9rem',
+            }}>
+              <FaPalette style={{ marginRight: '0.5rem', color: colors.white }} />
+              <input 
+                type="color" 
+                value={textureColor}
+                onChange={(e) => setTextureColor(e.target.value)}
+                style={{
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  width: '25px',
+                  height: '25px',
+                }}
+              />
+            </div>
+            
+            <div style={{
+              display: 'flex',
+              alignItems: 'center', 
+              gap: '5px'
+            }}>
+              <span style={{
+                fontSize: '0.8rem',
+                color: colors.grey2,
+              }}>
+                RGB:
+              </span>
+              <span style={{
+                fontSize: '0.9rem',
+                fontFamily: 'monospace',
+              }}>
+                {hexToRgbArray(textureColor).join(', ')}
+              </span>
+            </div>
+            
+            <button
+              onClick={saveTextureColor}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                backgroundColor: colors.blue,
+                color: colors.white,
+                border: 'none',
+                borderRadius: '9999px',
+                padding: '0.5rem 1rem',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                marginLeft: 'auto',
+              }}
+            >
+              <FaUpload style={{ marginRight: '0.5rem' }} />
+              Save Color
+            </button>
+          </div>
+          
+          <div style={{
+            width: '100%',
+            height: '30px',
+            backgroundColor: textureColor,
+            borderRadius: '4px',
+            border: `1px solid ${colors.grey4}`,
+            marginBottom: '1rem'
+          }} />
+        </div>
       </div>
       
       {uploadStatus && (
