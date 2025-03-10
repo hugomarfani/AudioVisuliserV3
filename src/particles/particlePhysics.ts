@@ -9,6 +9,7 @@ let defaultParticle;
 let musicNote1;
 let musicNote2;
 let bubble1;
+let bubble2;
 let star1;
 let star2;
 let crown1;
@@ -18,21 +19,6 @@ let animal3;
 let animal4;
 let animal5;
 let animal6;
-(async () => {
-  defaultParticle = await findImagePath('icon.png');
-  musicNote1 = await findImagePath('particles/musicNotes/musicNote1.png');
-  musicNote2 = await findImagePath('particles/musicNotes/musicNote2.png');
-  bubble1 = await findImagePath('particles/bubbles/bubbles1.png');
-  star1 = await findImagePath('particles/stars/star1.png');
-  star2 = await findImagePath('particles/stars/star2.png');
-  crown1 = await findImagePath('particles/crowns/crown1.png');
-  animal1 = await findImagePath('particles/animals/animal1.png');
-  animal2 = await findImagePath('particles/animals/animal2.png');
-  animal3 = await findImagePath('particles/animals/animal3.png');
-  animal4 = await findImagePath('particles/animals/animal4.png');
-  animal5 = await findImagePath('particles/animals/animal5.png');
-  animal6 = await findImagePath('particles/animals/animal6.png');
-})();
 
 
 export interface ParticlePhysics {
@@ -52,29 +38,29 @@ export const particlePhysics: Record<string, ParticlePhysics> = {
   musicNote: { 
     name: "musicNote", 
     weight: 1.0, gravity: 0.15, bounce: 0.6, airResistance: 0.01, lifespan: 5000, 
-    images: [musicNote1, musicNote2],
+    images: [],
     moods: ['happy', 'energetic']
   },
   bubble: { 
     name: "bubble", 
     weight: 0.3, gravity: 0.05, bounce: 0.8, airResistance: 0.02, lifespan: 4000, 
-    images: [bubble1],
+    images: [],
     moods: ['calm', 'happy']
   },
   star: { 
     name: "star", 
     weight: 2.8, gravity: 0.1, bounce: 0.7, airResistance: 0.015, lifespan: 6000, glow: true,
-    images: [star1, star2],
+    images: [],
     moods: ['happy', 'magical', 'festive']
   },
   balloon: {
     name: "balloon",
     weight: 0.2,
-    gravity: -0.05, // Negative gravity makes it float up
+    gravity: -0.05, 
     bounce: 0.3,
     airResistance: 0.02,
     lifespan: 8000,
-    images: [defaultParticle], // Replace with actual balloon images
+    images: [],
     moods: ['happy', 'celebratory', 'playful']
   },
   butterfly: {
@@ -84,7 +70,7 @@ export const particlePhysics: Record<string, ParticlePhysics> = {
     bounce: 0.4,
     airResistance: 0.03,
     lifespan: 7000,
-    images: [defaultParticle], // Replace with actual butterfly images
+    images: [], 
     moods: ['peaceful', 'gentle', 'romantic']
   },
   confetti: {
@@ -94,7 +80,7 @@ export const particlePhysics: Record<string, ParticlePhysics> = {
     bounce: 0.5,
     airResistance: 0.02,
     lifespan: 4000,
-    images: [defaultParticle], // Replace with actual confetti images
+    images: [],
     moods: ['celebratory', 'festive', 'energetic']
   },
   flower: {
@@ -104,7 +90,7 @@ export const particlePhysics: Record<string, ParticlePhysics> = {
     bounce: 0.3,
     airResistance: 0.015,
     lifespan: 5000,
-    images: [defaultParticle], // Replace with actual flower images
+    images: [], 
     moods: ['peaceful', 'romantic', 'gentle']
   },
   heart: {
@@ -115,7 +101,7 @@ export const particlePhysics: Record<string, ParticlePhysics> = {
     airResistance: 0.02,
     lifespan: 4500,
     glow: true,
-    images: [defaultParticle], // Replace with actual heart images
+    images: [], 
     moods: ['romantic', 'loving', 'gentle']
   },
   leaf: {
@@ -125,7 +111,7 @@ export const particlePhysics: Record<string, ParticlePhysics> = {
     bounce: 0.3,
     airResistance: 0.025,
     lifespan: 6000,
-    images: [defaultParticle], // Replace with actual leaf images
+    images: [],
     moods: ['calm', 'peaceful', 'melancholic']
   },
   raindrop: {
@@ -135,7 +121,7 @@ export const particlePhysics: Record<string, ParticlePhysics> = {
     bounce: 0.7,
     airResistance: 0.01,
     lifespan: 3000,
-    images: [defaultParticle], // Replace with actual raindrop images
+    images: [], 
     moods: ['sad', 'melancholic', 'calm']
   },
   snowflake: {
@@ -145,7 +131,7 @@ export const particlePhysics: Record<string, ParticlePhysics> = {
     bounce: 0.2,
     airResistance: 0.03,
     lifespan: 5500,
-    images: [defaultParticle], // Replace with actual snowflake images
+    images: [], 
     moods: ['peaceful', 'gentle', 'magical']
   },
   firework: {
@@ -156,7 +142,7 @@ export const particlePhysics: Record<string, ParticlePhysics> = {
     airResistance: 0.01,
     lifespan: 2000,
     glow: true,
-    images: [defaultParticle], // Replace with actual firework images
+    images: [], 
     moods: ['celebratory', 'festive', 'energetic']
   },
   crown: {
@@ -166,7 +152,7 @@ export const particlePhysics: Record<string, ParticlePhysics> = {
     bounce: 0.4,
     airResistance: 0.02,
     lifespan: 5000,
-    images: [crown1],
+    images: [],
     moods: ['royal', 'festive', 'celebratory']
   },
   animal: {
@@ -176,7 +162,7 @@ export const particlePhysics: Record<string, ParticlePhysics> = {
     bounce: 0.6,
     airResistance: 0.01,
     lifespan: 5000,
-    images: [animal1, animal2, animal3, animal4, animal5, animal6],
+    images: [],
     moods: ['happy', 'energetic']
   },
   emoji: {
@@ -186,29 +172,29 @@ export const particlePhysics: Record<string, ParticlePhysics> = {
     bounce: 0.4,
     airResistance: 0.03,
     lifespan: 7000,
-    images: [defaultParticle], // Replace with actual emoji images
+    images: [], 
     moods: ['happy', 'playful', 'fun']
   }
   
 };
 
 export const particleConfig: { [key: string]: { dir: string, count: number } } = {
-  musicNote: { dir: 'musicNotes', count: 2 }, 
-  star: { dir: 'stars', count: 2 },
+  musicNote: { dir: 'musicNotes', count: 5 }, 
+  star: { dir: 'stars', count: 3 },
   bubble: { dir: 'bubbles', count: 1 },
-  snowflake: { dir: 'snowflakes', count: 1 },
-  heart: { dir: 'hearts', count: 3},
+  snowflake: { dir: 'snowflakes', count: 3 },
+  heart: { dir: 'hearts', count: 5},
   leaves: { dir: 'leaves', count: 1 },
   butterfly: { dir: 'butterflies', count: 1 },
-  confetti: { dir: 'confetti', count: 1 },
-  raindrop: { dir: 'raindrops', count: 1 },
+  confetti: { dir: 'confetti', count: 2 },
+  raindrop: { dir: 'raindrops', count: 4 },
   firefly: { dir: 'fireflies', count: 1 },
-  balloon: { dir: 'balloons', count: 2},
+  balloon: { dir: 'balloons', count: 4},
   flower: { dir: 'flowers', count: 1 },
-  firework: { dir: 'fireworks', count: 2 },
+  firework: { dir: 'fireworks', count: 4 },
   crown: { dir: 'crowns', count: 1 },
   animal: { dir: 'animals', count: 6 },
-  emoji: { dir: 'emojis', count: 4 }
+  emoji: { dir: 'emojis', count: 5 }
 };
 
 
