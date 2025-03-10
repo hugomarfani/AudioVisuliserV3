@@ -35,9 +35,10 @@ const Player = forwardRef<any, PlayerProps>(
     const [isHueStatusOpen, setIsHueStatusOpen] = useState(false);
     const [isHueSettingsOpen, setIsHueSettingsOpen] = useState(false);
     const [isHueConnected, setIsHueConnected] = useState(false);
+    const [colorsLoaded, setColorsLoaded] = useState(false);
 
     // Get songs from database to access their colors
-    const { songs, loading } = useSongs();
+    const { songs, loading, refetch } = useSongs();
 
     // Debug: Log the track ID we received
     console.log('🔍 Track ID received in Player:', track.id);
@@ -93,23 +94,76 @@ const Player = forwardRef<any, PlayerProps>(
 
     // Load colors from the database for the current track
     useEffect(() => {
-      if (track.id) {
-        console.log('🔍 Trying to find song with ID:', track.id);
-        console.log('🔍 Available songs:', songs.map(song => ({
-          id: song.dataValues.id,
-          title: song.dataValues.title,
-          hasColors: song.dataValues.colours && song.dataValues.colours.length > 0
-        })));
+      if (!track.id) {
+        console.log('⚠️ No track ID provided, cannot load colors');
+        return;
+      }
 
-        const currentSong = songs.find(song => song.dataValues.id === track.id);
+      // Always log the current state
+      console.log('🔍 Song data status:', { 
+        trackId: track.id, 
+        loading, 
+        songsCount: songs.length,
+        songsLoaded: songs.length > 0 && songs[0] && !!songs[0].dataValues
+      });
+      
+      if (loading) {
+        console.log('⏳ Songs are still loading, waiting...');
+        return;
+      }
 
-        console.log('🔍 Found song:', currentSong ? {
-          id: currentSong.dataValues.id,
-          title: currentSong.dataValues.title,
-          colours: currentSong.dataValues.colours
-        } : 'Not found');
+      // If songs array is empty after loading is complete, trigger a refetch
+      if (!loading && songs.length === 0) {
+        console.log('⚠️ Songs array is empty after loading completed, triggering refetch...');
+        refetch();
+        return;
+      }
 
-        if (currentSong && currentSong.dataValues.colours && currentSong.dataValues.colours.length > 0) {
+      console.log('🔍 Trying to find song with ID:', track.id);
+      
+      // Check if songs are properly loaded with dataValues
+      const validSongs = songs.filter(song => song && song.dataValues);
+      
+      if (validSongs.length === 0) {
+        console.log('⚠️ No valid songs loaded yet, retrying...');
+        refetch();
+        return;
+      }
+      
+      console.log('🔍 Available songs:', validSongs.map(song => ({
+        id: song.dataValues.id,
+        title: song.dataValues.title,
+        hasColors: song.dataValues.colours && song.dataValues.colours.length > 0
+      })));
+
+      // Try to find the song by exact ID match first
+      let currentSong = validSongs.find(song => song.dataValues.id === track.id);
+      
+      // If not found, try case-insensitive comparison as fallback
+      if (!currentSong && typeof track.id === 'string') {
+        currentSong = validSongs.find(song => 
+          typeof song.dataValues.id === 'string' && 
+          song.dataValues.id.toLowerCase() === track.id.toLowerCase()
+        );
+        
+        // If still not found, try partial matching as last resort
+        if (!currentSong) {
+          currentSong = validSongs.find(song => 
+            typeof song.dataValues.id === 'string' && 
+            typeof track.id === 'string' && 
+            (song.dataValues.id.includes(track.id) || track.id.includes(song.dataValues.id))
+          );
+        }
+      }
+
+      console.log('🔍 Found song:', currentSong ? {
+        id: currentSong.dataValues.id,
+        title: currentSong.dataValues.title,
+        colours: currentSong.dataValues.colours
+      } : 'Not found');
+
+      if (currentSong && currentSong.dataValues.colours && currentSong.dataValues.colours.length > 0) {
+        try {
           // Convert hex colors to RGB arrays
           const rgbColors: number[][] = currentSong.dataValues.colours.map((hexColor: string) => {
             // Remove '#' if present
@@ -120,32 +174,50 @@ const Player = forwardRef<any, PlayerProps>(
             const g = parseInt(hex.substring(2, 4), 16);
             const b = parseInt(hex.substring(4, 6), 16);
 
+            // Validate the RGB values
+            if (isNaN(r) || isNaN(g) || isNaN(b)) {
+              console.warn(`⚠️ Invalid hex color found: ${hexColor}`);
+              return [255, 255, 255]; // Default to white
+            }
+
             return [r, g, b];
           });
 
           if (rgbColors.length > 0) {
             baseColors.current = rgbColors;
             console.log('🎨 Loaded colors from database:', rgbColors);
+            setColorsLoaded(true);
           }
-        } else {
-          console.log('⚠️ No colors found for this song or song not found, using default colors');
-          if (currentSong) {
-            console.log('🔍 Song found but no colors:',
-              currentSong.dataValues.id,
-              currentSong.dataValues.title,
-              'Has colours property:', !!currentSong.dataValues.colours,
-              'Colours length:', currentSong.dataValues.colours ? currentSong.dataValues.colours.length : 0
-            );
-          }
+        } catch (error) {
+          console.error('❌ Error parsing colors:', error);
+          // Keep default colors
         }
       } else {
-        console.log('⚠️ Cannot load colors: Track ID missing or songs not loaded yet',
-          'Track ID:', track.id,
-          'Songs loaded:', songs.length,
-          'Songs loading state:', loading
-        );
+        console.log('⚠️ No colors found for this song or song not found, using default colors');
+        if (currentSong) {
+          console.log('🔍 Song found but no colors:',
+            currentSong.dataValues.id,
+            currentSong.dataValues.title,
+            'Has colours property:', !!currentSong.dataValues.colours,
+            'Colours length:', currentSong.dataValues.colours ? currentSong.dataValues.colours.length : 0
+          );
+        }
       }
-    }, [track.id, songs, loading]);
+    }, [track.id, songs, loading, refetch]);
+
+    // Add additional aggressive retry at startup
+    useEffect(() => {
+      // If songs haven't loaded yet or there's an issue, try to fetch them again
+      if (track.id && !loading) {
+        if (songs.length === 0) {
+          console.log('🔄 No songs loaded, triggering refetch...');
+          refetch();
+        } else if (!songs.some(song => song && song.dataValues && song.dataValues.id === track.id)) {
+          console.log('🔄 Track not found in songs, requesting fresh data...');
+          setTimeout(() => refetch(), 1000); // Add slight delay before retry
+        }
+      }
+    }, [songs, loading, track.id, refetch]);
 
     useImperativeHandle(ref, () => ({
       play: () => audioRef.current?.play(),
