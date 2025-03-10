@@ -66,6 +66,7 @@ declare global {
       hue: {
         registerBridge: (ip: string) => Promise<HueCredentials>;
         getSettings: () => Promise<HueSettings>;
+        saveSettings: (settings: HueSettings) => Promise<boolean>; // Add this line for new saveSettings method
         fetchGroups: (params: { ip: string; username: string; clientkey: string }) => Promise<HueEntertainmentGroup[]>;
         onStreamingStateChanged: (callback: (event: any, isActive: boolean) => void) => void;
         removeStreamingStateListener: (callback: (event: any, isActive: boolean) => void) => void;
@@ -137,14 +138,24 @@ export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           const parsed = JSON.parse(savedSettings);
           setHueSettings(parsed);
           setIsConfigured(!!parsed && !!parsed.credentials?.username && !!parsed.selectedGroup);
+
+          // Also save to electron's persistent storage to ensure consistency
+          if (window.electron?.hue?.saveSettings) {
+            await window.electron.hue.saveSettings(parsed);
+          }
           return;
         }
 
         // Fall back to loading from electron if local storage is empty
         const settings = await window.electron.hue.getSettings();
         if (settings) {
+          // If we got settings from electron, also save them to localStorage for better persistence
+          localStorage.setItem(HUE_SETTINGS_KEY, JSON.stringify(settings));
+
           setHueSettings(settings);
-          setIsConfigured(!!settings && !!settings.username && !!settings.clientKey && !!settings.selectedGroup);
+          setIsConfigured(!!settings &&
+            ((!!settings.username && !!settings.clientKey) || (!!settings.credentials?.username)) &&
+            !!settings.selectedGroup);
         }
       } catch (error) {
         console.error('Error loading Hue settings:', error);
@@ -329,7 +340,7 @@ export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [isStreamingActive]);
 
-  // Save Hue settings to local storage
+  // Save Hue settings to both local storage and electron's persistent storage
   const saveHueSettings = useCallback((settings: HueSettings, numericId?: string) => {
     try {
       // Include the numeric ID in settings if provided
@@ -337,20 +348,39 @@ export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         { ...settings, numericGroupId: numericId } :
         settings;
 
+      // Save to localStorage
       localStorage.setItem(HUE_SETTINGS_KEY, JSON.stringify(settingsToSave));
+
+      // Also save to electron's persistent storage if available
+      if (window.electron?.hue?.saveSettings) {
+        window.electron.hue.saveSettings(settingsToSave)
+          .catch(err => console.error('Failed to save settings to electron:', err));
+      }
+
       setHueSettings(settingsToSave);
       setIsConfigured(true);
+
+      console.log('Hue settings saved successfully:', settingsToSave);
     } catch (error) {
       console.error('Failed to save Hue settings:', error);
     }
   }, []);
 
-  // Reset Hue settings
+  // Reset Hue settings in both local storage and electron
   const resetHueSettings = useCallback(() => {
     localStorage.removeItem(HUE_SETTINGS_KEY);
+
+    // Also reset in electron's persistent storage if available
+    if (window.electron?.hue?.saveSettings) {
+      window.electron.hue.saveSettings(null)
+        .catch(err => console.error('Failed to reset settings in electron:', err));
+    }
+
     setHueSettings(null);
     setIsConfigured(false);
     setIsStreamingActive(false);
+
+    console.log('Hue settings reset successfully');
   }, []);
 
   // Modified test lights function to accept specific light IDs

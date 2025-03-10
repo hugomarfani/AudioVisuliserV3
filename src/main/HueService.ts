@@ -2,6 +2,9 @@ import { ipcMain } from 'electron';
 import axios from 'axios';
 import https from 'https';
 import dgram from 'dgram';
+import fs from 'fs';
+import path from 'path';
+import { app } from 'electron';
 // Fixed import for node-dtls-client
 var dtls = require("node-dtls-client");
 
@@ -26,6 +29,24 @@ interface BeatData {
   highEnergy: number;
   color?: number[]; // Optional color parameter
   vocalEnergy?: number; // Optional vocal energy parameter
+}
+
+// Interface for Hue settings
+interface HueSettings {
+  username?: string;
+  clientKey?: string;
+  bridge?: {
+    id: string;
+    internalIpAddress?: string;
+    ip?: string;
+    name?: string;
+  };
+  credentials?: {
+    username: string;
+    clientkey: string;
+  };
+  selectedGroup?: string;
+  numericGroupId?: string;
 }
 
 /**
@@ -72,7 +93,12 @@ export default class HueService {
     [255, 0, 255],  // Magenta
   ];
 
+  // Add a new property to store the settings file path
+  private settingsFilePath: string;
+
   constructor() {
+    // Initialize the settings file path
+    this.settingsFilePath = path.join(app.getPath('userData'), 'hue_settings.json');
     this.registerIpcHandlers();
     console.log('HueService initialized');
   }
@@ -91,8 +117,61 @@ export default class HueService {
     ipcMain.handle('hue-process-beat', this.handleProcessBeat);
     // New handler to get beat detection status
     ipcMain.handle('hue-get-beat-status', this.handleGetBeatStatus);
+    // New handlers for persistent settings
+    ipcMain.handle('hue-save-settings', this.handleSaveSettings);
+    ipcMain.handle('hue-get-settings', this.handleGetSettings);
     console.log('Registered Hue IPC handlers');
   }
+
+  /**
+   * Save Hue settings to a persistent file
+   */
+  private handleSaveSettings = async (_: any, settings: HueSettings | null): Promise<boolean> => {
+    try {
+      if (settings === null) {
+        // If null, remove the settings file
+        if (fs.existsSync(this.settingsFilePath)) {
+          fs.unlinkSync(this.settingsFilePath);
+          console.log('Hue settings file removed');
+        }
+        return true;
+      }
+
+      // Ensure directory exists
+      const dirPath = path.dirname(this.settingsFilePath);
+      if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true });
+      }
+
+      // Save settings to file
+      fs.writeFileSync(this.settingsFilePath, JSON.stringify(settings, null, 2));
+      console.log('Hue settings saved to', this.settingsFilePath);
+      return true;
+    } catch (error) {
+      console.error('Failed to save Hue settings:', error);
+      return false;
+    }
+  };
+
+  /**
+   * Load Hue settings from persistent storage
+   */
+  private handleGetSettings = async (): Promise<HueSettings | null> => {
+    try {
+      if (!fs.existsSync(this.settingsFilePath)) {
+        console.log('No Hue settings file found at', this.settingsFilePath);
+        return null;
+      }
+
+      const data = fs.readFileSync(this.settingsFilePath, 'utf8');
+      const settings = JSON.parse(data) as HueSettings;
+      console.log('Loaded Hue settings from', this.settingsFilePath);
+      return settings;
+    } catch (error) {
+      console.error('Failed to load Hue settings:', error);
+      return null;
+    }
+  };
 
   // New method to get the current beat status
   private handleGetBeatStatus = async (): Promise<{isDetected: boolean, lastTime: number}> => {

@@ -30,7 +30,9 @@ export type Channels =
   | 'hue-set-color'
   | 'hue-test-lights'
   | 'hue-process-beat'
-  | 'hue-get-beat-status';
+  | 'hue-get-beat-status'
+  | 'hue-save-settings'
+  | 'hue-get-settings';
 
 const electronHandler = {
   ipcRenderer: {
@@ -122,6 +124,10 @@ const electronHandler = {
       ipcRenderer.invoke('hue-process-beat', data),
     getBeatStatus: () =>
       ipcRenderer.invoke('hue-get-beat-status'),
+    saveSettings: (settings: any) =>
+      ipcRenderer.invoke('hue-save-settings', settings),
+    getSettings: () =>
+      ipcRenderer.invoke('hue-get-settings'),
     onStreamingStateChanged: (callback) => {
       ipcRenderer.on('hue:streamingStateChanged', callback);
     },
