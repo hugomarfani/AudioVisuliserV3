@@ -47,7 +47,7 @@
     "package_test": " npm run build && electron-builder build --publish never && npm run build:dll",
     "rebuild": "electron-rebuild --parallel --types prod,dev,optional --module-dir release/app",
     "prestart": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.main.dev.ts",
-    "start": "ts-node ./.erb/scripts/check-port-in-use.js && npm run prestart && npm run server & npm run start:renderer && cross-env NODE_ENV=development DISABLE_ELECTRON_DEBUG_WINDOW=true npm run start:main",
+    "start": "ts-node ./.erb/scripts/check-port-in-use.js && npm run prestart && concurrently \"npm run server\" \"npm run start:renderer\" \"npm run start:main\"",
     "start:main": "cross-env NODE_ENV=development electronmon .",
     "start:preload": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.preload.dev.ts",
     "start:renderer": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack serve --config ./.erb/configs/webpack.config.renderer.dev.ts",
