@@ -27,6 +27,7 @@ import {
 } from '../youtube/youtubeToWav';
 import { mainPaths, getResourcePath } from './paths';
 import { registerImageHandlers } from './ipc/imageHandlers';
+import HueService from './HueService';
 
 class AppUpdater {
   constructor() {
@@ -41,6 +42,9 @@ let mainWindow: BrowserWindow | null = null;
 const ps1Path = mainPaths.ps1Path;
 const exePath = mainPaths.llmWhisperPath;
 const SDPath = mainPaths.SDPath;
+
+// Initialize Hue Service
+const hueService = new HueService();
 
 registerImageHandlers();
 
@@ -70,11 +74,11 @@ const progressSteps = {
 function trackProgressFromStdout(data: Buffer, sender: Electron.WebContents, operationId: string) {
   const output = data.toString();
   console.log(`📜 stdout: ${output}`);
-  
+
   // Check for each progress step
   Object.entries(progressSteps).forEach(([key, message]) => {
     if (output.includes(message)) {
-      const progressData = { 
+      const progressData = {
         operationId,
         step: key,
         message: message,
@@ -113,14 +117,14 @@ function runAIProcessWithTracking(
 
   // Start the process
   const process = spawn(command, args);
-  
+
   // Store the process with its operationId
   activeProcesses[operationId] = process;
-  
+
   process.stdout.on('data', (data) => {
     trackProgressFromStdout(data, sender, operationId);
   });
-  
+
   process.stderr.on('data', (data) => {
     const errorMessage = data.toString();
     console.error(`⚠️ stderr: ${errorMessage}`);
@@ -131,7 +135,7 @@ function runAIProcessWithTracking(
     console.log("Sending error:", errorData);
     sender.send('ai-error', errorData);
   });
-  
+
   process.on('close', (code) => {
     console.log(`✅ Process exited with code ${code}`);
     const completeData = {
@@ -140,10 +144,10 @@ function runAIProcessWithTracking(
     };
     console.log("Sending process complete:", completeData);
     sender.send('ai-process-complete', completeData);
-    
+
     // Remove from active processes when done
     delete activeProcesses[operationId];
-    
+
     return code;
   });
 }
@@ -302,13 +306,13 @@ ipcMain.handle('download-wav', async (_, url) => {
 // Replace existing run-whisper handler
 ipcMain.handle('run-whisper', (event, songId, operationId = null) => {
   console.log('Running whisper with songId:', songId, "with exePath:", exePath);
-  
+
   // Use the provided operationId or generate one if not provided
   const actualOperationId = operationId || `whisper-${songId}-${Date.now()}`;
   console.log(`Using operationId: ${actualOperationId}`);
-  
+
   const expectedSteps = ['aiSetup', 'whisper'];
-  
+
   runAIProcessWithTracking(
     'powershell',
     [
@@ -321,14 +325,14 @@ ipcMain.handle('run-whisper', (event, songId, operationId = null) => {
     actualOperationId,
     expectedSteps
   );
-  
+
   return actualOperationId;
 });
 
 // Add the function to build Gemma command with options
 function buildGemmaCommand(songId: string, options: Record<string, boolean>) {
   let command = `${exePath} -e -l -s ${songId}`;
-  
+
   // Add flags based on options
   if (options.extractColour) command += ' -c';
   if (options.extractParticle) command += ' -p';
@@ -338,7 +342,7 @@ function buildGemmaCommand(songId: string, options: Record<string, boolean>) {
   if (options.generateBackgroundPrompts) command += ' --generateBackgroundPrompts';
   if (options.extractStatus) command += ' --status';
   if (options.all) command += ' --all';
-  
+
   if (options.rerunWhisper) command = `${exePath} -e -w -s ${songId}`;
   return command;
 }
@@ -346,19 +350,19 @@ function buildGemmaCommand(songId: string, options: Record<string, boolean>) {
 // Keep the existing simple Gemma handler (without options) for backward compatibility
 ipcMain.handle('run-gemma', (event, songId, operationId = null) => {
   console.log('Running Gemma with songId:', songId);
-  
+
   // Use the provided operationId or generate one if not provided
   const actualOperationId = operationId || `gemma-${songId}-${Date.now()}`;
   console.log(`Using operationId: ${actualOperationId}`);
-  
+
   const expectedSteps = [
-    'aiSetup', 
-    'statusExtraction', 'colourExtraction', 'particleExtraction', 
-    'objectExtraction', 'backgroundExtraction', 
-    'objectPrompts', 'backgroundPrompts', 
+    'aiSetup',
+    'statusExtraction', 'colourExtraction', 'particleExtraction',
+    'objectExtraction', 'backgroundExtraction',
+    'objectPrompts', 'backgroundPrompts',
     'jsonStorage', 'llm'
   ];
-  
+
   runAIProcessWithTracking(
     'powershell',
     [
@@ -371,23 +375,23 @@ ipcMain.handle('run-gemma', (event, songId, operationId = null) => {
     actualOperationId,
     expectedSteps
   );
-  
+
   return actualOperationId;
 });
 
 // Add new handler with options
 ipcMain.handle('run-gemma-with-options', (event, { songId, options, operationId = null }) => {
   console.log('Running Gemma with options:', songId, options);
-  
+
   const command = buildGemmaCommand(songId, options);
-  
+
   // Use the provided operationId or generate one if not provided
   const actualOperationId = operationId || `gemma-options-${songId}-${Date.now()}`;
   console.log(`Using operationId: ${actualOperationId}`);
-  
+
   // Determine which steps to expect based on the options
   const expectedSteps = ['aiSetup'];
-  
+
   if (options.rerunWhisper) {
     expectedSteps.push('whisper');
   }
@@ -415,7 +419,7 @@ ipcMain.handle('run-gemma-with-options', (event, { songId, options, operationId 
 
   expectedSteps.push('jsonStorage');
   expectedSteps.push('llm');
-  
+
   runAIProcessWithTracking(
     'powershell',
     [
@@ -428,24 +432,24 @@ ipcMain.handle('run-gemma-with-options', (event, { songId, options, operationId 
     actualOperationId,
     expectedSteps
   );
-  
+
   return actualOperationId;
 });
 
 // Add the Stable Diffusion handler
 ipcMain.handle('run-stable-diffusion', (event, songId: string, operationId = null) => {
   console.log('Running Stable Diffusion with songId:', songId);
-  
+
   const sdPathStr = SDPath.toString();
-  
+
   // Use the provided operationId or generate one if not provided
   const actualOperationId = operationId || `sd-${songId}-${Date.now()}`;
   console.log(`Using operationId: ${actualOperationId}`);
-  
+
   // const expectedSteps = ['stableDiffusion', 'jsonStorage'];
-  const expectedSteps = ['aiSetup', 'imageBack1', 'imageBack2', 'imageBack3', 
+  const expectedSteps = ['aiSetup', 'imageBack1', 'imageBack2', 'imageBack3',
     'imageObj1', 'imageObj2', 'imageObj3', 'stableDiffusion'];
-  
+
   runAIProcessWithTracking(
     'powershell',
     [
@@ -458,7 +462,7 @@ ipcMain.handle('run-stable-diffusion', (event, songId: string, operationId = nul
     actualOperationId,
     expectedSteps
   );
-  
+
   return actualOperationId;
 });
 
@@ -491,7 +495,7 @@ ipcMain.on('run-gemma-test', (event) => {
 
 // Common ports used by the application
 const appPorts = [
-  1212 
+  1212
 ];
 
 // Function to terminate all active processes
@@ -519,7 +523,7 @@ function terminateAllProcesses() {
       console.error(`Error killing process ${id}:`, err);
     }
   });
-  
+
   // Clean up ports used by the application
   cleanupPorts();
 }
@@ -527,7 +531,7 @@ function terminateAllProcesses() {
 // Function to clean up ports
 function cleanupPorts() {
   console.log('Cleaning up ports...');
-  
+
   try {
     if (process.platform === 'win32') {
       // Windows
@@ -537,18 +541,18 @@ function cleanupPorts() {
           // Find process using this port
           const findCmd = `netstat -ano | findstr :${port}`;
           let output;
-          
+
           try {
             output = execSync(findCmd, { encoding: 'utf8' });
           } catch (e) {
             // No process using this port, which is fine
             return;
           }
-          
+
           if (output) {
             const lines = output.split('\n');
             const pids = new Set();
-            
+
             lines.forEach(line => {
               const parts = line.trim().split(/\s+/);
               if (parts.length > 4) {
@@ -558,7 +562,7 @@ function cleanupPorts() {
                 }
               }
             });
-            
+
             // Kill each process found
             pids.forEach(pid => {
               console.log(`Killing process ${pid} using port ${port}`);
@@ -582,14 +586,14 @@ function cleanupPorts() {
           // Find process using this port
           const cmd = `lsof -i :${port} -t`;
           let pids;
-          
+
           try {
             pids = execSync(cmd, { encoding: 'utf8' }).trim();
           } catch (e) {
             // No process using this port
             return;
           }
-          
+
           if (pids) {
             pids.split('\n').forEach(pid => {
               if (pid) {
@@ -615,14 +619,14 @@ function cleanupPorts() {
           // Find process using this port
           const cmd = `fuser -n tcp ${port} 2>/dev/null`;
           let pids;
-          
+
           try {
             pids = execSync(cmd, { encoding: 'utf8' }).trim();
           } catch (e) {
             // No process using this port
             return;
           }
-          
+
           if (pids) {
             pids.split(' ').forEach(pid => {
               if (pid) {
@@ -641,7 +645,7 @@ function cleanupPorts() {
         }
       });
     }
-    
+
     console.log('Port cleanup completed.');
   } catch (error) {
     console.error('Error in port cleanup:', error);
@@ -665,10 +669,10 @@ ipcMain.on('window-control', (_, command) => {
       break;
     case 'close':
       console.log('Close button clicked. Beginning shutdown sequence...');
-      
+
       // Terminate all processes and release ports
       terminateAllProcesses();
-      
+
       // Close database connections
       db.close((err) => {
         if (err) {
@@ -676,7 +680,7 @@ ipcMain.on('window-control', (_, command) => {
         } else {
           console.log('Database connection closed');
         }
-        
+
         setTimeout(() => {
           // Force exit after a short delay to ensure cleanup completes
           console.log('Forcing application exit...');
@@ -812,7 +816,7 @@ app.on('before-quit', () => {
   console.log('Application is about to quit...');
   // Make sure to terminate any running processes and release ports
   terminateAllProcesses();
-  
+
   db.close((err) => {
     if (err) {
       console.error('Error closing database:', err);

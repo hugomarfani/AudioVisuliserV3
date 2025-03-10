@@ -21,7 +21,16 @@ export type Channels =
   | 'ai-progress-update'  // New channel for progress updates
   | 'ai-error'           // New channel for error reporting
   | 'ai-process-complete' // New channel for process completion
-  | 'redownload-mp3';
+  | 'redownload-mp3'
+  | 'hue-discover'
+  | 'hue-register'
+  | 'hue-fetch-groups'
+  | 'hue-start-streaming'
+  | 'hue-stop-streaming'
+  | 'hue-set-color'
+  | 'hue-test-lights'
+  | 'hue-process-beat'
+  | 'hue-get-beat-status';
 
 const electronHandler = {
   ipcRenderer: {
@@ -38,7 +47,7 @@ const electronHandler = {
         console.log("Received in preload:", channel, args);
         func(...args);
       };
-      
+
       ipcRenderer.on(channel, subscription);
 
       return () => {
@@ -65,7 +74,7 @@ const electronHandler = {
         'ai-process-complete',
         'window-control',
       ] as Channels[];
-      
+
       if (validChannels.includes(channel)) {
         console.log("Removing listener for:", channel);
         // The key issue is that we need to use a stored reference to the original subscription
@@ -84,6 +93,47 @@ const electronHandler = {
       ipcRenderer.invoke('merge-asset-path', path),
     downloadWav: (url: string) => ipcRenderer.invoke('download-wav', url),
     downloadMp3: (url: string) => ipcRenderer.invoke('download-mp3', url),
+  },
+  hue: {
+    discoverBridges: () => ipcRenderer.invoke('hue-discover'),
+    registerBridge: (ip: string) => ipcRenderer.invoke('hue-register', ip),
+    fetchGroups: (data: { ip: string; username: string; psk: string }) =>
+      ipcRenderer.invoke('hue-fetch-groups', data),
+    startStreaming: (data: {
+      ip: string;
+      username: string;
+      psk: string;
+      groupId: string;
+      numericGroupId?: string;
+    }) =>
+      ipcRenderer.invoke('hue-start-streaming', data),
+    stopStreaming: () => ipcRenderer.invoke('hue-stop-streaming'),
+    setColor: (data: { lightIds: number[]; rgb: number[]; transitionTime: number }) =>
+      ipcRenderer.invoke('hue-set-color', data),
+    testLights: (data?: { lightIds?: number[] }) =>
+      ipcRenderer.invoke('hue-test-lights', data),
+    processBeat: (data: {
+      isBeat: boolean;
+      energy: number;
+      bassEnergy: number;
+      midEnergy: number;
+      highEnergy: number;
+    }) =>
+      ipcRenderer.invoke('hue-process-beat', data),
+    getBeatStatus: () =>
+      ipcRenderer.invoke('hue-get-beat-status'),
+    onStreamingStateChanged: (callback) => {
+      ipcRenderer.on('hue:streamingStateChanged', callback);
+    },
+    removeStreamingStateListener: (callback) => {
+      ipcRenderer.removeListener('hue:streamingStateChanged', callback);
+    },
+    onBeatDetected: (callback) => {
+      ipcRenderer.on('hue:beatDetected', callback);
+    },
+    removeBeatListener: (callback) => {
+      ipcRenderer.removeListener('hue:beatDetected', callback);
+    },
   },
 };
 
