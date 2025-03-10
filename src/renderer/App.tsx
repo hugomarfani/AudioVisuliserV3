@@ -61,7 +61,7 @@ const AppContent: FC = () => {
           }
         />
         <Route path="/particles/:id" element={<Particles />} />
-        <Route path="/aiden/:id" element={<ShaderVisuals />} />
+        <Route path="/aiden/:id" element={<PlayScene />} />
       </Routes>
     </div>
   );
