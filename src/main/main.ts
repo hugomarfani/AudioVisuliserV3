@@ -14,6 +14,8 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import { exec, spawn, execSync } from 'child_process';
 import os from 'os';
+import fs from 'fs';
+import { promisify } from 'util';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 import initDatabase from '../database/init';
@@ -510,6 +512,64 @@ ipcMain.on('run-gemma-test', (event) => {
     console.log(`✅ Process exited with code ${code}`);
     event.reply('run-gemma-test-reply', `Process exited with code ${code}`);
   });
+});
+
+// Add the delete-song IPC handler
+ipcMain.handle('delete-song', async (_, songId) => {
+  console.log(`Attempting to delete song with ID: ${songId}`);
+  try {
+    // 1. Delete the song from database
+    const deletedSong = await Song.destroy({
+      where: { id: songId }
+    });
+
+    if (!deletedSong) {
+      console.error(`Song with ID ${songId} not found in database`);
+      return { success: false, error: `Song with ID ${songId} not found` };
+    }
+
+    // 2. Delete all associated files
+    const filesToDelete = [
+      `audio/${songId}.mp3`,
+      `lyrics/${songId}.txt`,
+      `songData/${songId}.json`,
+      `shader/background/${songId}.jpg`,
+      `shader/texture/${songId}.jpg`
+    ];
+
+    // Handle file deletions
+    for (const filePath of filesToDelete) {
+      try {
+        const fullPath = getResourcePath('assets', filePath);
+        // Check if file exists before attempting to delete
+        if (fs.existsSync(fullPath)) {
+          await fs.promises.unlink(fullPath);
+          console.log(`Deleted file: ${fullPath}`);
+        }
+      } catch (error) {
+        console.warn(`Could not delete file ${filePath}:`, error);
+        // Continue with other deletions even if one fails
+      }
+    }
+
+    // 3. Delete the images directory if it exists
+    const imagesDir = getResourcePath('assets', `images/${songId}`);
+    try {
+      if (fs.existsSync(imagesDir)) {
+        // Recursive directory deletion
+        await fs.promises.rm(imagesDir, { recursive: true, force: true });
+        console.log(`Deleted directory: ${imagesDir}`);
+      }
+    } catch (error) {
+      console.warn(`Could not delete directory ${imagesDir}:`, error);
+    }
+
+    console.log(`Successfully deleted song with ID: ${songId} and all associated files`);
+    return { success: true };
+  } catch (error) {
+    console.error(`Error deleting song with ID ${songId}:`, error);
+    return { success: false, error: `Failed to delete song: ${error instanceof Error ? error.message : String(error)}` };
+  }
 });
 
 // Common ports used by the application
