@@ -9,6 +9,7 @@ let defaultParticle;
 let musicNote1;
 let musicNote2;
 let bubble1;
+let bubble2;
 let star1;
 let star2;
 let crown1;
@@ -23,6 +24,7 @@ let animal6;
   musicNote1 = await findImagePath('particles/musicNotes/musicNote1.png');
   musicNote2 = await findImagePath('particles/musicNotes/musicNote2.png');
   bubble1 = await findImagePath('particles/bubbles/bubbles1.png');
+  bubble2 = await findImagePath('particles/bubbles/bubbles2.png');
   star1 = await findImagePath('particles/stars/star1.png');
   star2 = await findImagePath('particles/stars/star2.png');
   crown1 = await findImagePath('particles/crowns/crown1.png');
@@ -58,7 +60,7 @@ export const particlePhysics: Record<string, ParticlePhysics> = {
   bubble: { 
     name: "bubble", 
     weight: 0.3, gravity: 0.05, bounce: 0.8, airResistance: 0.02, lifespan: 4000, 
-    images: [bubble1],
+    images: [bubble1, bubble2],
     moods: ['calm', 'happy']
   },
   star: { 
@@ -193,22 +195,22 @@ export const particlePhysics: Record<string, ParticlePhysics> = {
 };
 
 export const particleConfig: { [key: string]: { dir: string, count: number } } = {
-  musicNote: { dir: 'musicNotes', count: 2 }, 
-  star: { dir: 'stars', count: 2 },
+  musicNote: { dir: 'musicNotes', count: 5 }, 
+  star: { dir: 'stars', count: 3 },
   bubble: { dir: 'bubbles', count: 1 },
-  snowflake: { dir: 'snowflakes', count: 1 },
-  heart: { dir: 'hearts', count: 3},
+  snowflake: { dir: 'snowflakes', count: 3 },
+  heart: { dir: 'hearts', count: 5},
   leaves: { dir: 'leaves', count: 1 },
   butterfly: { dir: 'butterflies', count: 1 },
-  confetti: { dir: 'confetti', count: 1 },
-  raindrop: { dir: 'raindrops', count: 1 },
+  confetti: { dir: 'confetti', count: 2 },
+  raindrop: { dir: 'raindrops', count: 4 },
   firefly: { dir: 'fireflies', count: 1 },
-  balloon: { dir: 'balloons', count: 2},
+  balloon: { dir: 'balloons', count: 4},
   flower: { dir: 'flowers', count: 1 },
-  firework: { dir: 'fireworks', count: 2 },
+  firework: { dir: 'fireworks', count: 4 },
   crown: { dir: 'crowns', count: 1 },
   animal: { dir: 'animals', count: 6 },
-  emoji: { dir: 'emojis', count: 4 }
+  emoji: { dir: 'emojis', count: 5 }
 };
 
 

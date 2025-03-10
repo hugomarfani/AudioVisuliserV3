@@ -249,6 +249,8 @@ class ShaderVisuals extends Component {
   }
 
   resize() {
+    if (!this.mountRef.current) return; // Guard against null reference
+  
     this.width = this.mountRef.current.clientWidth;
     this.height = this.mountRef.current.clientHeight;
     this.renderer.setSize(this.width, this.height);
@@ -505,13 +507,14 @@ class ShaderVisuals extends Component {
     console.log('unmount');
     // Cancel the animation frame if it's running
     cancelAnimationFrame(this.requestID);
+    
+    // Remove event listeners
+    window.removeEventListener('resize', this.resize.bind(this));
+    
     // Remove Three.js canvas
     if (this.mountRef.current) {
       this.mountRef.current.removeChild(this.renderer.domElement);
     }
-    // if (this.mountRef.current && this.renderer.domElement.parentNode === this.mountRef.current) {
-    //   this.mountRef.current.removeChild(this.renderer.domElement);
-    // }
   }
 
   // This is the React lifecycle render method that returns the component's JSX.
