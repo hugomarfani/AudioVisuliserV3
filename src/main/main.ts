@@ -29,6 +29,25 @@ import { mainPaths, getResourcePath } from './paths';
 import { registerImageHandlers } from './ipc/imageHandlers';
 import HueService from './HueService';
 
+// Add this near the top of the file
+// Ensure this app is only running one instance
+const gotTheLock = app.requestSingleInstanceLock();
+let windowCreated = false;
+
+if (!gotTheLock) {
+  console.log('Another instance is already running - quitting this one');
+  app.quit();
+} else {
+  // Someone tried to run a second instance, focus our window instead
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+      console.log('Second instance attempted to start - focusing existing window');
+    }
+  });
+}
+
 class AppUpdater {
   constructor() {
     log.transports.file.level = 'info';
@@ -712,6 +731,15 @@ const installExtensions = async () => {
 };
 
 const createWindow = async () => {
+  // Only create a window if one doesn't already exist
+  if (mainWindow !== null || windowCreated) {
+    console.log('Window already exists or is being created, skipping creation');
+    return;
+  }
+
+  console.log('Creating application window...');
+  windowCreated = true;
+
   if (isDebug) {
     await installExtensions();
   }
@@ -754,6 +782,7 @@ const createWindow = async () => {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+    windowCreated = false;
   });
 
   const menuBuilder = new MenuBuilder(mainWindow);
@@ -782,6 +811,13 @@ app.on('window-all-closed', () => {
   }
 });
 
+// Move the activate handler registration outside of app.whenReady() to avoid duplicate registrations
+app.removeAllListeners('activate');
+app.on('activate', () => {
+  console.log('App activated, checking if we need a new window');
+  if (mainWindow === null && !windowCreated) createWindow();
+});
+
 app
   .whenReady()
   .then(async () => {
@@ -798,10 +834,13 @@ app
       }
     }
 
-    createWindow();
-    app.on('activate', () => {
-      if (mainWindow === null) createWindow();
-    });
+    // Only create a window if one doesn't already exist
+    if (mainWindow === null && !windowCreated) {
+      console.log('App ready - creating initial window');
+      createWindow();
+    }
+
+    // Remove the nested activate handler to prevent duplication
   })
   .catch(console.log);
 
