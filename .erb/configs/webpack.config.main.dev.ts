@@ -66,17 +66,17 @@ const configuration: webpack.Configuration = {
   },
 
   plugins: [
-    //new webpack.EnvironmentPlugin({
-    //  NODE_ENV: 'development',
-    //}),
-//
-    //new webpack.DefinePlugin({
-    //  __nccwpck_require__: "require"
-    //}),
-//
-    //new webpack.LoaderOptionsPlugin({
-    //  debug: true,
-    //}),
+    new webpack.EnvironmentPlugin({
+     NODE_ENV: 'development',
+    }),
+
+    new webpack.DefinePlugin({
+     __nccwpck_require__: "require"
+    }),
+
+    new webpack.LoaderOptionsPlugin({
+     debug: true,
+    }),
 
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
