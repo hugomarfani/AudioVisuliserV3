@@ -1,32 +1,20 @@
-<img src=".erb/img/erb-banner.svg" width="100%" />
+<img src="https://github.com/user-attachments/assets/80050446-233a-4f93-bd3e-787dcfb152b4" width="50%" />
+
+<img src="https://github.com/user-attachments/assets/20b32e75-1976-493c-b55f-8d566c552cf5" width="100%" />
+
 
 <br>
 
-<p>
-  Electron React Boilerplate uses <a href="https://electron.atom.io/">Electron</a>, <a href="https://facebook.github.io/react/">React</a>, <a href="https://github.com/reactjs/react-router">React Router</a>, <a href="https://webpack.js.org/">Webpack</a> and <a href="https://www.npmjs.com/package/react-refresh">React Fast Refresh</a>.
-</p>
-
-<br>
-
-<div align="center">
-
-[![Build Status][github-actions-status]][github-actions-url]
-[![Github Tag][github-tag-image]][github-tag-url]
-[![Discord](https://badgen.net/badge/icon/discord?icon=discord&label)](https://discord.gg/Fjy3vfgy5q)
-
-[![OpenCollective](https://opencollective.com/electron-react-boilerplate-594/backers/badge.svg)](#backers)
-[![OpenCollective](https://opencollective.com/electron-react-boilerplate-594/sponsors/badge.svg)](#sponsors)
-[![StackOverflow][stackoverflow-img]][stackoverflow-url]
-
-</div>
 
 ## Project Overview
+This project provides an affordable, AI-powered sensory room designed to support autistic children by creating immersive, adaptive environments tailored to their emotional needs. Using accessible hardware like Intel-based computers, Philips Hue lights, and motion-tracking technology, the room dynamically responds to speech and gestures, adjusting visuals, sounds, and lighting. By enabling intuitive interactions and emotional regulation through sensory stimuli, this solution offers an effective and scalable approach to improving communication skills, emotional resilience, and overall comfort for children with autism.
 
 ### Particle Visualiser
 
 ### Shader Visualiser
 
 ### Hue Integration
+Our integration with the Philips Hue Entertainment API provides an immersive experience, synchronising room lighting in real-time with on-screen visuals and audio. Lights dynamically respond to music beats, vocals, and directional cues—for example, on-screen activity occurring on the right side will trigger more intense lighting effects on the corresponding side of the room, creating an engaging and interactive environment.
 
 ## Install
 
