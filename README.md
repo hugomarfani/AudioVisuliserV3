@@ -89,17 +89,23 @@ To package apps for the local platform:
 npm run package
 ```
 
+## Coders
+- [Hugo Marfani](https://github.com/hugomarfani)
+- [Horesh Lopian](https://github.com/HoreshLupi)
+- [Kiminao Usami](https://github.com/NaokiRe)
+- [Aiden Cheng](https://github.com/AidCheng)
+
 ## Dependencies
 This repository was forked off [electron-react-boilerplate](https://github.com/electron-react-boilerplate/electron-react-boilerplate).
 
-## Maintainers
+### Maintainers for Electron Boilerplate
 
 - [Amila Welihinda](https://github.com/amilajack)
 - [John Tran](https://github.com/jooohhn)
 - [C. T. Lin](https://github.com/chentsulin)
 - [Jhen-Jie Hong](https://github.com/jhen0409)
 
-## License
+### License
 
 MIT © [Electron React Boilerplate](https://github.com/electron-react-boilerplate)
 
