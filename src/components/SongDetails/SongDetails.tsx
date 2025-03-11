@@ -42,6 +42,11 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
           console.log('Song Images:', resolvedImagePaths);
           setUploadedImages(resolvedImagePaths);
         }
+        if (song && song.dataValues.jacket) {
+          const jacketImagePath = await findImagePath(song.dataValues.jacket);
+          setJacketImage(jacketImagePath);
+          console.log('Jacket Image:', jacketImagePath);
+        }
       }
     };
 
@@ -49,6 +54,7 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
       if (song) {
         const jacketImagePath = await findImagePath(song.dataValues.jacket);
         setJacketImage(jacketImagePath);
+        console.log('Jacket Image:', jacketImagePath);
       }
     };
 
