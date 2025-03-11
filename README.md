@@ -26,6 +26,12 @@
 
 ### Shader Visualiser
 
+![ezgif-7490fcba69ce7e](https://github.com/user-attachments/assets/ae00afd0-27ca-423f-93c2-6d845fa9484a)
+
+The shader visual allows you to interact with the particles simply by moving your mouse (or hand gestures with motion input, COMING SOON!). The particles read from a specific texture and will make move ments according to the music at the same time.
+
+You can also set colour, background and particle shape yourself from the settings in each song.
+
 ### Hue Integration
 
 ## Install
