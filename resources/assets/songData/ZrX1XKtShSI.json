@@ -1,0 +1,55 @@
+{
+  "audioPath": "audio/ZrX1XKtShSI.mp3",
+  "background_prompts": [
+    ", style: cartoon, characters: a lonely robot, a sad clown, a tired dragon, a grumpy cat, a bored owl, a worried worm, a lost teddy bear, setting: a deserted ballroom, mood: melancholic, lighting: dim, soft, warm.\n\ncolour: colourful background, suitable for children and family, style: cartoon, characters: a lonely robot, a sad clown, a tired dragon, a grumpy cat, a bored owl, a worried worm, a lost teddy bear, setting: a deserted ballroom, mood: melancholic, lighting: dim, soft, warm \n",
+    ", style: cartoon, characters: a family of four, a dog, a cat, a rabbit, a hamster, a goldfish, a snail, a bird, a butterfly, a ladybug, a spider, a worm, a frog, a turtle, a snake, a lizard, a monkey, a bear, a tiger, a lion, an elephant, a giraffe, a zebra, a hippopotamus, a rhinoceros, a panda, a koala, a kangaroo, a walrus, a dolphin, a whale, a shark, a crab, a lobster, a starfish, a seahorse, a jellyfish, a squid, a octopus, a clam, a snail, a sea turtle, a sea lion, a penguin, a polar bear, an arctic fox, a walrus, a seal, a narwhal, a manatee, a dugong, a platypus, a echidna, a wombat, a quokka, a sugar glider, a possum, a kangaroo, a koala, a wombat, a platypus, a echidna, a quokka, a sugar glider, a possum, a Tasmanian devil, a dingo, a kookaburra, a lorikeet, a cockatoo, a cassowary, a emu, a kiwi, a kea, a penguin, a albatross, a petrel, a shearwater, a gannet, a puffin, a tern, a pelican, a flamingo, a stork, a heron, a egret, a ibis, a crane, a owl, a hawk, a eagle, a vulture, a falcon, a kestrel, a buzzard, a raven, a crow, a magpie, a jay, a robin, a sparrow, a finch, a hummingbird, a woodpeck, a woodpecker, a nightingale, a lark, a swallow, a warbler, a wren, a titmouse, a chickadee, a nuthatch, a creeper, a gnatcatcher, a flycatcher, a thrasher, a mockingbird, a tanager, a cardinal, a grosbeak, a finch, a sparrow, a wren, a titmouse, a chickadee, a nuthatch, a creeper, a gnatcatcher, a flycatcher, a thrasher, a mockingbird, a tanager, a cardinal, a grosbeak, a finch, a sparrow, a wren, a tit",
+    ", style: cartoon, subject: a family of four, a dog, a cat, a piano, a fireplace, a large window with a view of a snowy landscape, a feeling of warmth and happiness, a sense of togetherness.\n\ncolour: colourful, suitable for children and family, style: cartoon, subject: a family of four, a dog, a cat, a piano, a fireplace, a large window with a view of a snowy landscape, a feeling of warmth and happiness, a sense of togetherness \n\n\n"
+  ],
+  "backgrounds": [
+    "Ballroom with no balls$",
+    "8,000 salad plates$",
+    "Empty halls$"
+  ],
+  "colours": [
+    "#FFD700",
+    "#800080",
+    "#008000",
+    "#FFC0CB",
+    "#FFA500",
+    "#FFD700",
+    "#800080",
+    "#800080",
+    "#008000",
+    "#008000",
+    "#FFC0CB",
+    "#FFC0CB",
+    "#FFA500",
+    "#FFA500"
+  ],
+  "colours_reason": [
+    "\n\n```\nColor 1: #FFD700\nColor 2: #800080\nColor 3: #008000\nColor 4: #FFC0CB\nColor 5: #FFA500\n\nColor 1 reason: The lyrics mention \"8,000 salad plates,\" which evokes a sense of a large, formal dining setting, often associated with the color gold (#FFD700).\nColor 2: #800080\nreason: The phrase \"beautiful stranger tall and fair\" suggests a person with a regal and mysterious aura, reminiscent of the color purple (#800080).\nColor 3: #008000\nreason: The line \"there'll be music, there'll be light\" implies a vibrant and lively atmosphere, often associated with the color green (#008000).\nColor 4: #FFC0CB\nreason: The mention of a \"gown and all\" and \"picture of sophisticated grace\" suggests a delicate and feminine aesthetic, often associated with the color pink (#FFC0CB).\nColor 5: #FFA500\nreason: The lyrics express a sense of excitement and anticipation for a \"chance to change my lonely world,\" which evokes a feeling of warmth and optimism, often associated with the color orange (#FFA500). \n\n\n\n```\n"
+  ],
+  "createdAt": "2025-02-24T17:20:39.387Z",
+  "id": "ZrX1XKtShSI",
+  "images": ["images/ZrX1XKtShSI/maxresdefault.jpg"],
+  "jacket": "images/ZrX1XKtShSI/maxresdefault.jpg",
+  "moods": [],
+  "object_prompts": [
+    "\n\n* **Subject:** A giant, sentient salad plate, made of porcelain, with a swirling blue and green glaze, adorned with delicate gold leaf accents.\n* **Expression:** A thoughtful, contemplative expression, with slightly furrowed brows and a hint of sadness in its eyes.\n* **Pose:** Sitting upright on a pedestal, its rim slightly tilted upwards as if listening intently.\n* **Background:** A dimly lit, antique library with towering bookshelves filled with ancient tomes, a large, ornate fireplace with flickering flames, and a single, dusty window casting a soft, ethereal glow.\n* **Lighting:** Soft, warm, and inviting, emanating from the fireplace and the window, creating a sense of mystery and nostalgia.\n* **Style:** A blend of realism and fantasy, with a touch of surrealism, inspired by the works of Hayao Miyazaki and Studio Ghibli.\n\n\n\nA giant, sentient salad plate, made of porcelain, with a swirling blue and green glaze, adorned with delicate gold leaf accents, a thoughtful, contemplative expression, with slightly furrowed brows and a hint of sadness in its eyes, sitting upright on a pedestal, its rim slightly tilted upwards as if listening intently, a dimly lit, antique library with towering bookshelves filled with ancient tomes, a large, ornate fireplace with flickering flames, and a single, dusty window casting a soft, ethereal glow, soft, warm, and inviting, emanating from the fireplace and the window, creating a sense of mystery and nostalgia, a blend of realism and fantasy, with a touch of surrealism, inspired by the works of Hayao Miyazaki and Studio Ghibli \n",
+    "\n\n* **Song Title:** \"Moonlight Sonata\" by Ludwig van Beethoven\n* **Mood:** melancholic, wistful, introspective\n* **Visual Style:** impressionistic, soft focus, muted colors, brushstrokes visible\n* **Scene:** A lone figure, silhouetted against a pale moonlight, standing in a deserted ballroom, dust motes dancing in the air\n* **Details:** cracked marble floor, ornate chandeliers casting long shadows, a grand piano with its lid slightly ajar, a single rose lying on the floor\n\nMoonlight Sonata, melancholic, wistful, introspective, impressionistic, soft focus, muted colors, brushstrokes visible, a lone figure, silhouetted against a pale moonlight, standing in a deserted ballroom, cracked marble floor, ornate chandeliers casting long shadows, a grand piano with its lid slightly ajar, a single rose lying on the floor \n\n\n",
+    "\n\n* **Song Title:** \"The Sound of Silence\" by Simon & Garfunkel\n* **Mood:** melancholic, introspective, haunting\n* **Setting:** a foggy, deserted city street at night, streetlights casting long, distorted shadows\n* **Characters:** a lone figure in a long, dark coat, head bowed, walking away from the viewer\n* **Color Palette:** muted tones of blue, gray, and purple, with a hint of orange from the streetlights\n* **Style:** cinematic, film noir, with a focus on atmosphere and mood\n\nThe Sound of Silence, melancholic, introspective, haunting, a foggy, deserted city street at night, streetlights casting long, distorted shadows, a lone figure in a long, dark coat, head bowed, walking away from the viewer, muted tones of blue, gray, and purple, with a hint of orange from the streetlights, cinematic, film noir, with a focus on atmosphere and mood \n\n\n"
+  ],
+  "objects": ["8,000 salad plates$", "ballroom$", "gown$"],
+  "particles": [],
+  "status": "Red",
+  "title": "Kristen Bell, Idina Menzel - For the First Time in Forever (From \"Frozen\"/Sing-Along)",
+  "shaderBackground": "shader/background/ZrX1XKtShSI.jpg",
+  "shaderTexture": "shader/texture/ZrX1XKtShSI.jpg",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ],
+  "updatedAt": "2025-02-24T17:20:39.388Z",
+  "uploader": "DisneyMusicVEVO"
+}

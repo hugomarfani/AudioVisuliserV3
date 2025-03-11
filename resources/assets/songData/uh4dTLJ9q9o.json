@@ -1,0 +1,37 @@
+{
+    "audioPath": "audio/uh4dTLJ9q9o.mp3",
+    "background_prompts": [],
+    "backgrounds": [],
+    "colours": [
+        "#FFD700",
+        "#800080",
+        "#00FFFF",
+        "#FFA500",
+        "#008000",
+        "#800080"
+    ],
+    "colours_reason": [
+        "\n\n```\nColor 1: #FFD700\nColor 2: #800080\nColor 3: #00FFFF\nColor 4: #FFA500\nColor 5: #008000\n```\n\nColor 1 reason:  The lyrics mention \"lava\" which is often depicted as a fiery orange color.\nColor 2: #800080 reason: The lyrics mention \"stone\" which can be a dark gray or purple color.\nColor 3 reason: The lyrics mention \"sea\" which is often depicted as a turquoise or cyan color.\nColor 4 reason: The lyrics mention \"dreams\" which can be associated with a warm, golden color like orange.\nColor 5 reason: The lyrics mention \"earth\" which can be associated with a green color.\n\n\n\n"
+    ],
+    "createdAt": "2025-03-08T16:28:14.226Z",
+    "id": "uh4dTLJ9q9o",
+    "images": [
+        "images/uh4dTLJ9q9o/image_1741452206160.png"
+    ],
+    "jacket": "images/uh4dTLJ9q9o/jacket.png",
+    "moods": [],
+    "object_prompts": [],
+    "objects": [],
+    "particleColour": [
+        "255",
+        "255",
+        "255"
+    ],
+    "particles": [],
+    "shaderBackground": "shader/background/uh4dTLJ9q9o.jpg",
+    "shaderTexture": "shader/texture/uh4dTLJ9q9o.jpg",
+    "status": "Yellow",
+    "title": "Disney Music - Lava (Official Lyric Video from \"Lava\")",
+    "updatedAt": "2025-03-08T16:43:26.167Z",
+    "uploader": "DisneyMusicVEVO"
+}

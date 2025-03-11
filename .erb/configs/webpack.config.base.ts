@@ -15,6 +15,10 @@ const configuration: webpack.Configuration = {
   module: {
     rules: [
       {
+        test: /\.node$/,
+        use: 'node-loader'
+      },
+      {
         test: /\.[jt]sx?$/,
         exclude: /node_modules/,
         use: {
@@ -26,6 +30,22 @@ const configuration: webpack.Configuration = {
               module: 'esnext',
             },
           },
+        },
+      },
+      {
+        // Support for MP3 files
+        test: /\.(mp3|wav)$/,
+        type: 'asset/resource',
+        generator: {
+          filename: 'assets/audio/[name][ext]', // Store MP3 files in assets/audio
+        },
+      },
+      {
+        // Support for images (PNG, JPEG, SVG, GIF)
+        test: /\.(png|jpe?g|gif|svg)$/,
+        type: 'asset/resource',
+        generator: {
+          filename: 'assets/images/[name][ext]', // Store images in assets/images
         },
       },
     ],
@@ -43,7 +63,7 @@ const configuration: webpack.Configuration = {
    * Determine the array of extensions that should be used to resolve modules.
    */
   resolve: {
-    extensions: ['.js', '.jsx', '.json', '.ts', '.tsx'],
+    extensions: ['.js', '.jsx', '.json', '.ts', '.tsx', '.css'],
     modules: [webpackPaths.srcPath, 'node_modules'],
     // There is no need to add aliases here, the paths in tsconfig get mirrored
     plugins: [new TsconfigPathsPlugins()],

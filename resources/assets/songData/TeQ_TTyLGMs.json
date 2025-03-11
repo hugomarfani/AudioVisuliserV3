@@ -1,0 +1,56 @@
+{
+    "audioPath": "audio/TeQ_TTyLGMs.mp3",
+    "background_prompts": [
+        ", style: cartoon, characters: a young girl with bright red hair, a talking cat with a mischievous grin, a wise old owl, a friendly dragon with shimmering scales, a magical mushroom house, a starry night sky, action: the girl is pointing at a picture on the wall, the cat is looking at the picture with curiosity, the owl is observing with wisdom, the dragon is playfully blowing smoke rings, the mushroom house is glowing softly, the stars are twinkling.\n\n\ncolour: colourful background, suitable for children and family, style: cartoon, characters: a young girl with bright red hair, a talking cat with a mischievous grin, a wise old owl, a friendly dragon with shimmering scales, a magical mushroom house, a starry night sky, action: the girl is pointing at a picture on the wall, the cat is looking at the picture with curiosity, the owl is observing with wisdom, the dragon is playfully blowing smoke rings, the mushroom house is glowing softly, the stars are twinkling \n",
+        ", style: cartoon, characters: a family of four, a cat, a dog, a bird, a fish, a snail, a rabbit, a mouse, a hamster, a turtle, a lizard, a snake, a spider, a butterfly, a bee, a worm, a snail, a frog, a dragon, a unicorn, a fairy, a gnome, a robot, a spaceship, a castle, a tree, a flower, a rainbow, a sun, a moon, a star, a cloud, a river, a mountain, a volcano, a desert, a forest, a jungle, a beach, an ocean, a city, a house, a car, a bus, a train, a plane, a boat, a bicycle, a skateboard, a swing, a slide, a sandbox, a ball, a book, a toy, a game, a party, a picnic, a celebration, a concert, a festival, a market, a school, a hospital, a library, a museum, a zoo, a park, a playground, a garden, a field, a road, a bridge, a tunnel, a cave, a waterfall, a lake, a pond, a stream, a well, a fountain, a statue, a monument, a building, a sign, a flag, a map, a globe, a telescope, a microscope, a computer, a phone, a television, a radio, a musical instrument, a painting, a sculpture, a photograph, a movie, a book, a story, a dream, a fantasy, a reality, a future, a past, a present, a beginning, an end, a cycle, a journey, a discovery, a creation, a destruction, a transformation, a connection, a separation, a love, a hate, a joy, a sorrow, a hope, a fear, a dream, a reality, a future, a past, a present, a beginning, an end, a cycle, a journey, a discovery, a creation, a destruction, a transformation, a connection, a separation, a love, a hate, a joy, a sorrow, a hope, a fear.\n\n\nEmpty rooms, colourful background, suitable for children and family, cartoon style, a family of four, a cat, a dog, a bird, a fish, a snail, a rabbit, a mouse, a hamster, a turtle, a lizard, a snake, a spider, a",
+        ", style: cartoon, character: a friendly, smiling, anthropomorphic cat wearing a blue hat, holding a microphone, singing, stage: a small, colourful stage with a microphone stand, audience: a group of smiling, diverse children and adults, instruments: a small drum set, a keyboard, a guitar, props: confetti, balloons, streamers, mood: joyful, energetic, celebratory.\n\ncolour: colourful background, suitable for children and family, style: cartoon, character: a friendly, smiling, anthropomorphic cat wearing a blue hat, holding a microphone, singing, stage: a small, colourful stage with a microphone stand, audience: a group of smiling, diverse children and adults, instruments: a small drum set, a keyboard, a guitar, props: confetti, balloons, streamers, mood: joyful, energetic, celebratory \n\n\n"
+    ],
+    "backgrounds": [
+        "Talking to the pictures on the walls$",
+        "Empty rooms$",
+        "Joan$"
+    ],
+    "colours": [
+        "#FFD700",
+        "#800080",
+        "#00FFFF",
+        "#FFA500",
+        "#008000",
+        "#800080",
+        "#00FFFF",
+        "#FFA500",
+        "#008000"
+    ],
+    "colours_reason": [
+        "\n\n```\nColor 1: #FFD700\nColor 2: #800080\nColor 3: #00FFFF\nColor 4: #FFA500\nColor 5: #008000\n```\n\nColor 1 reason:  The lyrics mention \"Rihanna,\" a famous singer known for her association with the color gold.\nColor 2: #800080 reason: The lyrics mention \"Joan,\" a name often associated with the color purple.\nColor 3: #00FFFF reason: The lyrics mention \"bike around the halls,\" suggesting a youthful and vibrant energy, often associated with the color cyan.\nColor 4: #FFA500 reason: The lyrics mention \"companies overdue,\" suggesting a sense of urgency and potential financial strain, often associated with the color orange.\nColor 5: #008000 reason: The lyrics mention \"pictures on the walls,\" suggesting a sense of history and tradition, often associated with the color green.\n\n\n\n\n"
+    ],
+    "createdAt": "2025-02-23T13:01:20.255Z",
+    "id": "TeQ_TTyLGMs",
+    "images": [
+        "images/Do You Want to Build a Snowman/letitgo.jpg"
+    ],
+    "jacket": "images/Do You Want to Build a Snowman/letitgo.jpg",
+    "moods": [],
+    "object_prompts": [
+        "\n\n* **Song Title:** \"The Sound of Silence\" by Simon & Garfunkel\n* **Mood:** melancholic, introspective, haunting\n* **Setting:** dimly lit, dusty attic, cobwebs, old furniture, single bare bulb hanging from the ceiling\n* **Characters:** two figures, silhouetted against the single light source, one playing a guitar, the other listening intently\n* **Details:** worn leather armchair, antique gramophone, stacks of old books, faded photographs on the walls, a sense of forgotten memories\n\nThe Sound of Silence, melancholic, introspective, haunting, dimly lit, dusty attic, cobwebs, old furniture, single bare bulb hanging from the ceiling, two figures, silhouetted against the single light source, one playing a guitar, the other listening intently, worn leather armchair, antique gramophone, stacks of old books, faded photographs on the walls, a sense of forgotten memories \n\n\n",
+        "\n\n* **Song Title:** \"The Sound of Silence\" by Simon & Garfunkel\n* **Mood:** melancholic, introspective, haunting\n* **Setting:** a foggy, deserted city street at night, streetlights casting long, distorted shadows\n* **Characters:** two lone figures, silhouetted against the streetlights, walking away from each other\n* **Style:** dark, moody, cinematic, reminiscent of film noir\n* **Color Palette:** muted tones of blue, gray, and purple, with a hint of orange from the streetlights\n* **Composition:** asymmetrical, with the figures off-center, creating a sense of unease\n\nThe Sound of Silence, melancholic, introspective, haunting, a foggy, deserted city street at night, streetlights casting long, distorted shadows, two lone figures, silhouetted against the streetlights, walking away from each other, dark, moody, cinematic, reminiscent of film noir, muted tones of blue, gray, and purple, with a hint of orange from the streetlights, asymmetrical, with the figures off-center, creating a sense of unease \n\n\n",
+        "\n\n* **Song Title:** \"The Sound of Silence\" by Simon & Garfunkel\n* **Mood:** melancholic, introspective, haunting\n* **Setting:** a foggy, moonlit forest, bare trees, fallen leaves\n* **Characters:** a lone figure, shrouded in shadow, standing beneath a towering oak tree, holding a guitar\n* **Style:** dark, atmospheric, surreal, reminiscent of Edward Hopper\n\nThe Sound of Silence, melancholic, introspective, haunting, a foggy, moonlit forest, bare trees, fallen leaves, a lone figure, shrouded in shadow, standing beneath a towering oak tree, holding a guitar, dark, atmospheric, surreal, reminiscent of Edward Hopper \n\n\n"
+    ],
+    "objects": [
+        "pictures on the walls$",
+        "bike$",
+        "snowman$"
+    ],
+    "particles": ["snowflakes", "musicNotes"],
+    "status": "Yellow",
+    "title": "Do You Want to Build a Snowman? (From \"Frozen\"/Sing-Along)",
+    "shaderBackground": "shader/background/TeQ_TTyLGMs.jpg",
+    "shaderTexture": "shader/texture/TeQ_TTyLGMs.jpg",
+    "particleColour": [
+      "255",
+      "255",
+      "255"
+    ],
+    "updatedAt": "2025-02-23T13:01:20.257Z",
+    "uploader": "assets"
+}

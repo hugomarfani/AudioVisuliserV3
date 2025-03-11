@@ -1,0 +1,37 @@
+{
+  "id": "SR6iYWJxHqs",
+  "title": "Bruno Mars - Grenade (Official Music Video)",
+  "uploader": "Bruno Mars",
+  "audioPath": "audio/SR6iYWJxHqs.mp3",
+  "jacket": "images/SR6iYWJxHqs/jacket.png",
+  "images": [
+    "images/SR6iYWJxHqs/jacket.png"
+  ],
+  "moods": [],
+  "status": "Green",
+  "colours": [
+    "#FFD700",
+    "#800080",
+    "#008000",
+    "#FFC0CB",
+    "#0000FF",
+    "#800080"
+  ],
+  "colours_reason": [
+    "\n\n```\nColor 1: #FFD700\nColor 2: #800080\nColor 3: #008000\nColor 4: #FFC0CB\nColor 5: #0000FF\n\nColor 1 reason: The lyric \"You tossed it in the trash\" evokes the image of a bright yellow trash can, a common sight in many households.\nColor 2: #800080\nColor 3 reason: The lyric \"I'd catch a grenade for you\" implies a scene of intense conflict, where the green smoke from the grenade would be visible.\nColor 4 reason: The lyric \"Mad woman, bad woman\" suggests a woman who is angry and possibly dressed in a pink or magenta outfit, a color often associated with femininity and anger.\nColor 5 reason: The lyric \"You watched me burn down in flames\" evokes the image of a dark blue fire, a color often associated with destruction and pain. \n```\n\n\n\nLet me know if you'd like me to analyze another song!\n"
+  ],
+  "objects": [],
+  "object_prompts": [],
+  "particles": [],
+  "backgrounds": [],
+  "background_prompts": [],
+  "shaderBackground": "shader/background/SR6iYWJxHqs.jpg",
+  "shaderTexture": "shader/texture/SR6iYWJxHqs.jpg",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ],
+  "createdAt": "2025-03-08T16:35:12.470Z",
+  "updatedAt": "2025-03-11T10:19:38.897Z"
+}

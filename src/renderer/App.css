@@ -2,27 +2,30 @@
  * @NOTE: Prepend a `~` to css file paths that are in your node_modules
  *        See https://github.com/webpack-contrib/sass-loader#imports
  */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 body {
   position: relative;
-  color: white;
   height: 100vh;
-  background: linear-gradient(
+  /* background: linear-gradient(
     200.96deg,
     #fedc2a -29.09%,
     #dd5789 51.77%,
     #7a2c9e 129.35%
-  );
+  ); */
   font-family: sans-serif;
   overflow-y: hidden;
-  display: flex;
+  /* display: flex; */
   justify-content: center;
   align-items: center;
 }
 
-button {
-  background-color: white;
+/* button {
   padding: 10px 20px;
-  border-radius: 10px;
+  border-radius: 100px;
   border: none;
   appearance: none;
   font-size: 1.3rem;
@@ -30,8 +33,8 @@ button {
     0px 18px 88px -4px rgba(24, 39, 75, 0.14);
   transition: all ease-in 0.1s;
   cursor: pointer;
-  opacity: 0.9;
-}
+  opacity: 1;
+} */
 
 button:hover {
   transform: scale(1.05);
@@ -59,4 +62,128 @@ a:hover {
   justify-content: center;
   align-items: center;
   margin: 20px 0;
+}
+
+.particle-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none; /* Allow clicks to pass through to elements below */
+}
+
+.converter-container {
+  margin: 20px auto;
+  max-width: 600px;
+  padding: 20px;
+}
+
+.youtube-input {
+  width: 70%;
+  padding: 8px;
+  margin-right: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.convert-button {
+  padding: 8px 16px;
+  background-color: #ff0000;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.convert-button:hover {
+  background-color: #cc0000;
+}
+
+.status-message {
+  margin-top: 15px;
+  padding: 10px;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.1);
+  text-align: center;
+}
+
+/* Remove or comment out the old styles */
+/* .particles-page, .aiden-page {
+  ...
+} */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Remove these classes */
+.curtain,
+.curtain-left,
+.curtain-right,
+.visualization-page,
+.visualization-content,
+.player-container {
+  /* Remove all these classes */
+}
+
+.page-transition {
+  opacity: 0;
+  transform: scale(0.98);
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+}
+
+.page-transition.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.visualization-title {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+  transition-delay: 0.2s;
+}
+
+.visualization-title.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.player-wrapper {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+  transition-delay: 0.4s;
+}
+
+.player-wrapper.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Apple-inspired Modal Styles */
+.apple-modal-backdrop {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.apple-card {
+  border-radius: 20px;
+  box-shadow: 0px 8px 30px rgba(0, 0, 0, 0.12);
+  background-color: white;
+  overflow: hidden;
+}
+
+.apple-button {
+  border-radius: 50px;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
 }

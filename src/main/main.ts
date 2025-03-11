@@ -9,11 +9,46 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
+import { exec, spawn, execSync } from 'child_process';
+import os from 'os';
+import fs from 'fs';
+import { promisify } from 'util';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
+import initDatabase from '../database/init';
+import { UserDB } from '../database/models/User';
+import { db } from '../database/config';
+import { Song, saveSongAsJson } from '../database/models/Song';
+import { downloadYoutubeAudio } from '../youtube/youtubeToMP3';
+import {
+  downloadYoutubeAudio as downloadYoutubeAudioWav,
+  getYoutubeMetadata,
+} from '../youtube/youtubeToWav';
+import { mainPaths, getResourcePath } from './paths';
+import { registerImageHandlers } from './ipc/imageHandlers';
+import HueService from './HueService';
+
+// Add this near the top of the file
+// Ensure this app is only running one instance
+const gotTheLock = app.requestSingleInstanceLock();
+let windowCreated = false;
+
+if (!gotTheLock) {
+  console.log('Another instance is already running - quitting this one');
+  app.quit();
+} else {
+  // Someone tried to run a second instance, focus our window instead
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+      console.log('Second instance attempted to start - focusing existing window');
+    }
+  });
+}
 
 class AppUpdater {
   constructor() {
@@ -25,10 +60,709 @@ class AppUpdater {
 
 let mainWindow: BrowserWindow | null = null;
 
+const ps1Path = mainPaths.ps1Path;
+const exePath = mainPaths.llmWhisperPath;
+const SDPath = mainPaths.SDPath;
+
+// Initialize Hue Service
+const hueService = new HueService();
+
+registerImageHandlers();
+
+// Define the possible progress steps for tracking
+const progressSteps = {
+  whisper: 'Finished Whisper',
+  llm: 'Finished LLM',
+  stableDiffusion: 'Finished Stable Diffusion',
+  aiSetup: 'Finished AI Setup',
+  statusExtraction: 'Finished Status Extraction',
+  colourExtraction: 'Finished Colour Extraction',
+  particleExtraction: 'Finished Particle Extraction',
+  objectExtraction: 'Finished Object Extraction',
+  backgroundExtraction: 'Finished Background Extraction',
+  objectPrompts: 'Finished Object Prompts',
+  backgroundPrompts: 'Finished Background Prompts',
+  jsonStorage: 'Finished Json Storage',
+  imageBack1: 'Finished background_prompts_1',
+  imageBack2: 'Finished background_prompts_2',
+  imageBack3: 'Finished background_prompts_3',
+  imageObj1: 'Finished object_prompts_1',
+  imageObj2: 'Finished object_prompts_2',
+  imageObj3: 'Finished object_prompts_3',
+};
+
+// Helper function to parse stdout and track progress
+function trackProgressFromStdout(data: Buffer, sender: Electron.WebContents, operationId: string) {
+  const output = data.toString();
+  console.log(`📜 stdout: ${output}`);
+
+  // Check for each progress step
+  Object.entries(progressSteps).forEach(([key, message]) => {
+    if (output.includes(message)) {
+      const progressData = {
+        operationId,
+        step: key,
+        message: message,
+        completed: true
+      };
+      console.log("Sending progress update:", progressData);
+      // Send with explicit event name
+      sender.send('ai-progress-update', progressData);
+    }
+  });
+}
+
+// Track active child processes
+const activeProcesses: { [key: string]: ReturnType<typeof spawn> } = {};
+
+// General purpose function to run AI processes with tracking
+function runAIProcessWithTracking(
+  command: string,
+  args: string[],
+  sender: Electron.WebContents,
+  operationId: string,
+  expectedSteps: string[]
+) {
+  // Initialize all expected steps as not completed
+  expectedSteps.forEach(step => {
+    const progressData = {
+      operationId,
+      step,
+      message: `Waiting for ${step}...`,
+      completed: false
+    };
+    console.log("Sending initial step:", progressData);
+    // Use explicit event name
+    sender.send('ai-progress-update', progressData);
+  });
+
+  // Start the process
+  const process = spawn(command, args);
+
+  // Store the process with its operationId
+  activeProcesses[operationId] = process;
+
+  process.stdout.on('data', (data) => {
+    trackProgressFromStdout(data, sender, operationId);
+  });
+
+  process.stderr.on('data', (data) => {
+    const errorMessage = data.toString();
+    console.error(`⚠️ stderr: ${errorMessage}`);
+    const errorData = {
+      operationId,
+      error: errorMessage
+    };
+    console.log("Sending error:", errorData);
+    sender.send('ai-error', errorData);
+  });
+
+  process.on('close', (code) => {
+    console.log(`✅ Process exited with code ${code}`);
+    const completeData = {
+      operationId,
+      exitCode: code
+    };
+    console.log("Sending process complete:", completeData);
+    sender.send('ai-process-complete', completeData);
+
+    // Remove from active processes when done
+    delete activeProcesses[operationId];
+
+    return code;
+  });
+}
+
+ipcMain.on('reload-window', (event) => {
+  const win = BrowserWindow.getFocusedWindow();
+  if (win) win.reload();
+});
+
 ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
   console.log(msgTemplate(arg));
   event.reply('ipc-example', msgTemplate('pong'));
+});
+
+ipcMain.handle('user:create', async (_, user) => {
+  return UserDB.create(user);
+});
+
+ipcMain.handle('user:getAll', async () => {
+  return UserDB.getAll();
+});
+
+ipcMain.handle('user:getById', async (_, id) => {
+  return UserDB.getById(id);
+});
+
+ipcMain.handle('user:update', async (_, user) => {
+  return UserDB.update(user);
+});
+
+ipcMain.handle('user:delete', async (_, id) => {
+  return UserDB.delete(id);
+});
+
+ipcMain.handle('fetch-songs', async () => {
+  try {
+    const songs = await Song.findAll({
+      order: [['createdAt', 'DESC']],
+    });
+    // console.log('Fetched songs:', JSON.stringify(songs, null, 2));
+    return songs;
+  } catch (error) {
+    console.error('Error fetching songs:', error);
+    throw error;
+  }
+});
+
+// In your main.ts or preload.ts
+ipcMain.handle('open-file-dialog', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile'],
+    filters: [{ name: 'Images', extensions: ['jpg', 'png', 'gif', 'jpeg'] }]
+  });
+  return result;
+});
+
+ipcMain.handle('add-song', async (_event, songData) => {
+  try {
+    const song = await Song.create(songData);
+    return song;
+  } catch (error) {
+    console.error('Error adding song:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('merge-asset-path', async (_, pathToAdd) => {
+  return getResourcePath('assets',pathToAdd);
+});
+
+ipcMain.handle('reload-songs', async () => {
+  try {
+    await initDatabase();
+    // const songs = await Song.findAll({
+    //   order: [['createdAt', 'DESC']],
+    // });
+    // console.log('Reloaded songs:', JSON.stringify(songs, null, 2));
+    // return songs;
+  } catch (error) {
+    console.error('Error reloading songs:', error);
+    throw error;
+  }
+});
+
+// ipcMain.handle("download-mp3", async (event, url) => {
+//   try {
+//     const result = await downloadYoutubeAudio(url);
+//     return result;
+//   } catch (error) {
+//     console.error("Error in download-mp3 handler:", error);
+//     throw error;
+//   }
+// });
+
+ipcMain.handle('redownload-mp3', async (_, songId) => {
+  try {
+    const url = "https://www.youtube.com/watch?v=" + songId;
+    const id = await downloadYoutubeAudioWav(url, true);
+    // const { title, artist, thumbnailPath } = await getYoutubeMetadata(url);
+    // console.log(
+    //   `Redownloaded WAV with id: ${id}, title: ${title}, artist: ${artist}, thumbnail: ${thumbnailPath}`,
+    // );
+    return id;
+  } catch (error) {
+    console.error('Error in redownload-wav handler:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('download-wav', async (_, url) => {
+  try {
+    const id = await downloadYoutubeAudioWav(url, false);
+    const { title, artist, thumbnailPath } = await getYoutubeMetadata(url);
+    console.log(
+      `Downloaded WAV with id: ${id}, title: ${title}, artist: ${artist}, thumbnail: ${thumbnailPath}`,
+    );
+    // create song entry in database
+    // temporarily assign random status
+    const statuses = ['Blue', 'Yellow', 'Red', 'Green'];
+    const randomStatus: 'Blue' | 'Yellow' | 'Red' | 'Green' = statuses[
+      Math.floor(Math.random() * statuses.length)
+    ] as 'Blue' | 'Yellow' | 'Red' | 'Green';
+
+    const song = await Song.create({
+      id: id,
+      title: title,
+      uploader: artist,
+      audioPath: 'audio/' + id + '.mp3',
+      jacket: thumbnailPath, // Use the downloaded thumbnail path instead of icon.png
+      images: [thumbnailPath],
+      moods: [],
+      status: randomStatus,
+      colours: [],
+      colours_reason: [],
+      objects: [],
+      object_prompts: [],
+      backgrounds: [],
+      background_prompts: [],
+      particles: [],
+      particleColour: ["255", "255", "255"],
+      shaderBackground: '',
+      shaderTexture: '',
+      // shaderBackground: 'shader/background/'+ id + '.jpg',
+      // shaderTexture: 'shader/texture/'+ id + '.jpg',
+    });
+    saveSongAsJson(song);
+    console.log('Song entry created:', song);
+    return id;
+  } catch (error) {
+    console.error('Error in download-wav handler:', error);
+    throw error;
+  }
+});
+
+// Replace existing run-whisper handler
+ipcMain.handle('run-whisper', (event, songId, operationId = null) => {
+  console.log('Running whisper with songId:', songId, "with exePath:", exePath);
+
+  // Use the provided operationId or generate one if not provided
+  const actualOperationId = operationId || `whisper-${songId}-${Date.now()}`;
+  console.log(`Using operationId: ${actualOperationId}`);
+
+  const expectedSteps = ['aiSetup', 'whisper'];
+
+  runAIProcessWithTracking(
+    'powershell',
+    [
+      '-ExecutionPolicy',
+      'Bypass',
+      '-Command',
+      `& { . '${ps1Path}'; & ${exePath} -e -w --song ${songId}; }`,
+    ],
+    event.sender,
+    actualOperationId,
+    expectedSteps
+  );
+
+  return actualOperationId;
+});
+
+// Add the function to build Gemma command with options
+function buildGemmaCommand(songId: string, options: Record<string, boolean>) {
+  let command = `${exePath} -e -l -s ${songId}`;
+
+  // Add flags based on options
+  if (options.extractColour) command += ' -c';
+  if (options.extractParticle) command += ' -p';
+  if (options.extractObject) command += ' -o';
+  if (options.extractBackground) command += ' -b';
+  if (options.generateObjectPrompts) command += ' --generateObjectPrompts';
+  if (options.generateBackgroundPrompts) command += ' --generateBackgroundPrompts';
+  if (options.extractStatus) command += ' --status';
+  if (options.all) command += ' --all';
+
+  if (options.rerunWhisper) command = `${exePath} -e -w -s ${songId}`;
+  return command;
+}
+
+// Keep the existing simple Gemma handler (without options) for backward compatibility
+ipcMain.handle('run-gemma', (event, songId, operationId = null) => {
+  console.log('Running Gemma with songId:', songId);
+
+  // Use the provided operationId or generate one if not provided
+  const actualOperationId = operationId || `gemma-${songId}-${Date.now()}`;
+  console.log(`Using operationId: ${actualOperationId}`);
+
+  const expectedSteps = [
+    'aiSetup',
+    'statusExtraction', 'colourExtraction', 'particleExtraction',
+    'objectExtraction', 'backgroundExtraction',
+    'objectPrompts', 'backgroundPrompts',
+    'jsonStorage', 'llm'
+  ];
+
+  runAIProcessWithTracking(
+    'powershell',
+    [
+      '-ExecutionPolicy',
+      'Bypass',
+      '-Command',
+      `& { . '${ps1Path}'; & ${exePath} -e -l -s ${songId} --all; }`,
+    ],
+    event.sender,
+    actualOperationId,
+    expectedSteps
+  );
+
+  return actualOperationId;
+});
+
+// Add new handler with options
+ipcMain.handle('run-gemma-with-options', (event, { songId, options, operationId = null }) => {
+  console.log('Running Gemma with options:', songId, options);
+
+  const command = buildGemmaCommand(songId, options);
+
+  // Use the provided operationId or generate one if not provided
+  const actualOperationId = operationId || `gemma-options-${songId}-${Date.now()}`;
+  console.log(`Using operationId: ${actualOperationId}`);
+
+  // Determine which steps to expect based on the options
+  const expectedSteps = ['aiSetup'];
+
+  if (options.rerunWhisper) {
+    expectedSteps.push('whisper');
+  }
+  if (options.extractColour || options.all) {
+    expectedSteps.push('colourExtraction');
+  }
+  if (options.extractParticle || options.all) {
+    expectedSteps.push('particleExtraction');
+  }
+  if (options.extractObject || options.all) {
+    expectedSteps.push('objectExtraction');
+  }
+  if (options.extractBackground || options.all) {
+    expectedSteps.push('backgroundExtraction');
+  }
+  if (options.generateObjectPrompts || options.all) {
+    expectedSteps.push('objectPrompts');
+  }
+  if (options.generateBackgroundPrompts || options.all) {
+    expectedSteps.push('backgroundPrompts');
+  }
+  if (options.extractStatus || options.all) {
+    expectedSteps.push('statusExtraction');
+  }
+
+  expectedSteps.push('jsonStorage');
+  expectedSteps.push('llm');
+
+  runAIProcessWithTracking(
+    'powershell',
+    [
+      '-ExecutionPolicy',
+      'Bypass',
+      '-Command',
+      `& { . '${ps1Path}'; & ${command}; }`,
+    ],
+    event.sender,
+    actualOperationId,
+    expectedSteps
+  );
+
+  return actualOperationId;
+});
+
+// Add the Stable Diffusion handler
+ipcMain.handle('run-stable-diffusion', (event, songId: string, operationId = null) => {
+  console.log('Running Stable Diffusion with songId:', songId);
+
+  const sdPathStr = SDPath.toString();
+
+  // Use the provided operationId or generate one if not provided
+  const actualOperationId = operationId || `sd-${songId}-${Date.now()}`;
+  console.log(`Using operationId: ${actualOperationId}`);
+
+  // const expectedSteps = ['stableDiffusion', 'jsonStorage'];
+  const expectedSteps = ['aiSetup', 'imageBack1', 'imageBack2', 'imageBack3',
+    'imageObj1', 'imageObj2', 'imageObj3', 'stableDiffusion'];
+
+  runAIProcessWithTracking(
+    'powershell',
+    [
+      '-ExecutionPolicy',
+      'Bypass',
+      '-Command',
+      `& { . '${ps1Path}'; & ${sdPathStr} -e --songId ${songId}; }`,
+    ],
+    event.sender,
+    actualOperationId,
+    expectedSteps
+  );
+
+  return actualOperationId;
+});
+
+ipcMain.on('run-gemma-test', (event) => {
+  console.log(`Running Gemma test with ${ps1Path} and ${exePath}`);
+
+  const gemmaCommand = `${exePath} -e -l --all `;
+
+  // running using spawn -> real time output
+  const process = spawn('powershell', [
+    '-ExecutionPolicy',
+    'Bypass',
+    '-Command',
+    `& { . '${ps1Path}'; & ${gemmaCommand} ;}`,
+  ]);
+
+  process.stdout.on('data', (data) => {
+    console.log(`📜 stdout: ${data.toString()}`);
+  });
+
+  process.stderr.on('data', (data) => {
+    console.error(`⚠️ stderr: ${data.toString()}`);
+  });
+
+  process.on('close', (code) => {
+    console.log(`✅ Process exited with code ${code}`);
+    event.reply('run-gemma-test-reply', `Process exited with code ${code}`);
+  });
+});
+
+// Add the delete-song IPC handler
+ipcMain.handle('delete-song', async (_, songId) => {
+  console.log(`Attempting to delete song with ID: ${songId}`);
+  try {
+    // 1. Delete the song from database
+    const deletedSong = await Song.destroy({
+      where: { id: songId }
+    });
+
+    if (!deletedSong) {
+      console.error(`Song with ID ${songId} not found in database`);
+      return { success: false, error: `Song with ID ${songId} not found` };
+    }
+
+    // 2. Delete all associated files
+    const filesToDelete = [
+      `audio/${songId}.mp3`,
+      `lyrics/${songId}.txt`,
+      `songData/${songId}.json`,
+      `shader/background/${songId}.jpg`,
+      `shader/texture/${songId}.jpg`
+    ];
+
+    // Handle file deletions
+    for (const filePath of filesToDelete) {
+      try {
+        const fullPath = getResourcePath('assets', filePath);
+        // Check if file exists before attempting to delete
+        if (fs.existsSync(fullPath)) {
+          await fs.promises.unlink(fullPath);
+          console.log(`Deleted file: ${fullPath}`);
+        }
+      } catch (error) {
+        console.warn(`Could not delete file ${filePath}:`, error);
+        // Continue with other deletions even if one fails
+      }
+    }
+
+    // 3. Delete the images directory if it exists
+    const imagesDir = getResourcePath('assets', `images/${songId}`);
+    try {
+      if (fs.existsSync(imagesDir)) {
+        // Recursive directory deletion
+        await fs.promises.rm(imagesDir, { recursive: true, force: true });
+        console.log(`Deleted directory: ${imagesDir}`);
+      }
+    } catch (error) {
+      console.warn(`Could not delete directory ${imagesDir}:`, error);
+    }
+
+    console.log(`Successfully deleted song with ID: ${songId} and all associated files`);
+    return { success: true };
+  } catch (error) {
+    console.error(`Error deleting song with ID ${songId}:`, error);
+    return { success: false, error: `Failed to delete song: ${error instanceof Error ? error.message : String(error)}` };
+  }
+});
+
+// Common ports used by the application
+const appPorts = [
+  1212
+];
+
+// Function to terminate all active processes
+function terminateAllProcesses() {
+  // First kill all tracked child processes
+  Object.entries(activeProcesses).forEach(([id, process]) => {
+    console.log(`Terminating process: ${id}`);
+    try {
+      if (process.killed === false) {
+        // Force kill to ensure termination
+        if (process.platform === 'win32') {
+          // On Windows, use taskkill to forcefully terminate
+          try {
+            execSync(`taskkill /pid ${process.pid} /T /F`, { stdio: 'ignore' });
+          } catch (e) {
+            // If taskkill fails, try the standard kill
+            process.kill('SIGKILL');
+          }
+        } else {
+          // On Unix-like systems
+          process.kill('SIGKILL');
+        }
+      }
+    } catch (err) {
+      console.error(`Error killing process ${id}:`, err);
+    }
+  });
+
+  // Clean up ports used by the application
+  cleanupPorts();
+}
+
+// Function to clean up ports
+function cleanupPorts() {
+  console.log('Cleaning up ports...');
+  try {
+    if (process.platform === 'win32') {
+      // Windows
+      appPorts.forEach(port => {
+        try {
+          console.log(`Checking port ${port}...`);
+          // Find process using this port
+          const findCmd = `netstat -ano | findstr :${port}`;
+          let output;
+          try {
+            output = execSync(findCmd, { encoding: 'utf8' });
+          } catch (e) {
+            // No process using this port, which is fine
+            return;
+          }
+          if (output) {
+            const lines = output.split('\n');
+            const pids = new Set();
+            lines.forEach(line => {
+              const parts = line.trim().split(/\s+/);
+              if (parts.length > 4) {
+                const pid = parts[4];
+                // Make sure the PID is valid (a positive number)
+                if (/^[1-9]\d*$/.test(pid)) {
+                  pids.add(pid);
+                }
+              }
+            });
+            // Kill each process found
+            pids.forEach(pid => {
+              console.log(`Killing process ${pid} using port ${port}`);
+              try {
+                execSync(`taskkill /F /PID ${pid}`, { stdio: 'ignore' });
+                console.log(`Successfully terminated PID ${pid}`);
+              } catch (killError) {
+                console.error(`Failed to kill process ${pid}:`, killError);
+              }
+            });
+          }
+        } catch (error) {
+          console.error(`Error checking port ${port}:`, error);
+        }
+      });
+    } else if (process.platform === 'darwin') {
+      // macOS
+      appPorts.forEach(port => {
+        try {
+          console.log(`Checking port ${port}...`);
+          // Find process using this port
+          const cmd = `lsof -i :${port} -t`;
+          let pids;
+          try {
+            pids = execSync(cmd, { encoding: 'utf8' }).trim();
+          } catch (e) {
+            // No process using this port
+            return;
+          }
+          if (pids) {
+            pids.split('\n').forEach(pid => {
+              // Make sure the PID is valid (not empty and a number > 0)
+              if (pid && /^[1-9]\d*$/.test(pid)) {
+                console.log(`Killing process ${pid} using port ${port}`);
+                try {
+                  execSync(`kill -9 ${pid}`, { stdio: 'ignore' });
+                  console.log(`Successfully terminated PID ${pid}`);
+                } catch (killError) {
+                  console.error(`Failed to kill process ${pid}:`, killError);
+                }
+              }
+            });
+          }
+        } catch (error) {
+          console.error(`Error checking port ${port}:`, error);
+        }
+      });
+    } else {
+      // Linux
+      appPorts.forEach(port => {
+        try {
+          console.log(`Checking port ${port}...`);
+          // Find process using this port
+          const cmd = `fuser -n tcp ${port} 2>/dev/null`;
+          let pids;
+          try {
+            pids = execSync(cmd, { encoding: 'utf8' }).trim();
+          } catch (e) {
+            // No process using this port
+            return;
+          }
+          if (pids) {
+            pids.split(' ').forEach(pid => {
+              // Make sure the PID is valid (not empty and a number > 0)
+              if (pid && /^[1-9]\d*$/.test(pid)) {
+                console.log(`Killing process ${pid} using port ${port}`);
+                try {
+                  execSync(`kill -9 ${pid}`, { stdio: 'ignore' });
+                  console.log(`Successfully terminated PID ${pid}`);
+                } catch (killError) {
+                  console.error(`Failed to kill process ${pid}:`, killError);
+                }
+              }
+            });
+          }
+        } catch (error) {
+          console.error(`Error checking port ${port}:`, error);
+        }
+      });
+    }
+    console.log('Port cleanup completed.');
+  } catch (error) {
+    console.error('Error in port cleanup:', error);
+  }
+}
+
+// Add window control handlers
+ipcMain.on('window-control', (_, command) => {
+  if (!mainWindow) return;
+
+  switch (command) {
+    case 'minimize':
+      mainWindow.minimize();
+      break;
+    case 'toggle-fullscreen':
+      if (mainWindow.isFullScreen()) {
+        mainWindow.setFullScreen(false);
+      } else {
+        mainWindow.setFullScreen(true);
+      }
+      break;
+    case 'close':
+      console.log('Close button clicked. Beginning shutdown sequence...');
+
+      // Terminate all processes and release ports
+      terminateAllProcesses();
+
+      // Close database connections
+      db.close((err) => {
+        if (err) {
+          console.error('Error closing database:', err);
+        } else {
+          console.log('Database connection closed');
+        }
+
+        setTimeout(() => {
+          // Force exit after a short delay to ensure cleanup completes
+          console.log('Forcing application exit...');
+          app.exit(0);
+        }, 500);
+      });
+      break;
+    default:
+      console.log(`Unknown window command: ${command}`);
+  }
 });
 
 if (process.env.NODE_ENV === 'production') {
@@ -40,7 +774,7 @@ const isDebug =
   process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
 
 if (isDebug) {
-  require('electron-debug')();
+  require('electron-debug')({ showDevTools: false }); // this is to not show dev tools when app starts
 }
 
 const installExtensions = async () => {
@@ -57,6 +791,15 @@ const installExtensions = async () => {
 };
 
 const createWindow = async () => {
+  // Only create a window if one doesn't already exist
+  if (mainWindow !== null || windowCreated) {
+    console.log('Window already exists or is being created, skipping creation');
+    return;
+  }
+
+  console.log('Creating application window...');
+  windowCreated = true;
+
   if (isDebug) {
     await installExtensions();
   }
@@ -74,10 +817,13 @@ const createWindow = async () => {
     width: 1024,
     height: 728,
     icon: getAssetPath('icon.png'),
+    title: 'App (Database: Initializing...)',
+    fullscreen: true, // set to fullscreen
     webPreferences: {
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
+      webSecurity: false,
     },
   });
 
@@ -96,6 +842,7 @@ const createWindow = async () => {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+    windowCreated = false;
   });
 
   const menuBuilder = new MenuBuilder(mainWindow);
@@ -124,14 +871,49 @@ app.on('window-all-closed', () => {
   }
 });
 
+// Move the activate handler registration outside of app.whenReady() to avoid duplicate registrations
+app.removeAllListeners('activate');
+app.on('activate', () => {
+  console.log('App activated, checking if we need a new window');
+  if (mainWindow === null && !windowCreated) createWindow();
+});
+
 app
   .whenReady()
-  .then(() => {
-    createWindow();
-    app.on('activate', () => {
-      // On macOS it's common to re-create a window in the app when the
-      // dock icon is clicked and there are no other windows open.
-      if (mainWindow === null) createWindow();
-    });
+  .then(async () => {
+    try {
+      await initDatabase();
+      console.log('✨ Database system ready!');
+      if (mainWindow) {
+        mainWindow.setTitle('App (Database: Connected)');
+      }
+    } catch (error) {
+      console.error('💥 Failed to initialize database:', error);
+      if (mainWindow) {
+        mainWindow.setTitle('App (Database: Error)');
+      }
+    }
+
+    // Only create a window if one doesn't already exist
+    if (mainWindow === null && !windowCreated) {
+      console.log('App ready - creating initial window');
+      createWindow();
+    }
+
+    // Remove the nested activate handler to prevent duplication
   })
   .catch(console.log);
+
+app.on('before-quit', () => {
+  console.log('Application is about to quit...');
+  // Make sure to terminate any running processes and release ports
+  terminateAllProcesses();
+
+  db.close((err) => {
+    if (err) {
+      console.error('Error closing database:', err);
+    } else {
+      console.log('Database connection closed');
+    }
+  });
+});

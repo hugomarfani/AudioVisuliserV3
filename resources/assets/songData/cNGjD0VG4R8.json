@@ -1,0 +1,30 @@
+{
+  "id": "cNGjD0VG4R8",
+  "title": "Ed Sheeran - Perfect",
+  "uploader": "LatinHype",
+  "audioPath": "audio/cNGjD0VG4R8.mp3",
+  "jacket": "images/perfect/perfect.png",
+  "images": [
+    "images/perfect/night.gif"
+  ],
+  "moods": [],
+  "status": "Blue",
+  "colours": [],
+  "colours_reason": [],
+  "objects": [],
+  "object_prompts": [],
+  "particles": [
+    "stars"
+  ],
+  "backgrounds": [],
+  "background_prompts": [],
+  "shaderBackground": "shader/background/cNGjD0VG4R8.jpg",
+  "shaderTexture": "shader/texture/cNGjD0VG4R8.jpg",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ],
+  "createdAt": "2025-03-03T12:11:56.376Z",
+  "updatedAt": "2025-03-06T20:07:01.529Z"
+}
