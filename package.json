@@ -211,7 +211,9 @@
     "asar": true,
     "asarUnpack": [
       "**\\*.{node,dll}",
-      "**/node_modules/sqlite3/**/*"
+      "**/node_modules/sqlite3/**/*",
+      "**/node_modules/node-aead-crypto/**/*",
+      "**/node_modules/node-dtls-client/**/*"
     ],
     "files": [
       "dist",

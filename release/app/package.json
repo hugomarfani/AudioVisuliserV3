@@ -17,6 +17,7 @@
   "dependencies": {
     "@types/sequelize": "^4.28.20",
     "sequelize": "^6.37.6",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "node-dtls-client": "^1.1.1"
   }
 }

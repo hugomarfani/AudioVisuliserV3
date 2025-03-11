@@ -61,22 +61,22 @@ const configuration: webpack.Configuration = {
   externals: {
     'sqlite3': 'commonjs sqlite3',
     'node-aead-crypto': 'commonjs node-aead-crypto',
-    'node-dtls-client': 'commonjs node-dtls-client',
-    'phea': 'commonjs phea',
+    // 'node-dtls-client': 'commonjs node-dtls-client',
+    // 'phea': 'commonjs phea',
   },
 
   plugins: [
-    new webpack.EnvironmentPlugin({
-     NODE_ENV: 'development',
-    }),
+    // new webpack.EnvironmentPlugin({
+    //  NODE_ENV: 'development',
+    // }),
 
-    new webpack.DefinePlugin({
-     __nccwpck_require__: "require"
-    }),
+    // new webpack.DefinePlugin({
+    //  __nccwpck_require__: "require"
+    // }),
 
-    new webpack.LoaderOptionsPlugin({
-     debug: true,
-    }),
+    // new webpack.LoaderOptionsPlugin({
+    //  debug: true,
+    // }),
 
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
