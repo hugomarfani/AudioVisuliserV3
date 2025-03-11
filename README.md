@@ -13,6 +13,12 @@ This project provides an affordable, AI-powered sensory room designed to support
 
 ### Shader Visualiser
 
+![ezgif-7490fcba69ce7e](https://github.com/user-attachments/assets/ae00afd0-27ca-423f-93c2-6d845fa9484a)
+
+The shader visual allows you to interact with the particles simply by moving your mouse (or hand gestures with motion input, COMING SOON!). The particles read from a specific texture and will make move ments according to the music at the same time.
+
+You can also set colour, background and particle shape yourself from the settings in each song.
+
 ### Hue Integration
 Our integration with the Philips Hue Entertainment API provides an immersive experience, synchronising room lighting in real-time with on-screen visuals and audio. Lights dynamically respond to music beats, vocals, and directional cues—for example, on-screen activity occurring on the right side will trigger more intense lighting effects on the corresponding side of the room, creating an engaging and interactive environment.
 
