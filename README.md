@@ -20,6 +20,14 @@
 
 </div>
 
+## Project Overview
+
+### Particle Visualiser
+
+### Shader Visualiser
+
+### Hue Integration
+
 ## Install
 
 Clone the repo and install dependencies:
