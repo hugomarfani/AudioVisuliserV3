@@ -60,10 +60,10 @@ std::string statusPrompt =
     "4. Green: calm and happy emotions";
 
 std::string particleSelectionPrompt =
-    "Analyze the lyrics of the song provided and choose 1 particle effect from "
+    "Analyze the lyrics of the song provided and choose 1-3 particle effect from "
     "the following list,"
     "that best fits the mood and theme of the song. Output the name of the "
-    "selected particle effect and no other word. Here is the list of particle "
+    "selected particle effect, in the format $particle$, and no other word. Here is the list of particle "
     "effects:";
 
 std::string lyricsPrompt = "These are the lyrics for";
@@ -537,15 +537,14 @@ class LLM {
 
   void extractStatus() {
     std::cout << "Extracting status from lyrics" << std::endl;
-    std::string statusPrompt = lyricsSetup + statusPrompt + "\n";
+    std::string zoneExtractionPrompt = lyricsSetup + statusPrompt + "\n";
+    std::string statusOutput;
     try{
-      std::string statusOutput = generate(statusPrompt, 100);
-      outputMap[STATUS] = getOptionsFromLlmOutput(statusOutput);
+      statusOutput = generate(zoneExtractionPrompt, 100);
     } catch (const std::bad_alloc& e) {
       std::cerr << "Bad allocation error: " << e.what() << std::endl;
       std::cerr << "Trying with shorter lyrics" << std::endl;
-      std::string statusOutput = generate(shorterLyricsSetup + statusPrompt, 100);
-      outputMap[STATUS] = getOptionsFromLlmOutput(statusOutput);
+      statusOutput = generate(shorterLyricsSetup + statusPrompt, 100);
     }
 
     outputMap[STATUS] = getOptionsFromLlmOutput(statusOutput);
@@ -561,10 +560,19 @@ class LLM {
     std::vector<std::string> particleList =
         getParticleEffectFromJson(particleListFilePath);
     std::string particlePrompt = lyricsSetup + particleSelectionPrompt + "\n";
+    std::string shorterPrompt = shorterLyricsSetup + particleSelectionPrompt + "\n";
     for (const auto &particle : particleList) {
       particlePrompt += particle + "\n";
+      shorterPrompt += particle + "\n";
     }
-    std::string particleOutput = generate(particlePrompt, 100);
+    std::string particleOutput;
+    try{
+      particleOutput = generate(particlePrompt, 100);
+    } catch (const std::bad_alloc& e) {
+      std::cerr << "Bad allocation error: " << e.what() << std::endl;
+      std::cerr << "Trying with shorter lyrics" << std::endl;
+      particleOutput = generate(shorterPrompt, 100);
+    }
 
     outputMap[PARTICLES] = getOptionsFromLlmOutput(particleOutput);
     if (debug) {
@@ -576,7 +584,14 @@ class LLM {
   void extractObjects() {
     std::cout << "Extracting objects from lyrics" << std::endl;
     std::string objectPrompt = lyricsSetup + objectExtractionPrompt;
-    std::string objectOutput = generate(objectPrompt, 500);
+    std::string objectOutput;
+    try{
+      objectOutput = generate(objectPrompt, 500);
+    } catch (const std::bad_alloc& e) {
+      std::cerr << "Bad allocation error: " << e.what() << std::endl;
+      std::cerr << "Trying with shorter lyrics" << std::endl;
+      objectOutput = generate(shorterLyricsSetup + objectExtractionPrompt, 500);
+    }
     std::vector<std::string> objects = getOptionsFromLlmOutput(objectOutput);
 
     outputMap[OBJECTS] = objects;
@@ -594,7 +609,14 @@ class LLM {
   void extractBackgrounds() {
     std::cout << "Extracting backgrounds from lyrics" << std::endl;
     std::string backgroundPrompt = lyricsSetup + backgroundExtractionPrompt;
-    std::string backgroundOutput = generate(backgroundPrompt, 500);
+    std::string backgroundOutput;
+    try {
+      backgroundOutput = generate(backgroundPrompt, 500);
+    } catch (const std::bad_alloc& e) {
+      std::cerr << "Bad allocation error: " << e.what() << std::endl;
+      std::cerr << "Trying with shorter lyrics" << std::endl;
+      backgroundOutput = generate(shorterLyricsSetup + backgroundExtractionPrompt, 500);
+    }
     std::vector<std::string> backgrounds =
         getOptionsFromLlmOutput(backgroundOutput);
 
