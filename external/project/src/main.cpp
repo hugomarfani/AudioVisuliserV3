@@ -1,5 +1,3 @@
-
-
 #include <algorithm>
 #include <boost/program_options.hpp>
 #include <filesystem>
@@ -62,7 +60,7 @@ std::string statusPrompt =
     "4. Green: calm and happy emotions";
 
 std::string particleSelectionPrompt =
-    "Analyze the lyrics of the song provided and choose 1-3 particle effect from "
+    "Analyze the lyrics of the song provided and choose 1 particle effect from "
     "the following list,"
     "that best fits the mood and theme of the song. Output the name of the "
     "selected particle effect and no other word. Here is the list of particle "
@@ -445,6 +443,7 @@ class LLM {
   const std::string lyrics;
   const bool debug;
   std::string lyricsSetup;
+  std::string shorterLyricsSetup;
   std::string outputFilePath;
 
   std::unordered_map<LLMOutputType, std::vector<std::string>> outputMap;
@@ -495,6 +494,8 @@ class LLM {
     std::cout << "Lyrics: " << lyrics << std::endl;
     std::cout << "Output File Path: " << outputFilePath << std::endl;
     lyricsSetup = lyricsPrompt + " " + songName + "\n" + lyrics;
+    std::string truncatedLyrics = lyrics.substr(0, std::min(size_t(500), lyrics.length()));
+    shorterLyricsSetup = lyricsPrompt + " " + songName + "\n" + truncatedLyrics;
     outputMap = std::unordered_map<LLMOutputType, std::vector<std::string>>();
     retrieveCurrentOutput();
   }
@@ -502,7 +503,14 @@ class LLM {
   void extractColours() {
     std ::cout << "Extracting colours from lyrics" << std::endl;
     std::string colourPrompt = lyricsSetup + colourExtractionPrompt;
-    std::string colourOutput = generate(colourPrompt, 500);
+    std::string colourOutput;
+    try{
+      colourOutput = generate(colourPrompt, 500);
+    } catch (const std::bad_alloc& e) {
+      std::cerr << "Bad allocation error: " << e.what() << std::endl;
+      std::cerr << "Trying with shorter lyrics" << std::endl;
+      colourOutput = generate(shorterLyricsSetup + colourExtractionPrompt, 500);
+    }
 
     std::vector<std::string> colours;
     // regex to match hex colours
@@ -530,7 +538,15 @@ class LLM {
   void extractStatus() {
     std::cout << "Extracting status from lyrics" << std::endl;
     std::string statusPrompt = lyricsSetup + statusPrompt + "\n";
-    std::string statusOutput = generate(statusPrompt, 100);
+    try{
+      std::string statusOutput = generate(statusPrompt, 100);
+      outputMap[STATUS] = getOptionsFromLlmOutput(statusOutput);
+    } catch (const std::bad_alloc& e) {
+      std::cerr << "Bad allocation error: " << e.what() << std::endl;
+      std::cerr << "Trying with shorter lyrics" << std::endl;
+      std::string statusOutput = generate(shorterLyricsSetup + statusPrompt, 100);
+      outputMap[STATUS] = getOptionsFromLlmOutput(statusOutput);
+    }
 
     outputMap[STATUS] = getOptionsFromLlmOutput(statusOutput);
 
@@ -927,31 +943,32 @@ int main(int argc, char *argv[]) {
   }
 
   // ================== Stable Diffusion Pipeline ==================
-  if (vm.count("stable-diffusion")) {
-    std::cout << "Starting Stable Diffusion Pipeline" << std::endl;
-    try {
-      // std::string device = getModelDevice();
-      std::string device = "CPU";
-      std::cout << "starting stable diffusion" << std::endl;
-      std::cout << "model path: " << stableDiffusionModelPath << std::endl;
-      std::cout << "device: " << device << std::endl;
-      ov::genai::Text2ImagePipeline t2iPipe(stableDiffusionModelPath, device);
-      std::cout << "pipe created" << std::endl;
-      // StableDiffusion stableDiffusion(t2iPipe, device, songId, debug);
-      // stableDiffusion.generateImage(vm["prompt"].as<std::string>());
-      finishStableDiffusion();
-    } catch (const std::exception &e) {
-      std::cerr << "Error: " << e.what() << std::endl;
-      cleanup();
-      finishStableDiffusion();
-      return 1;
-    } catch (...) {
-      std::cerr << "Error: Unknown error" << std::endl;
-      cleanup();
-      finishStableDiffusion();
-      return 1;
-    }
-  }
+  // DEPRECATED
+  // if (vm.count("stable-diffusion")) {
+  //   std::cout << "Starting Stable Diffusion Pipeline" << std::endl;
+  //   try {
+  //     // std::string device = getModelDevice();
+  //     std::string device = "CPU";
+  //     std::cout << "starting stable diffusion" << std::endl;
+  //     std::cout << "model path: " << stableDiffusionModelPath << std::endl;
+  //     std::cout << "device: " << device << std::endl;
+  //     ov::genai::Text2ImagePipeline t2iPipe(stableDiffusionModelPath, device);
+  //     std::cout << "pipe created" << std::endl;
+  //     // StableDiffusion stableDiffusion(t2iPipe, device, songId, debug);
+  //     // stableDiffusion.generateImage(vm["prompt"].as<std::string>());
+  //     finishStableDiffusion();
+  //   } catch (const std::exception &e) {
+  //     std::cerr << "Error: " << e.what() << std::endl;
+  //     cleanup();
+  //     finishStableDiffusion();
+  //     return 1;
+  //   } catch (...) {
+  //     std::cerr << "Error: Unknown error" << std::endl;
+  //     cleanup();
+  //     finishStableDiffusion();
+  //     return 1;
+  //   }
+  // }
 
   // ================== Whisper Pipeline ==================
   if (vm.count("whisper")) {

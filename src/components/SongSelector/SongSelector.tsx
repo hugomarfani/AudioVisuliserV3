@@ -589,6 +589,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
           onClose={() => {
             setIsSongDetailsOpen(false);
             setSelectedSongId(null);
+            reload();
           }}
           songId={selectedSongId}
         />

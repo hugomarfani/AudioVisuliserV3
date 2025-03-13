@@ -50,6 +50,7 @@ if (!gotTheLock) {
   });
 }
 
+
 class AppUpdater {
   constructor() {
     log.transports.file.level = 'info';

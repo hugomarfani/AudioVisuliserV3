@@ -1,4 +1,4 @@
-const ytdlp = require('yt-dlp-exec');
+
 const ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
 const fs = require('fs');
@@ -9,6 +9,9 @@ const { mainPaths, getResourcePath} = require('../main/paths');
 const ffmpegPath = mainPaths.ffmpegPath;
 const ffprobePath = mainPaths.ffprobePath;
 
+process.env.YOUTUBE_DL_DIR = "./resources";
+
+const ytdlp = require('yt-dlp-exec');
 
 // Verify FFmpeg files exist
 if (!fs.existsSync(ffmpegPath)) {

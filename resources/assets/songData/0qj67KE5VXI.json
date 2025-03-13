@@ -1,28 +1,28 @@
 {
-  "id": "0qj67KE5VXI",
-  "title": "Troy, Gabriella - Breaking Free (From \"High School Musical\")",
-  "uploader": "DisneyMusicVEVO",
-  "audioPath": "audio/0qj67KE5VXI.mp3",
-  "jacket": "images/0qj67KE5VXI/jacket.png",
-  "images": [
-    "images/0qj67KE5VXI/image_1741452244800.png"
-  ],
-  "moods": [],
-  "status": "Yellow",
-  "colours": [],
-  "colours_reason": [],
-  "objects": [],
-  "object_prompts": [],
-  "particles": [],
-  "backgrounds": [],
-  "background_prompts": [],
-  "shaderBackground": "shader/background/0qj67KE5VXI.jpg",
-  "shaderTexture": "shader/texture/0qj67KE5VXI.jpg",
-  "particleColour": [
-    "255",
-    "255",
-    "255"
-  ],
-  "createdAt": "2025-03-08T16:24:33.537Z",
-  "updatedAt": "2025-03-08T16:44:04.806Z"
+    "audioPath": "audio/0qj67KE5VXI.mp3",
+    "background_prompts": [],
+    "backgrounds": [],
+    "colours": [],
+    "colours_reason": [],
+    "createdAt": "2025-03-08T16:24:33.537Z",
+    "id": "0qj67KE5VXI",
+    "images": [
+        "images/0qj67KE5VXI/image_1741452244800.png"
+    ],
+    "jacket": "images/0qj67KE5VXI/jacket.png",
+    "moods": [],
+    "object_prompts": [],
+    "objects": [],
+    "particleColour": [
+        "255",
+        "255",
+        "255"
+    ],
+    "particles": [],
+    "shaderBackground": "shader/background/0qj67KE5VXI.jpg",
+    "shaderTexture": "shader/texture/0qj67KE5VXI.jpg",
+    "status": "Yellow",
+    "title": "Troy, Gabriella - Breaking Free (From \"High School Musical\")",
+    "updatedAt": "2025-03-08T16:44:04.806Z",
+    "uploader": "DisneyMusicVEVO"
 }
