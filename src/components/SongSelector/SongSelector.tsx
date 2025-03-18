@@ -2,18 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FilterButton from './FilterButton';
 import SongCard from './SongCard';
+import ScreenRecorder from '../ScreenRecorder/ScreenRecorder';
 import SongDetails from '../SongDetails/SongDetails';
 import Library from '../Library/Library';
-import Database from '../Database/Database'; // (Optional: currently not rendered)
 import HueSettings from '../HueSettings/HueSettings';
-import { SongModel } from '../../database/models/Song'; // Import Song type if needed
 import { useSongs } from '../../hooks/useSongs';
 import { useHue } from '../../hooks/useHue';
 import colors from '../../theme/colors';
 import axios from 'axios';
 import {
   FaMusic,
-  FaDatabase,
   FaSync,
   FaChevronLeft,
   FaChevronRight,
@@ -504,6 +502,13 @@ const SongSelector: React.FC<SongSelectorProps> = ({
           </button>
         </div>
       )}
+
+      {/* Screen Recorder */}
+      <ScreenRecorder
+        devices={devices}
+        accessToken={accessToken}
+        onTrackSelect={onTrackSelect}
+      />
 
       {/* Shader Warning Popup */}
       {showShaderWarning && (

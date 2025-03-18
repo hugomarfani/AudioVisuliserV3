@@ -9,12 +9,12 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, dialog, desktopCapturer, session } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import { exec, spawn, execSync } from 'child_process';
 import os from 'os';
-import fs from 'fs';
+import fs, { unlink } from 'fs';
 import { promisify } from 'util';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
@@ -22,17 +22,15 @@ import initDatabase from '../database/init';
 import { UserDB } from '../database/models/User';
 import { db } from '../database/config';
 import { Song, saveSongAsJson } from '../database/models/Song';
-import { downloadYoutubeAudio } from '../youtube/youtubeToMP3';
 import {
   downloadYoutubeAudio as downloadYoutubeAudioWav,
   getYoutubeMetadata,
+  saveAudio
 } from '../youtube/youtubeToWav';
 import { mainPaths, getResourcePath } from './paths';
 import { registerImageHandlers } from './ipc/imageHandlers';
 import HueService from './HueService';
 
-// Add this near the top of the file
-// Ensure this app is only running one instance
 const gotTheLock = app.requestSingleInstanceLock();
 let windowCreated = false;
 
@@ -92,12 +90,10 @@ const progressSteps = {
   imageObj3: 'Finished object_prompts_3',
 };
 
-// Helper function to parse stdout and track progress
 function trackProgressFromStdout(data: Buffer, sender: Electron.WebContents, operationId: string) {
   const output = data.toString();
   console.log(`📜 stdout: ${output}`);
 
-  // Check for each progress step
   Object.entries(progressSteps).forEach(([key, message]) => {
     if (output.includes(message)) {
       const progressData = {
@@ -107,16 +103,15 @@ function trackProgressFromStdout(data: Buffer, sender: Electron.WebContents, ope
         completed: true
       };
       console.log("Sending progress update:", progressData);
-      // Send with explicit event name
       sender.send('ai-progress-update', progressData);
     }
   });
 }
 
-// Track active child processes
+
 const activeProcesses: { [key: string]: ReturnType<typeof spawn> } = {};
 
-// General purpose function to run AI processes with tracking
+
 function runAIProcessWithTracking(
   command: string,
   args: string[],
@@ -124,7 +119,6 @@ function runAIProcessWithTracking(
   operationId: string,
   expectedSteps: string[]
 ) {
-  // Initialize all expected steps as not completed
   expectedSteps.forEach(step => {
     const progressData = {
       operationId,
@@ -133,7 +127,6 @@ function runAIProcessWithTracking(
       completed: false
     };
     console.log("Sending initial step:", progressData);
-    // Use explicit event name
     sender.send('ai-progress-update', progressData);
   });
 
@@ -173,6 +166,11 @@ function runAIProcessWithTracking(
     return code;
   });
 }
+
+ipcMain.handle('get-sources', async () => {
+  return desktopCapturer.getSources({ types: ['window', 'screen'] });
+});
+
 
 ipcMain.on('reload-window', (event) => {
   const win = BrowserWindow.getFocusedWindow();
@@ -264,6 +262,31 @@ ipcMain.handle('reload-songs', async () => {
 //     throw error;
 //   }
 // });
+
+ipcMain.handle('save-audio-recording', async (_, { blob, fileName }) => {
+  try {
+    // Get the path to resources/assets/audio
+    const audioDir = path.join(
+        app.isPackaged ? process.resourcesPath : app.getAppPath(),
+        'resources', 'assets', 'audio'
+    );
+    
+    if (!fs.existsSync(audioDir)) {
+        fs.mkdirSync(audioDir, { recursive: true });
+    }
+    
+    const filePath = path.join(audioDir, fileName);
+    fs.writeFileSync(filePath, Buffer.from(blob));
+
+    // convert to mp3 and wav
+    await saveAudio(filePath, fileName);
+    
+    return { success: true};
+  } catch (error) {
+      console.error('Failed to save audio recording:', error);
+      return { success: false, error: error.message };
+  }
+});
 
 ipcMain.handle('redownload-mp3', async (_, songId) => {
   try {
@@ -901,7 +924,16 @@ app
       createWindow();
     }
 
-    // Remove the nested activate handler to prevent duplication
+    session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+      desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
+        // Grant access to the first screen found.
+        callback({ video: sources[0], audio: 'loopback' })
+      })
+      // If true, use the system picker if available.
+      // Note: this is currently experimental. If the system picker
+      // is available, it will be used and the media request handler
+      // will not be invoked.
+    }, { useSystemPicker: true }) 
   })
   .catch(console.log);
 

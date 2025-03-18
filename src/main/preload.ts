@@ -1,6 +1,6 @@
 // Disable no-unused-vars, broken for spread args
 /* eslint no-unused-vars: off */
-import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, IpcRendererEvent, desktopCapturer } from 'electron';
 
 export type Channels =
   | 'ipc-example'
@@ -18,9 +18,9 @@ export type Channels =
   | 'save-image'
   | 'open-file-dialog'
   | 'delete-image'
-  | 'ai-progress-update'  // New channel for progress updates
-  | 'ai-error'           // New channel for error reporting
-  | 'ai-process-complete' // New channel for process completion
+  | 'ai-progress-update'
+  | 'ai-error'          
+  | 'ai-process-complete' 
   | 'redownload-mp3'
   | 'hue-discover'
   | 'hue-register'
@@ -34,7 +34,8 @@ export type Channels =
   | 'hue-save-settings'
   | 'hue-get-settings'
   | 'hue-update-cursor'
-  | 'hue-toggle-cursor-control';
+  | 'hue-toggle-cursor-control'
+  | 'get-sources';
 
 const electronHandler = {
   ipcRenderer: {
@@ -97,6 +98,9 @@ const electronHandler = {
       ipcRenderer.invoke('merge-asset-path', path),
     downloadWav: (url: string) => ipcRenderer.invoke('download-wav', url),
     downloadMp3: (url: string) => ipcRenderer.invoke('download-mp3', url),
+    saveAudioRecording: (data: {blob: Blob, fileName: string}) =>
+      ipcRenderer.invoke('save-audio-recording', data),
+
   },
   hue: {
     discoverBridges: () => ipcRenderer.invoke('hue-discover'),
@@ -158,6 +162,9 @@ const electronHandler = {
     removeBeatListener: (callback) => {
       ipcRenderer.removeListener('hue:beatDetected', callback);
     },
+  },
+  recorder: {
+    sourceIds: () => {ipcRenderer.invoke('get-sources');}
   },
 };
 

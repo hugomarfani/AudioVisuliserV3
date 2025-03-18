@@ -51,34 +51,9 @@ const downloadYoutubeAudio = async (url, onlyMp3) => {
       'prefer-free-formats': true,
     });
 
-    // Convert directly to 16kHz WAV
-    if (!onlyMp3) {
-      await new Promise((resolve, reject) => {
-        ffmpeg(tempFile)
-          .audioFrequency(16000)
-          .toFormat('wav')
-          .on('error', (err) => {
-            reject(new Error(`FFmpeg conversion error: ${err.message}`));
-          })
-          .on('end', resolve)
-          .save(outputFile);
-      });
-    }
+    saveAudio(tempFile, onlyMp3);
 
-    // Convert to MP3
-    await new Promise((resolve, reject) => {
-      ffmpeg(tempFile)
-      .audioBitrate('320k')
-      .toFormat('mp3')
-      .on('error', (err) => {
-        reject(new Error(`FFmpeg conversion error: ${err.message}`));
-      })
-      .on('end', resolve)
-      .save(mp3OutputFile);
-    });
 
-    // Cleanup temp file
-    fs.unlinkSync(tempFile);
 
     return videoId;
   } catch (error) {
@@ -92,6 +67,38 @@ const downloadYoutubeAudio = async (url, onlyMp3) => {
     throw error;
   }
 };
+
+const saveAudio = async (tempFile, onlyMp3) => {
+ // Convert directly to 16kHz WAV
+ if (!onlyMp3) {
+  await new Promise((resolve, reject) => {
+    ffmpeg(tempFile)
+      .audioFrequency(16000)
+      .toFormat('wav')
+      .on('error', (err) => {
+        reject(new Error(`FFmpeg conversion error: ${err.message}`));
+      })
+      .on('end', resolve)
+      .save(outputFile);
+    });
+  }
+
+  // Convert to MP3
+  await new Promise((resolve, reject) => {
+    ffmpeg(tempFile)
+    .audioBitrate('320k')
+    .toFormat('mp3')
+    .on('error', (err) => {
+      reject(new Error(`FFmpeg conversion error: ${err.message}`));
+    })
+    .on('end', resolve)
+    .save(mp3OutputFile);
+  });
+
+  // Cleanup temp file
+  fs.unlinkSync(tempFile);
+}
+
 
 const getYoutubeMetadata = async (url) => {
   try {
@@ -156,4 +163,4 @@ const getYoutubeMetadata = async (url) => {
   }
 };
 
-module.exports = { downloadYoutubeAudio, getYoutubeMetadata };
+module.exports = { downloadYoutubeAudio, getYoutubeMetadata, saveAudio };
