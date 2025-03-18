@@ -75,6 +75,12 @@ Start the app in the `dev` environment:
 npm start
 ```
 
+Then in a seperate terminal
+
+```bash
+npm run server
+```
+
 ## Packaging for Production
 
 To package apps for the local platform:
