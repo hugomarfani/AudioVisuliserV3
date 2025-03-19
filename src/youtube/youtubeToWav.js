@@ -51,7 +51,7 @@ const downloadYoutubeAudio = async (url, onlyMp3) => {
       'prefer-free-formats': true,
     });
 
-    saveAudio(tempFile, onlyMp3);
+    saveAudio(tempFile, outputFile, mp3OutputFile, onlyMp3);
 
 
 
@@ -68,7 +68,8 @@ const downloadYoutubeAudio = async (url, onlyMp3) => {
   }
 };
 
-const saveAudio = async (tempFile, onlyMp3) => {
+const saveAudio = async (tempFile, outputFile, mp3OutputFile, onlyMp3) => {
+  console.log('Converting audio to WAV and MP3...');
  // Convert directly to 16kHz WAV
  if (!onlyMp3) {
   await new Promise((resolve, reject) => {

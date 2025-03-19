@@ -216,7 +216,7 @@ ipcMain.handle('fetch-songs', async () => {
   }
 });
 
-// In your main.ts or preload.ts
+
 ipcMain.handle('open-file-dialog', async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openFile'],
@@ -224,6 +224,32 @@ ipcMain.handle('open-file-dialog', async () => {
   });
   return result;
 });
+
+// Add this handler to open file dialog
+ipcMain.handle('select-audio-file', async () => {
+  try {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [
+        { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg', 'm4a', 'flac', 'webm'] }
+      ],
+      title: 'Select Audio File'
+    });
+    
+    if (canceled || filePaths.length === 0) {
+      return { cancelled: true };
+    }
+    
+    return { 
+      cancelled: false, 
+      filePath: filePaths[0]
+    };
+  } catch (error) {
+    console.error('Error selecting audio file:', error);
+    throw error;
+  }
+});
+
 
 ipcMain.handle('add-song', async (_event, songData) => {
   try {
@@ -263,8 +289,17 @@ ipcMain.handle('reload-songs', async () => {
 //   }
 // });
 
+ipcMain.handle('link-new-mp3', async (_, songId, filePath) => {
+  const pathToAdd = `audio/${songId}`;
+  const mp3Path = getResourcePath('assets',pathToAdd+".mp3");
+  const wavPath = getResourcePath('assets',pathToAdd+".wav");
+  await saveAudio(filePath, wavPath, mp3Path, false);
+  return { mp3Path, wavPath };
+});
+
 ipcMain.handle('save-audio-recording', async (_, { blob, fileName }) => {
   try {
+    console.log('Saving audio recording:', fileName);
     // Get the path to resources/assets/audio
     const audioDir = path.join(
         app.isPackaged ? process.resourcesPath : app.getAppPath(),
@@ -276,10 +311,11 @@ ipcMain.handle('save-audio-recording', async (_, { blob, fileName }) => {
     }
     
     const filePath = path.join(audioDir, fileName);
-    fs.writeFileSync(filePath, Buffer.from(blob));
+    fs.writeFileSync(filePath, blob);
 
     // convert to mp3 and wav
-    await saveAudio(filePath, fileName);
+    console.log('Converting to mp3 and wav');
+    await saveAudio(filePath, false);
     
     return { success: true};
   } catch (error) {

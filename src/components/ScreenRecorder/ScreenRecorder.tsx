@@ -16,8 +16,11 @@ const ScreenRecorder = () => {
     const [error, setError] = useState('');
     const videoRef = useRef(null);
     const mediaRecorderRef = useRef(null);
+    const chunksRef = useRef([]); // Use ref instead of state for chunks
+    
+    // Keep the state for UI updates if needed
     const [recordedChunks, setRecordedChunks] = useState([]);
-
+    
     const handleStream = (stream) => {
         if (videoRef.current) {
             videoRef.current.srcObject = stream;
@@ -30,9 +33,7 @@ const ScreenRecorder = () => {
             
             mediaRecorder.ondataavailable = (event) => {
                 console.log('Data Available:', event.data);
-                if (event.data.size > 0) {
-                    setRecordedChunks((prev) => [...prev, event.data]);
-                }
+                setRecordedChunks((prev) => [...prev, event.data]);
             };
             // mediaRecorder.onstop = () => {
             //     console.log('Media Recorder Stopped');
@@ -105,24 +106,34 @@ const ScreenRecorder = () => {
     }
 
     const handleAudioStream = (audioStream, fullStream) => {
+        // Clear previous chunks
+        chunksRef.current = [];
+        
         if (videoRef.current) {
             videoRef.current.srcObject = fullStream;
             videoRef.current.onloadedmetadata = () => videoRef.current.play();
             videoRef.current.muted = true;
         }
+        
         const mediaRecorder = new MediaRecorder(audioStream, { mimeType: 'audio/webm' });
         mediaRecorderRef.current = mediaRecorder;
-        console.log('Media Recorder:', mediaRecorder);
+        
         mediaRecorder.ondataavailable = (event) => {
             if (event.data.size > 0) {
-                setRecordedChunks((prev) => [...prev, event.data]);
+                // Add directly to ref
+                chunksRef.current.push(event.data);
+                // Also update state for UI if needed
+                setRecordedChunks([...chunksRef.current]);
             }
         };
+        
         mediaRecorder.onstop = () => {
             console.log('Media Recorder Stopped');
-            console.log('Recorded Chunks:', recordedChunks);
-            saveRecording();
+            console.log('Recorded Chunks:', chunksRef.current);
+            saveRecording(chunksRef.current); // Pass the ref value directly
         }
+        
+        // Request data more frequently (every 1 second)
         mediaRecorder.start();
         setLoading(false);
     }
@@ -134,14 +145,14 @@ const ScreenRecorder = () => {
         await getResource();
     };
 
-    const saveRecording = async () => {
-        if (recordedChunks.length === 0) {
+    const saveRecording = async (chunks = chunksRef.current) => {
+        if (chunks.length === 0) {
             setError('No recording data available');
             setLoading(false);
             return;
         }
 
-        const blob = new Blob(recordedChunks, {
+        const blob = new Blob(chunks, {
             type: 'audio/webm'
         });
 
@@ -159,6 +170,25 @@ const ScreenRecorder = () => {
         a.click();
 
         // Save to file
+        // const reader = new FileReader();
+        // reader.onload = async () => {
+        //     if (reader.result) {
+        //         try {
+        //             const result = await window.electron.fileSystem.saveAudioRecording({
+        //                 buffer: reader.result,
+        //                 fileName: fileName
+        //             });
+        //             if (result) {
+        //                 console.log('File saved successfully');
+        //             }
+        //         } catch (e) {
+        //             console.error(e);
+        //             setError('Failed to save recording');
+        //         }
+        //     }
+        //     setRecordedChunks([]);
+        // };
+        // reader.readAsArrayBuffer(blob);
         // const result = await window.electron.fileSystem.saveAudioRecording({ blob, fileName });
 
         // Clean up
@@ -166,6 +196,7 @@ const ScreenRecorder = () => {
         document.body.removeChild(a);
         
         // Reset recorded chunks
+        chunksRef.current = [];
         setRecordedChunks([]);
     };
 

@@ -16,57 +16,11 @@ const WhisperRunner: React.FC<WhisperRunnerProps> = ({ song, songId, refetch }) 
     jsonStorage: 'Saving Results'
   };
 
-  // Define the available Whisper options
-  const whisperOptions = [
-    { 
-      key: 'generateTranscript',
-      label: 'Generate Transcript',
-      flag: '-t',
-      description: 'Generate full transcript from audio'
-    },
-    { 
-      key: 'generateLyrics',
-      label: 'Generate Lyrics',
-      flag: '-l',
-      description: 'Extract lyrics from audio'
-    },
-    { 
-      key: 'useHighAccuracy',
-      label: 'Use High Accuracy Model',
-      flag: '--high-accuracy',
-      description: 'Use larger model for better accuracy (slower)'
-    },
-    { 
-      key: 'forceReprocess',
-      label: 'Force Reprocessing',
-      flag: '--force',
-      description: 'Force reprocessing even if transcript exists'
-    },
-    { 
-      key: 'all',
-      label: 'Run All Features',
-      flag: '--all',
-      description: 'Run all Whisper features'
-    }
-  ];
-
-  // Prepare options for Whisper
-  const prepareWhisperOptions = (selectedOptions: string[]) => {
-    let options: Record<string, boolean> = {};
-    
-    if (selectedOptions.includes('all')) {
-      options = {
-        generateTranscript: true,
-        generateLyrics: true,
-        all: true
-      };
-    } else {
-      selectedOptions.forEach(opt => {
-        options[opt] = true;
-      });
-    }
-    
-    return options;
+  // Default options to use (no user selection needed)
+  const defaultOptions = {
+    generateTranscript: true,
+    generateLyrics: true,
+    useHighAccuracy: true
   };
 
   return (
@@ -76,11 +30,10 @@ const WhisperRunner: React.FC<WhisperRunnerProps> = ({ song, songId, refetch }) 
       refetch={refetch}
       title="Whisper Speech Recognition"
       description="Process audio to extract transcript and lyrics"
-      options={whisperOptions}
+      defaultOptions={defaultOptions}
       progressLabels={progressLabels}
       invokeChannel="run-whisper-with-options"
-      runAllKey="all"
-      prepareOptions={prepareWhisperOptions}
+      hideOptions={true}
     />
   );
 };

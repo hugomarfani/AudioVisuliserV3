@@ -22,6 +22,35 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
   const [jacketImage, setJacketImage] = useState<string>("");
   const [redownloading, setRedownloading] = useState(false);
 
+  const [linkingFile, setLinkingFile] = useState(false);
+
+  const handleLinkAudioFile = async () => {
+    try {
+      setLinkingFile(true);
+      
+      // Open file dialog and get selected path
+      const result = await window.electron.fileSystem.selectAudioFile();
+      
+      if (result.cancelled) {
+        setLinkingFile(false);
+        return;
+      }
+      
+      // Link the selected file to this song
+      await window.electron.fileSystem.linkNewMp3(songId, result.filePath);
+      
+      setLinkingFile(false);
+      alert("Audio file linked successfully!");
+      
+      // Refresh song data
+      refetch();
+    } catch (error) {
+      setLinkingFile(false);
+      console.error("Error linking audio file:", error);
+      alert(`Failed to link audio file: ${error}`);
+    }
+  };
+
   const findImagePath = async (P: string) => {
     const response = await window.electron.fileSystem.mergeAssetPath(P);
     return response;
@@ -198,22 +227,43 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
           </button>
         </div>
 
+        {/* Link New Audio File section */}
+        <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>
+          <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>
+            Link Local Audio File
+          </h3>
+          <p style={{ fontSize: '0.9rem', color: colors.grey2, marginBottom: '1rem' }}>
+            Select a local audio file to use with this song instead of downloading from YouTube.
+          </p>
+          <button
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: colors.green,
+              color: colors.white,
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              marginRight: '10px'
+            }}
+            onClick={handleLinkAudioFile}
+          >
+            Select Audio File
+          </button>
+        </div>
 
-
-        {/*
-
-        DEPRECATED WARNING -> WHISPER NOW DELETES THE WAV FILE AFTER PROCESSING SO NO NEED TO RERUN WHISPER
+        {/* DEPRECATED WARNING -> WHISPER NOW DELETES THE WAV FILE AFTER PROCESSING SO NO NEED TO RERUN WHISPER
         HOWEVER, LEAVING THIS COMMENTED OUT IN CASE WE NEED TO REVERT BACK TO THIS
         THIS WOULD REQUIRE SD.EXE BEING UPDATED WITH THE NEW WHISPER COMMANDS
 
-        Whisper Runner component - add this before LLM Runner
+        Whisper Runner component - add this before LLM Runner */}
         <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>
           <WhisperRunner
             song={song}
             songId={songId}
             refetch={refetch}
           />
-        </div> */}
+        </div>
 
         {/* LLM Runner component - add this before BackgroundSelector */}
         <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>

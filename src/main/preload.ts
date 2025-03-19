@@ -100,6 +100,9 @@ const electronHandler = {
     downloadMp3: (url: string) => ipcRenderer.invoke('download-mp3', url),
     saveAudioRecording: (data: {blob: Blob, fileName: string}) =>
       ipcRenderer.invoke('save-audio-recording', data),
+    linkNewMp3: (songId: string, filePath: string) =>
+      ipcRenderer.invoke('link-new-mp3', songId, filePath),
+    selectAudioFile: () => ipcRenderer.invoke('select-audio-file'),
 
   },
   hue: {
