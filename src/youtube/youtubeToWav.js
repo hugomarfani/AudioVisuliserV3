@@ -52,6 +52,8 @@ const downloadYoutubeAudio = async (url, onlyMp3) => {
     });
 
     saveAudio(tempFile, outputFile, mp3OutputFile, onlyMp3);
+    // Cleanup temp file
+    fs.unlinkSync(tempFile);
 
 
 
@@ -96,8 +98,7 @@ const saveAudio = async (tempFile, outputFile, mp3OutputFile, onlyMp3) => {
     .save(mp3OutputFile);
   });
 
-  // Cleanup temp file
-  fs.unlinkSync(tempFile);
+
 }
 
 

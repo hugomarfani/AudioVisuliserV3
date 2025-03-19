@@ -2,22 +2,7 @@ import React, { useState } from 'react';
 import colors from '../../theme/colors';
 import AIProgressTracker from '../common/AIProgressTracker';
 import { FaSpinner } from 'react-icons/fa';
-
-const GEMMA_PROMPTS = [
-    { id: 'emotions', label: 'Detect Emotions' },
-    { id: 'instruments', label: 'Identify Instruments' },
-    { id: 'genre', label: 'Analyze Genre' },
-    { id: 'structure', label: 'Analyze Song Structure' },
-];
-
-const MOOD_OPTIONS = [
-    { id: 'happy', label: 'Happy' },
-    { id: 'sad', label: 'Sad' },
-    { id: 'energetic', label: 'Energetic' },
-    { id: 'calm', label: 'Calm' },
-    { id: 'romantic', label: 'Romantic' },
-    { id: 'mysterious', label: 'Mysterious' },
-];
+import { useAIProcessTracking } from '../../hooks/useAIProcessTracking';
 
 interface AddSongFormProps {
     onSubmit: (data: { url: string; prompt: string; moods: string[] }) => void;
@@ -27,10 +12,7 @@ const AddCustomSong: React.FC<AddSongFormProps> = ({ onSubmit }) => {
     const [url, setUrl] = useState('');
     const [selectedPrompt, setSelectedPrompt] = useState('');
     const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
-    const [status, setStatus] = useState<string>('');
-    const [isProcessing, setIsProcessing] = useState<boolean>(false);
     const [currentOperationId, setCurrentOperationId] = useState<string | null>(null);
-    const [progressSteps, setProgressSteps] = useState<{ key: string; label: string; completed: boolean }[]>([]);
     const [filePath, setFilePath] = useState<string | null>('');
     
     // New state variables for song metadata
@@ -38,8 +20,31 @@ const AddCustomSong: React.FC<AddSongFormProps> = ({ onSubmit }) => {
     const [artistName, setArtistName] = useState<string>('');
     const [thumbnailPath, setThumbnailPath] = useState<string | null>(null);
     const [selectingThumbnail, setSelectingThumbnail] = useState(false);
-
     const [linkingFile, setLinkingFile] = useState(false);
+
+    // Handle completion of AI processing
+    const handleComplete = (data: any) => {
+        // Reset form fields
+        setSongName('');
+        setArtistName('');
+        setThumbnailPath(null);
+        setFilePath('');
+        
+        // Call onSubmit with the data
+        onSubmit({ url: '', prompt: '', moods: [] });
+    };
+    
+    const {
+        isProcessing,
+        status,
+        progressSteps,
+        startProcessing,
+        setStatus,
+        updateStep
+    } = useAIProcessTracking({
+        operationId: currentOperationId,
+        onComplete: handleComplete
+    });
 
     // Function to select a thumbnail image
     const handleSelectThumbnail = async () => {
@@ -90,97 +95,6 @@ const AddCustomSong: React.FC<AddSongFormProps> = ({ onSubmit }) => {
         }
     };
 
-    // Progress step display names
-    const progressLabels: Record<string, string> = {
-        download: 'Downloading YouTube Audio',
-        converting: 'Converting to WAV Format',
-        aiSetup: 'Preparing AI Environment',
-        whisper: 'Running Speech Recognition'
-    };
-
-    const isValidYouTubeUrl = (url: string) => {
-        const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
-        return youtubeRegex.test(url);
-    };
-
-    // Set up listeners for Whisper progress events when component mounts
-    React.useEffect(() => {
-        let removeProgressListener: (() => void) | undefined;
-        let removeErrorListener: (() => void) | undefined;
-        let removeCompleteListener: (() => void) | undefined;
-
-        const progressListener = (data: any) => {
-            if (data && data.operationId === currentOperationId) {
-                console.log("Progress update received:", data);
-                setProgressSteps(prevSteps => {
-                    const stepIndex = prevSteps.findIndex(step => step.key === data.step);
-
-                    let newSteps;
-                    if (stepIndex >= 0) {
-                        newSteps = [...prevSteps];
-                        newSteps[stepIndex] = {
-                            ...newSteps[stepIndex],
-                            completed: data.completed
-                        };
-                    } else {
-                        newSteps = [
-                            ...prevSteps,
-                            {
-                                key: data.step,
-                                label: progressLabels[data.step] || data.step,
-                                completed: data.completed
-                            }
-                        ];
-                    }
-
-                    return newSteps;
-                });
-            }
-        };
-
-        const errorListener = (data: any) => {
-            if (data && data.operationId === currentOperationId) {
-                setStatus(`Error: ${data.error}`);
-                setIsProcessing(false);
-
-                if (removeProgressListener) removeProgressListener();
-                if (removeErrorListener) removeErrorListener();
-                if (removeCompleteListener) removeCompleteListener();
-            }
-        };
-
-        const completeListener = (data: any) => {
-            if (data && data.operationId === currentOperationId) {
-                setIsProcessing(false);
-                setStatus('Processing completed successfully!');
-
-                // Continue with form submission or other actions
-                onSubmit({ url, prompt: selectedPrompt, moods: selectedMoods });
-                setUrl('');
-                setSelectedPrompt('');
-                setSelectedMoods([]);
-
-                if (removeProgressListener) removeProgressListener();
-                if (removeErrorListener) removeErrorListener();
-                if (removeCompleteListener) removeCompleteListener();
-            }
-        };
-
-        // Set up listeners
-        if (currentOperationId) {
-            removeProgressListener = window.electron.ipcRenderer.on('ai-progress-update', progressListener);
-            removeErrorListener = window.electron.ipcRenderer.on('ai-error', errorListener);
-            removeCompleteListener = window.electron.ipcRenderer.on('ai-process-complete', completeListener);
-        }
-
-        return () => {
-            // Cleanup function
-            if (removeProgressListener) removeProgressListener();
-            if (removeErrorListener) removeErrorListener();
-            if (removeCompleteListener) removeCompleteListener();
-        };
-    }, [currentOperationId, onSubmit, url, selectedPrompt, selectedMoods, progressLabels]);
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
@@ -210,8 +124,7 @@ const AddCustomSong: React.FC<AddSongFormProps> = ({ onSubmit }) => {
         setCurrentOperationId(operationId);
 
         // Initialize processing state
-        setIsProcessing(true);
-        setProgressSteps([
+        startProcessing([
             { key: 'processing', label: 'Processing Audio File', completed: false },
         ]);
         setStatus('Processing audio file...');
@@ -224,46 +137,32 @@ const AddCustomSong: React.FC<AddSongFormProps> = ({ onSubmit }) => {
                 artistName, 
                 thumbnailPath
             );
+
+            const resultId = result.dataValues.id;
             
             // Link the audio file to the song
             await window.electron.ipcRenderer.invoke(
                 'link-new-mp3',
-                result.id,
+                resultId,
                 filePath
             );
             
             // Mark processing complete
-            setProgressSteps(prev => {
-                return prev.map(step =>
-                    step.key === 'processing' ? { ...step, completed: true } : step
-                );
-            });
+            updateStep('processing', true);
 
             setStatus(`Song added successfully! Processing with Whisper...`);
       
             // Run whisper with our operation ID
             await window.electron.ipcRenderer.invoke(
               'run-whisper',
-              result.id,
+              resultId,
               operationId
             );
             
-
-
-            setIsProcessing(false);
-            
-            // Reset form fields
-            setSongName('');
-            setArtistName('');
-            setThumbnailPath(null);
-            setFilePath('');
-            
-            // Call onSubmit with the data
-            onSubmit({ url: '', prompt: '', moods: [] });
+            // The rest will be handled by the hook's event listeners
 
         } catch (error) {
             setStatus(`Error: ${error.message || 'Unknown error occurred'}`);
-            setIsProcessing(false);
             setCurrentOperationId(null);
         }
     };

@@ -4,6 +4,7 @@ import { SongModel } from '../../database/models/Song';
 import colors from '../../theme/colors';
 import AIProgressTracker from '../common/AIProgressTracker';
 import SongSelectionItem from './SongSelectionItem';
+import { useAIProcessTracking, progressLabels } from '../../hooks/useAIProcessTracking';
 
 interface BatchLLMRunnerProps {
   onClose: () => void;
@@ -69,108 +70,38 @@ const llmOptions = [
   }
 ];
 
-// Progress step display names
-const progressLabels: Record<string, string> = {
-  whisper: 'Speech to Text',
-  llm: 'Language Model Processing',
-  stableDiffusion: 'Image Generation',
-  aiSetup: 'AI Setup',
-  statusExtraction: 'Extracting Status',
-  colourExtraction: 'Extracting Colors',
-  particleExtraction: 'Extracting Particles',
-  objectExtraction: 'Extracting Objects',
-  backgroundExtraction: 'Extracting Backgrounds',
-  objectPrompts: 'Generating Object Prompts',
-  backgroundPrompts: 'Generating Background Prompts',
-  jsonStorage: 'Saving Results'
-};
-
 const BatchLLMRunner: React.FC<BatchLLMRunnerProps> = ({ onClose, songs, refetch }) => {
   const [selectedSongIds, setSelectedSongIds] = useState<string[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [currentSongIndex, setCurrentSongIndex] = useState(-1);
-  const [statusMessage, setStatusMessage] = useState('');
   const [currentOperationId, setCurrentOperationId] = useState<string | null>(null);
-  const [progressSteps, setProgressSteps] = useState<{ key: string, label: string, completed: boolean }[]>([]);
-  const [showOptions, setShowOptions] = useState(true);
   const [overallProgress, setOverallProgress] = useState(0);
-
-  // Set up listeners for AI progress events
-  useEffect(() => {
-    let removeProgressListener: (() => void) | undefined;
-    let removeErrorListener: (() => void) | undefined;
-    let removeCompleteListener: (() => void) | undefined;
-    
-    const progressListener = (data: any) => {
-      if (data && data.operationId === currentOperationId) {
-        setProgressSteps(prevSteps => {
-          const stepIndex = prevSteps.findIndex(step => step.key === data.step);
-          
-          let newSteps;
-          if (stepIndex >= 0) {
-            newSteps = [...prevSteps];
-            newSteps[stepIndex] = {
-              ...newSteps[stepIndex],
-              completed: data.completed
-            };
-          } else {
-            newSteps = [
-              ...prevSteps,
-              {
-                key: data.step,
-                label: progressLabels[data.step] || data.step,
-                completed: data.completed
-              }
-            ];
-          }
-          
-          return newSteps;
-        });
-      }
-    };
-
-    const errorListener = (data: any) => {
-      if (data && data.operationId === currentOperationId) {
-        setStatusMessage(`Error processing song ${currentSongIndex + 1}/${selectedSongIds.length}: ${data.error}`);
-        
-        // Move to the next song despite the error
-        processSongs(currentSongIndex + 1);
-        
-        // Clean up current listeners
-        if (removeProgressListener) removeProgressListener();
-        if (removeErrorListener) removeErrorListener();
-        if (removeCompleteListener) removeCompleteListener();
-      }
-    };
-
-    const completeListener = (data: any) => {
-      if (data && data.operationId === currentOperationId) {
-        setStatusMessage(`Completed song ${currentSongIndex + 1}/${selectedSongIds.length}`);
-        
-        // Move to the next song
-        processSongs(currentSongIndex + 1);
-        
-        // Clean up current listeners
-        if (removeProgressListener) removeProgressListener();
-        if (removeErrorListener) removeErrorListener();
-        if (removeCompleteListener) removeCompleteListener();
-      }
-    };
-
-    // Set up listeners if we're processing a song
-    if (currentOperationId) {
-      removeProgressListener = window.electron.ipcRenderer.on('ai-progress-update', progressListener);
-      removeErrorListener = window.electron.ipcRenderer.on('ai-error', errorListener);
-      removeCompleteListener = window.electron.ipcRenderer.on('ai-process-complete', completeListener);
-    }
-
-    return () => {
-      if (removeProgressListener) removeProgressListener();
-      if (removeErrorListener) removeErrorListener();
-      if (removeCompleteListener) removeCompleteListener();
-    };
-  }, [currentOperationId, currentSongIndex, selectedSongIds.length]);
+  const [showOptions, setShowOptions] = useState(true);
+  
+  // Use the AI process tracking hook
+  const handleComplete = (data: any) => {
+    // Move to the next song
+    processSongs(currentSongIndex + 1);
+  };
+  
+  const handleError = (error: string) => {
+    // Log the error and move to the next song despite the error
+    console.error(`Error processing song ${currentSongIndex + 1}:`, error);
+    processSongs(currentSongIndex + 1);
+  };
+  
+  const {
+    isProcessing,
+    status: statusMessage,
+    progressSteps,
+    startProcessing: startAIProcessing,
+    setIsProcessing,
+    setStatus: setStatusMessage,
+  } = useAIProcessTracking({
+    operationId: currentOperationId,
+    onComplete: handleComplete,
+    onError: handleError
+  });
 
   // Track and update the overall progress
   useEffect(() => {
@@ -265,16 +196,12 @@ const BatchLLMRunner: React.FC<BatchLLMRunnerProps> = ({ onClose, songs, refetch
       setCurrentSongIndex(-1);
       setStatusMessage(`Batch processing complete. Processed ${selectedSongIds.length} songs.`);
       setCurrentOperationId(null);
-      setProgressSteps([]);
       refetch();
       return;
     }
 
     // Update the current song index
     setCurrentSongIndex(index);
-    
-    // Reset progress steps for the new song
-    setProgressSteps([]);
     
     // Get the current song ID
     const songId = selectedSongIds[index];
@@ -286,6 +213,9 @@ const BatchLLMRunner: React.FC<BatchLLMRunnerProps> = ({ onClose, songs, refetch
     setStatusMessage(`Processing song ${index + 1}/${selectedSongIds.length}: ${
       songs.find(s => s.id === songId)?.title || songId
     }`);
+    
+    // Initialize processing state with initial steps for this song
+    startAIProcessing([]);
     
     try {
       // Prepare options
@@ -301,13 +231,9 @@ const BatchLLMRunner: React.FC<BatchLLMRunnerProps> = ({ onClose, songs, refetch
         }
       );
       
-      // Note: We don't update anything here as the process will run asynchronously
-      // and we'll receive progress updates via the event listeners
-      
+      // The process will continue via the hook's event listeners
     } catch (error) {
       setStatusMessage(`Error starting process for song ${index + 1}: ${error.message || 'Unknown error'}`);
-      
-      // Move to the next song despite the error
       processSongs(index + 1);
     }
   };
@@ -317,7 +243,6 @@ const BatchLLMRunner: React.FC<BatchLLMRunnerProps> = ({ onClose, songs, refetch
     setCurrentSongIndex(-1);
     setStatusMessage('Processing cancelled');
     setCurrentOperationId(null);
-    setProgressSteps([]);
   };
 
   const selectAllSongs = () => {

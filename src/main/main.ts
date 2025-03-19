@@ -304,10 +304,7 @@ ipcMain.handle('save-audio-recording', async (_, { blob, fileName }) => {
   try {
     console.log('Saving audio recording:', fileName);
     // Get the path to resources/assets/audio
-    const audioDir = path.join(
-        app.isPackaged ? process.resourcesPath : app.getAppPath(),
-        'resources', 'assets', 'audio'
-    );
+    const audioDir = getResourcePath('assets', 'audio');
     
     if (!fs.existsSync(audioDir)) {
         fs.mkdirSync(audioDir, { recursive: true });
@@ -327,25 +324,34 @@ ipcMain.handle('save-audio-recording', async (_, { blob, fileName }) => {
   }
 });
 
-// DEPRECATED: Use download-wav instead
-// ipcMain.handle('redownload-mp3', async (_, songId) => {
-//   try {
-//     const url = "https://www.youtube.com/watch?v=" + songId;
-//     const id = await downloadYoutubeAudioWav(url, true);
-//     // const { title, artist, thumbnailPath } = await getYoutubeMetadata(url);
-//     // console.log(
-//     //   `Redownloaded WAV with id: ${id}, title: ${title}, artist: ${artist}, thumbnail: ${thumbnailPath}`,
-//     // );
-//     return id;
-//   } catch (error) {
-//     console.error('Error in redownload-wav handler:', error);
-//     throw error;
-//   }
-// });
+ipcMain.handle('redownload-mp3', async (_, songId) => {
+  try {
+    const url = "https://www.youtube.com/watch?v=" + songId;
+    const id = await downloadYoutubeAudioWav(url, true);
+    // const { title, artist, thumbnailPath } = await getYoutubeMetadata(url);
+    // console.log(
+    //   `Redownloaded WAV with id: ${id}, title: ${title}, artist: ${artist}, thumbnail: ${thumbnailPath}`,
+    // );
+    return id;
+  } catch (error) {
+    console.error('Error in redownload-wav handler:', error);
+    throw error;
+  }
+});
 
 ipcMain.handle('save-custom-song', async (_, title: string, artist: string, thumbnailPath: string) => {
   try {
-    const song = await makeNewSong(title, artist, thumbnailPath);
+    const id = uuidv4();
+    const imageDir = getResourcePath('assets', 'images', id);
+    if (!fs.existsSync(imageDir)) {
+      fs.mkdirSync(imageDir, { recursive: true });
+    }
+    // copy the image
+    const imageFileName = `jacket.png`;
+    const newImagePath = path.join(imageDir, imageFileName);
+    fs.copyFileSync(thumbnailPath, newImagePath);
+
+    const song = await makeNewSong(id, title, artist);
     saveSongAsJson(song);
     return song;
   } catch (error) {
@@ -354,22 +360,21 @@ ipcMain.handle('save-custom-song', async (_, title: string, artist: string, thum
   }
 })
 
-async function makeNewSong(title: string, artist: string, thumbnailPath: string, ytId?: string) {
+async function makeNewSong(id: string, title: string, artist: string, ytId?: string) {
   // create song entry in database
   // temporarily assign random status
   const statuses = ['Blue', 'Yellow', 'Red', 'Green'];
   const randomStatus: 'Blue' | 'Yellow' | 'Red' | 'Green' = statuses[
     Math.floor(Math.random() * statuses.length)
   ] as 'Blue' | 'Yellow' | 'Red' | 'Green';
-  const songId = uuidv4();
 
   const song = await Song.create({
-    id: songId,
+    id: id,
     title: title,
     uploader: artist,
-    audioPath: 'audio/' + songId + '.mp3',
-    jacket: thumbnailPath, // Use the downloaded thumbnail path instead of icon.png
-    images: [thumbnailPath],
+    audioPath: 'audio/' + id + '.mp3',
+    jacket: 'images/shoot' + id + '/jacket.png', 
+    images: ['images/' + id + '/jacket.png'],
     moods: [],
     status: randomStatus,
     colours: [],
@@ -389,15 +394,16 @@ async function makeNewSong(title: string, artist: string, thumbnailPath: string,
 
 ipcMain.handle('download-wav', async (_, url) => {
   try {
-    const id = await downloadYoutubeAudioWav(url, false);
+    const Ytid = await downloadYoutubeAudioWav(url, false);
     const { title, artist, thumbnailPath } = await getYoutubeMetadata(url);
     console.log(
-      `Downloaded WAV with id: ${id}, title: ${title}, artist: ${artist}, thumbnail: ${thumbnailPath}`,
+      `Downloaded WAV with id: ${Ytid}, title: ${title}, artist: ${artist}, thumbnail: ${thumbnailPath}`,
     );
-    const song = await makeNewSong(title, artist, thumbnailPath, id);
+    const songId = uuidv4();
+    const song = await makeNewSong(songId, title, artist, Ytid);
     saveSongAsJson(song);
     console.log('Song entry created:', song);
-    return id;
+    return Ytid;
   } catch (error) {
     console.error('Error in download-wav handler:', error);
     throw error;
