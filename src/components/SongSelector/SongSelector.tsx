@@ -16,7 +16,9 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaCog,
+  FaServer,
 } from 'react-icons/fa';
+import BatchLLMRunner from './BatchLLMRunner';
 
 interface SongSelectorProps {
   onTrackSelect: (uri: string) => void;
@@ -52,6 +54,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
   const [isSongDetailsOpen, setIsSongDetailsOpen] = useState(false);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   const [isHueSettingsOpen, setIsHueSettingsOpen] = useState(false);
+  const [isBatchLLMOpen, setIsBatchLLMOpen] = useState(false);
 
   // Additional states from file A
   const [visualMode, setVisualMode] = useState(() => {
@@ -68,26 +71,26 @@ const SongSelector: React.FC<SongSelectorProps> = ({
   const songsPerPage = 8;
 
   // Fetch devices from Spotify API
-  useEffect(() => {
-    async function fetchDevices() {
-      try {
-        const response = await axios.get(
-          'https://api.spotify.com/v1/me/player/devices',
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          },
-        );
-        setDevices(response.data.devices);
-      } catch (error) {
-        console.error('Error fetching devices:', error);
-      }
-    }
-    if (accessToken) {
-      fetchDevices();
-    }
-  }, [accessToken]);
+  // useEffect(() => {
+  //   async function fetchDevices() {
+  //     try {
+  //       const response = await axios.get(
+  //         'https://api.spotify.com/v1/me/player/devices',
+  //         {
+  //           headers: {
+  //             Authorization: `Bearer ${accessToken}`,
+  //           },
+  //         },
+  //       );
+  //       setDevices(response.data.devices);
+  //     } catch (error) {
+  //       console.error('Error fetching devices:', error);
+  //     }
+  //   }
+  //   if (accessToken) {
+  //     fetchDevices();
+  //   }
+  // }, [accessToken]);
 
   // Filter songs based on colour filters and search term
   const filteredSongs = songs.filter((song) => {
@@ -253,6 +256,24 @@ const SongSelector: React.FC<SongSelectorProps> = ({
         >
           <FaSync />
           <span style={{ marginLeft: '0.5rem' }}>Reload</span>
+        </button>
+        <button
+          onClick={() => setIsBatchLLMOpen(true)}
+          style={{
+            backgroundColor: colors.grey2,
+            color: colors.white,
+            border: 'none',
+            borderRadius: '9999px',
+            padding: '0.5rem 1rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 'clamp(0.75rem, 1vw, 1rem)',
+          }}
+        >
+          <FaServer />
+          <span style={{ marginLeft: '0.5rem' }}>Batch LLM</span>
         </button>
         <button
           onClick={() => setIsHueSettingsOpen(true)}
@@ -613,6 +634,18 @@ const SongSelector: React.FC<SongSelectorProps> = ({
       {/* Hue Settings Modal */}
       {isHueSettingsOpen && (
         <HueSettings onClose={() => setIsHueSettingsOpen(false)} />
+      )}
+
+      {/* BatchLLM Modal */}
+      {isBatchLLMOpen && (
+        <BatchLLMRunner
+          onClose={() => {
+            setIsBatchLLMOpen(false);
+            refetch();
+          }}
+          songs={songs}
+          refetch={refetch}
+        />
       )}
     </div>
   );
