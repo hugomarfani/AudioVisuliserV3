@@ -31,6 +31,7 @@ import { mainPaths, getResourcePath } from './paths';
 import { registerImageHandlers } from './ipc/imageHandlers';
 import HueService from './HueService';
 import {v4 as uuidv4} from 'uuid';
+import { addAbortListener } from 'events';
 
 const gotTheLock = app.requestSingleInstanceLock();
 let windowCreated = false;
@@ -168,9 +169,10 @@ function runAIProcessWithTracking(
   });
 }
 
-ipcMain.handle('get-sources', async () => {
-  return desktopCapturer.getSources({ types: ['window', 'screen'] });
-});
+// DEPRECATED - CAN'T SEND SOURCES PROPERLY
+// ipcMain.handle('get-sources', async () => {
+//   return desktopCapturer.getSources({ types: ['window', 'screen'] });
+// });
 
 
 ipcMain.on('reload-window', (event) => {
@@ -325,20 +327,32 @@ ipcMain.handle('save-audio-recording', async (_, { blob, fileName }) => {
   }
 });
 
-ipcMain.handle('redownload-mp3', async (_, songId) => {
+// DEPRECATED: Use download-wav instead
+// ipcMain.handle('redownload-mp3', async (_, songId) => {
+//   try {
+//     const url = "https://www.youtube.com/watch?v=" + songId;
+//     const id = await downloadYoutubeAudioWav(url, true);
+//     // const { title, artist, thumbnailPath } = await getYoutubeMetadata(url);
+//     // console.log(
+//     //   `Redownloaded WAV with id: ${id}, title: ${title}, artist: ${artist}, thumbnail: ${thumbnailPath}`,
+//     // );
+//     return id;
+//   } catch (error) {
+//     console.error('Error in redownload-wav handler:', error);
+//     throw error;
+//   }
+// });
+
+ipcMain.handle('save-custom-song', async (_, title: string, artist: string, thumbnailPath: string) => {
   try {
-    const url = "https://www.youtube.com/watch?v=" + songId;
-    const id = await downloadYoutubeAudioWav(url, true);
-    // const { title, artist, thumbnailPath } = await getYoutubeMetadata(url);
-    // console.log(
-    //   `Redownloaded WAV with id: ${id}, title: ${title}, artist: ${artist}, thumbnail: ${thumbnailPath}`,
-    // );
-    return id;
+    const song = await makeNewSong(title, artist, thumbnailPath);
+    saveSongAsJson(song);
+    return song;
   } catch (error) {
-    console.error('Error in redownload-wav handler:', error);
+    console.error('Error in save-custom-song handler:', error);
     throw error;
   }
-});
+})
 
 async function makeNewSong(title: string, artist: string, thumbnailPath: string, ytId?: string) {
   // create song entry in database

@@ -1,0 +1,431 @@
+import React, { useState } from 'react';
+import colors from '../../theme/colors';
+import AIProgressTracker from '../common/AIProgressTracker';
+import { FaSpinner } from 'react-icons/fa';
+
+const GEMMA_PROMPTS = [
+    { id: 'emotions', label: 'Detect Emotions' },
+    { id: 'instruments', label: 'Identify Instruments' },
+    { id: 'genre', label: 'Analyze Genre' },
+    { id: 'structure', label: 'Analyze Song Structure' },
+];
+
+const MOOD_OPTIONS = [
+    { id: 'happy', label: 'Happy' },
+    { id: 'sad', label: 'Sad' },
+    { id: 'energetic', label: 'Energetic' },
+    { id: 'calm', label: 'Calm' },
+    { id: 'romantic', label: 'Romantic' },
+    { id: 'mysterious', label: 'Mysterious' },
+];
+
+interface AddSongFormProps {
+    onSubmit: (data: { url: string; prompt: string; moods: string[] }) => void;
+}
+
+const AddCustomSong: React.FC<AddSongFormProps> = ({ onSubmit }) => {
+    const [url, setUrl] = useState('');
+    const [selectedPrompt, setSelectedPrompt] = useState('');
+    const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
+    const [status, setStatus] = useState<string>('');
+    const [isProcessing, setIsProcessing] = useState<boolean>(false);
+    const [currentOperationId, setCurrentOperationId] = useState<string | null>(null);
+    const [progressSteps, setProgressSteps] = useState<{ key: string; label: string; completed: boolean }[]>([]);
+    const [filePath, setFilePath] = useState<string | null>('');
+    
+    // New state variables for song metadata
+    const [songName, setSongName] = useState<string>('');
+    const [artistName, setArtistName] = useState<string>('');
+    const [thumbnailPath, setThumbnailPath] = useState<string | null>(null);
+    const [selectingThumbnail, setSelectingThumbnail] = useState(false);
+
+    const [linkingFile, setLinkingFile] = useState(false);
+
+    // Function to select a thumbnail image
+    const handleSelectThumbnail = async () => {
+        try {
+            setSelectingThumbnail(true);
+            
+            // Open file dialog and get selected path
+            const result = await window.electron.ipcRenderer.invoke('open-file-dialog');
+            
+            if (result.canceled || result.filePaths.length === 0) {
+                setSelectingThumbnail(false);
+                return;
+            }
+            
+            setThumbnailPath(result.filePaths[0]);
+            setSelectingThumbnail(false);
+        } catch (error) {
+            setSelectingThumbnail(false);
+            console.error("Error selecting thumbnail:", error);
+            alert(`Failed to select thumbnail: ${error}`);
+        }
+    };
+
+    const handleLinkAudioFile = async () => {
+        try {
+            setLinkingFile(true);
+
+            // Open file dialog and get selected path
+            const result = await window.electron.fileSystem.selectAudioFile();
+
+
+            if (result.cancelled) {
+                setLinkingFile(false);
+                return;
+            }
+            setFilePath(result.filePath);
+
+            // // Link the selected file to this song
+            // await window.electron.fileSystem.linkNewMp3(songId, result.filePath);
+
+            // setLinkingFile(false);
+            // alert("Audio file linked successfully!");
+
+        } catch (error) {
+            setLinkingFile(false);
+            console.error("Error linking audio file:", error);
+            alert(`Failed to link audio file: ${error}`);
+        }
+    };
+
+    // Progress step display names
+    const progressLabels: Record<string, string> = {
+        download: 'Downloading YouTube Audio',
+        converting: 'Converting to WAV Format',
+        aiSetup: 'Preparing AI Environment',
+        whisper: 'Running Speech Recognition'
+    };
+
+    const isValidYouTubeUrl = (url: string) => {
+        const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
+        return youtubeRegex.test(url);
+    };
+
+    // Set up listeners for Whisper progress events when component mounts
+    React.useEffect(() => {
+        let removeProgressListener: (() => void) | undefined;
+        let removeErrorListener: (() => void) | undefined;
+        let removeCompleteListener: (() => void) | undefined;
+
+        const progressListener = (data: any) => {
+            if (data && data.operationId === currentOperationId) {
+                console.log("Progress update received:", data);
+                setProgressSteps(prevSteps => {
+                    const stepIndex = prevSteps.findIndex(step => step.key === data.step);
+
+                    let newSteps;
+                    if (stepIndex >= 0) {
+                        newSteps = [...prevSteps];
+                        newSteps[stepIndex] = {
+                            ...newSteps[stepIndex],
+                            completed: data.completed
+                        };
+                    } else {
+                        newSteps = [
+                            ...prevSteps,
+                            {
+                                key: data.step,
+                                label: progressLabels[data.step] || data.step,
+                                completed: data.completed
+                            }
+                        ];
+                    }
+
+                    return newSteps;
+                });
+            }
+        };
+
+        const errorListener = (data: any) => {
+            if (data && data.operationId === currentOperationId) {
+                setStatus(`Error: ${data.error}`);
+                setIsProcessing(false);
+
+                if (removeProgressListener) removeProgressListener();
+                if (removeErrorListener) removeErrorListener();
+                if (removeCompleteListener) removeCompleteListener();
+            }
+        };
+
+        const completeListener = (data: any) => {
+            if (data && data.operationId === currentOperationId) {
+                setIsProcessing(false);
+                setStatus('Processing completed successfully!');
+
+                // Continue with form submission or other actions
+                onSubmit({ url, prompt: selectedPrompt, moods: selectedMoods });
+                setUrl('');
+                setSelectedPrompt('');
+                setSelectedMoods([]);
+
+                if (removeProgressListener) removeProgressListener();
+                if (removeErrorListener) removeErrorListener();
+                if (removeCompleteListener) removeCompleteListener();
+            }
+        };
+
+        // Set up listeners
+        if (currentOperationId) {
+            removeProgressListener = window.electron.ipcRenderer.on('ai-progress-update', progressListener);
+            removeErrorListener = window.electron.ipcRenderer.on('ai-error', errorListener);
+            removeCompleteListener = window.electron.ipcRenderer.on('ai-process-complete', completeListener);
+        }
+
+        return () => {
+            // Cleanup function
+            if (removeProgressListener) removeProgressListener();
+            if (removeErrorListener) removeErrorListener();
+            if (removeCompleteListener) removeCompleteListener();
+        };
+    }, [currentOperationId, onSubmit, url, selectedPrompt, selectedMoods, progressLabels]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        // Validate required fields
+        if (!filePath) {
+            setStatus('Please select an audio file');
+            return;
+        }
+        
+        if (!songName.trim()) {
+            setStatus('Please enter a song name');
+            return;
+        }
+        
+        if (!artistName.trim()) {
+            setStatus('Please enter an artist name');
+            return;
+        }
+        
+        if (!thumbnailPath) {
+            setStatus('Please select a thumbnail image');
+            return;
+        }
+
+        // Generate operation ID
+        const operationId = `add-song-${Date.now()}`;
+        setCurrentOperationId(operationId);
+
+        // Initialize processing state
+        setIsProcessing(true);
+        setProgressSteps([
+            { key: 'processing', label: 'Processing Audio File', completed: false },
+        ]);
+        setStatus('Processing audio file...');
+
+        try {
+            // Save custom song with provided metadata
+            const result = await window.electron.ipcRenderer.invoke(
+                'save-custom-song', 
+                songName, 
+                artistName, 
+                thumbnailPath
+            );
+            
+            // Link the audio file to the song
+            await window.electron.ipcRenderer.invoke(
+                'link-new-mp3',
+                result.id,
+                filePath
+            );
+            
+            // Mark processing complete
+            setProgressSteps(prev => {
+                return prev.map(step =>
+                    step.key === 'processing' ? { ...step, completed: true } : step
+                );
+            });
+
+            setStatus(`Song added successfully! Processing with Whisper...`);
+      
+            // Run whisper with our operation ID
+            await window.electron.ipcRenderer.invoke(
+              'run-whisper',
+              result.id,
+              operationId
+            );
+            
+
+
+            setIsProcessing(false);
+            
+            // Reset form fields
+            setSongName('');
+            setArtistName('');
+            setThumbnailPath(null);
+            setFilePath('');
+            
+            // Call onSubmit with the data
+            onSubmit({ url: '', prompt: '', moods: [] });
+
+        } catch (error) {
+            setStatus(`Error: ${error.message || 'Unknown error occurred'}`);
+            setIsProcessing(false);
+            setCurrentOperationId(null);
+        }
+    };
+
+    return (
+        <form
+            onSubmit={handleSubmit}
+            style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+        >
+            {/* Song Metadata Section */}
+            <div style={{ marginBottom: '1rem' }}>
+                <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>
+                    Song Information
+                </h3>
+                
+                {/* Song Name Field */}
+                <div style={{ marginBottom: '1rem' }}>
+                    <label htmlFor="songName" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                        Song Name *
+                    </label>
+                    <input
+                        id="songName"
+                        type="text"
+                        value={songName}
+                        onChange={(e) => setSongName(e.target.value)}
+                        placeholder="Enter song name"
+                        style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            borderRadius: '4px',
+                            border: `1px solid ${colors.grey4}`,
+                            backgroundColor: colors.black,
+                            color: colors.white
+                        }}
+                        required
+                    />
+                </div>
+                
+                {/* Artist Name Field */}
+                <div style={{ marginBottom: '1rem' }}>
+                    <label htmlFor="artistName" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                        Artist Name *
+                    </label>
+                    <input
+                        id="artistName"
+                        type="text"
+                        value={artistName}
+                        onChange={(e) => setArtistName(e.target.value)}
+                        placeholder="Enter artist name"
+                        style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            borderRadius: '4px',
+                            border: `1px solid ${colors.grey4}`,
+                            backgroundColor: colors.black,
+                            color: colors.white
+                        }}
+                        required
+                    />
+                </div>
+                
+                {/* Thumbnail Selection */}
+                <div style={{ marginBottom: '1rem' }}>
+                    <label htmlFor="thumbnail" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                        Song Thumbnail *
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <button
+                            type="button"
+                            onClick={handleSelectThumbnail}
+                            disabled={selectingThumbnail}
+                            style={{
+                                padding: '0.5rem 1rem',
+                                backgroundColor: colors.purple,
+                                color: colors.white,
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: selectingThumbnail ? 'not-allowed' : 'pointer',
+                                fontWeight: 'bold',
+                            }}
+                        >
+                            {selectingThumbnail ? 'Selecting...' : 'Select Thumbnail'}
+                        </button>
+                        {thumbnailPath && (
+                            <span style={{ color: colors.green }}>✓ Thumbnail selected</span>
+                        )}
+                    </div>
+                    {thumbnailPath && (
+                        <div style={{ marginTop: '0.5rem', maxWidth: '200px' }}>
+                            <img 
+                                src={`file://${thumbnailPath}`} 
+                                alt="Selected thumbnail" 
+                                style={{ width: '100%', borderRadius: '4px' }}
+                            />
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Link New Audio File section */}
+            <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>
+                <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>
+                    Link Local Audio File
+                </h3>
+                <p style={{ fontSize: '0.9rem', color: colors.grey2, marginBottom: '1rem' }}>
+                    Select a local audio file to use with this song instead of downloading from YouTube.
+                </p>
+                <button
+                    type="button"
+                    style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: colors.green,
+                        color: colors.white,
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        marginRight: '10px'
+                    }}
+                    onClick={handleLinkAudioFile}
+                >
+                    Select Audio File
+                </button>
+                {filePath && (
+                    <span style={{ color: colors.green, marginLeft: '0.5rem' }}>
+                        ✓ Audio file selected
+                    </span>
+                )}
+            </div>
+
+            <button
+                type="submit"
+                disabled={isProcessing || !songName || !artistName || !thumbnailPath || !filePath}
+                style={{
+                    padding: '0.75rem 2rem',
+                    backgroundColor: isProcessing || !songName || !artistName || !thumbnailPath || !filePath ? colors.grey3 : colors.blue,
+                    color: colors.white,
+                    border: 'none',
+                    borderRadius: '999px',
+                    cursor: isProcessing || !songName || !artistName || !thumbnailPath || !filePath ? 'not-allowed' : 'pointer',
+                    fontSize: '1rem',
+                    marginTop: '1rem',
+                    width: 'fit-content',
+                    alignSelf: 'center',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                }}
+            >
+                {isProcessing && <FaSpinner style={{ animation: 'spin 1s linear infinite' }} />}
+                {isProcessing ? 'Processing...' : 'Add Song'}
+            </button>
+
+            {/* Use AIProgressTracker component */}
+            <AIProgressTracker
+                isProcessing={isProcessing}
+                progressSteps={progressSteps}
+                statusMessage={status}
+            />
+        </form>
+    );
+};
+
+export default AddCustomSong;

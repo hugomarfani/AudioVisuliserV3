@@ -205,7 +205,8 @@ const AddSongForm: React.FC<AddSongFormProps> = ({ onSubmit }) => {
         required
       />
 
-      <div>
+      {/* Gemma Prompt Selection for Mood -*/}
+      {/* <div>
         <p style={{ marginBottom: '0.5rem', color: colors.grey2 }}>
           Select Moods (Optional)
         </p>
@@ -247,7 +248,7 @@ const AddSongForm: React.FC<AddSongFormProps> = ({ onSubmit }) => {
             </label>
           ))}
         </div>
-      </div>
+      </div> */}
 
       <button
         type="submit"

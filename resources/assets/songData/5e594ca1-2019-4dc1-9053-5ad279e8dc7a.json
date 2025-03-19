@@ -1,0 +1,29 @@
+{
+  "id": "5e594ca1-2019-4dc1-9053-5ad279e8dc7a",
+  "title": "LetItGoPersonal",
+  "uploader": "Test",
+  "audioPath": "audio/5e594ca1-2019-4dc1-9053-5ad279e8dc7a.mp3",
+  "jacket": "C:\\Users\\billy\\Downloads\\motioninputgames-logo-cropped2 2.png",
+  "images": [
+    "C:\\Users\\billy\\Downloads\\motioninputgames-logo-cropped2 2.png"
+  ],
+  "moods": [],
+  "status": "Red",
+  "colours": [],
+  "colours_reason": [],
+  "objects": [],
+  "object_prompts": [],
+  "particles": [],
+  "backgrounds": [],
+  "background_prompts": [],
+  "shaderBackground": "",
+  "shaderTexture": "",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ],
+  "createdAt": "2025-03-19T18:40:59.443Z",
+  "updatedAt": "2025-03-19T18:40:59.443Z",
+  "youtubeId": ""
+}

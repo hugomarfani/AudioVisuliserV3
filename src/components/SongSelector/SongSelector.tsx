@@ -40,7 +40,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
   const { songs, loading, error, refetch } = useSongs();
   const { isConfigured } = useHue();
 
-  // States for filters, search and devices
+
   const [selectedFilters, setSelectedFilters] = useState<
     Array<'Blue' | 'Green' | 'Yellow' | 'Red'>
   >([]);
@@ -48,8 +48,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
   const [devices, setDevices] = useState<Device[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
 
-  // States for modals/popups
-  const [isDatabaseOpen, setIsDatabaseOpen] = useState(false); // (Optional)
+
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [isSongDetailsOpen, setIsSongDetailsOpen] = useState(false);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
@@ -61,7 +60,6 @@ const SongSelector: React.FC<SongSelectorProps> = ({
     const savedMode = localStorage.getItem('visualizationMode');
     return savedMode !== null ? savedMode === 'true' : useShader;
   });
-  const [showParticleManager, setShowParticleManager] = useState<boolean>(false);
   const [selectedParticleSong, setSelectedParticleSong] = useState<string | null>(null);
   const [showShaderWarning, setShowShaderWarning] = useState(false);
   const [selectedInvalidSong, setSelectedInvalidSong] = useState<string | null>(null);
@@ -69,28 +67,6 @@ const SongSelector: React.FC<SongSelectorProps> = ({
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const songsPerPage = 8;
-
-  // Fetch devices from Spotify API
-  // useEffect(() => {
-  //   async function fetchDevices() {
-  //     try {
-  //       const response = await axios.get(
-  //         'https://api.spotify.com/v1/me/player/devices',
-  //         {
-  //           headers: {
-  //             Authorization: `Bearer ${accessToken}`,
-  //           },
-  //         },
-  //       );
-  //       setDevices(response.data.devices);
-  //     } catch (error) {
-  //       console.error('Error fetching devices:', error);
-  //     }
-  //   }
-  //   if (accessToken) {
-  //     fetchDevices();
-  //   }
-  // }, [accessToken]);
 
   // Filter songs based on colour filters and search term
   const filteredSongs = songs.filter((song) => {
@@ -142,7 +118,6 @@ const SongSelector: React.FC<SongSelectorProps> = ({
   const openParticleManager = (songId: string) => {
     setSelectedParticleSong(songId);
     setIsSongDetailsOpen(true);
-    // Additional logic for particle management can be added here
   };
 
   // Pagination calculations
@@ -526,9 +501,6 @@ const SongSelector: React.FC<SongSelectorProps> = ({
 
       {/* Screen Recorder */}
       <ScreenRecorder
-        devices={devices}
-        accessToken={accessToken}
-        onTrackSelect={onTrackSelect}
       />
 
       {/* Shader Warning Popup */}

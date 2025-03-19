@@ -7,7 +7,6 @@ export type Channels =
   | 'run-gemma-test'
   | 'run-gemma-test-reply'
   | 'download-wav'
-  | 'download-mp3'
   | 'run-whisper'
   | 'run-gemma'
   | 'run-gemma-with-options'
@@ -34,8 +33,7 @@ export type Channels =
   | 'hue-save-settings'
   | 'hue-get-settings'
   | 'hue-update-cursor'
-  | 'hue-toggle-cursor-control'
-  | 'get-sources';
+  | 'hue-toggle-cursor-control';
 
 const electronHandler = {
   ipcRenderer: {
@@ -167,7 +165,9 @@ const electronHandler = {
     },
   },
   recorder: {
-    sourceIds: () => {ipcRenderer.invoke('get-sources');}
+    sourceIds: () => {ipcRenderer.invoke('get-sources');},
+    saveCustomSong: (title: string, artist: string, thumbnailPath: string) => {
+      ipcRenderer.invoke('save-custom-song', title, artist, thumbnailPath);} 
   },
 };
 

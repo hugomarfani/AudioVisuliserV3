@@ -27,21 +27,21 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
   const handleLinkAudioFile = async () => {
     try {
       setLinkingFile(true);
-      
+
       // Open file dialog and get selected path
       const result = await window.electron.fileSystem.selectAudioFile();
-      
+
       if (result.cancelled) {
         setLinkingFile(false);
         return;
       }
-      
+
       // Link the selected file to this song
       await window.electron.fileSystem.linkNewMp3(songId, result.filePath);
-      
+
       setLinkingFile(false);
       alert("Audio file linked successfully!");
-      
+
       // Refresh song data
       refetch();
     } catch (error) {
@@ -257,13 +257,13 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
         THIS WOULD REQUIRE SD.EXE BEING UPDATED WITH THE NEW WHISPER COMMANDS
 
         Whisper Runner component - add this before LLM Runner */}
-        <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>
+        {/* <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>
           <WhisperRunner
             song={song}
             songId={songId}
             refetch={refetch}
           />
-        </div>
+        </div> */}
 
         {/* LLM Runner component - add this before BackgroundSelector */}
         <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>

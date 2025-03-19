@@ -1,12 +1,15 @@
 import React from 'react';
 import colors from '../../theme/colors';
 import AddSongForm from './AddSongForm';
+import AddCustomSong from './AddCustomSong';
+import ScreenRecorder from '../ScreenRecorder/ScreenRecorder';
 
 interface LibraryProps {
   onClose: () => void;
 }
 
 const Library: React.FC<LibraryProps> = ({ onClose }) => {
+  const [youtubeMode, setYoutubeMode] = React.useState(true);
   const handleAddSong = (data: {
     url: string;
     prompt: string;
@@ -57,7 +60,64 @@ const Library: React.FC<LibraryProps> = ({ onClose }) => {
           &times;
         </button>
         <h2 style={{ marginBottom: '1rem' }}>Search for New Song</h2>
-        <AddSongForm onSubmit={handleAddSong} />
+        {/* Visualisation Mode Toggle Slider */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'right',
+          marginLeft: '1rem',
+        }}>
+          <span style={{
+            display: 'flex',
+            alignItems: 'center',
+            color: !youtubeMode ? colors.blue : colors.grey3,
+            marginRight: '0.5rem',
+            fontWeight: !youtubeMode ? 'bold' : 'normal',
+            fontSize: 'clamp(0.75rem, 1.2vw, 0.875rem)',
+          }}>
+            custom
+          </span>
+          <div
+            onClick={() => setYoutubeMode(!youtubeMode)}
+            style={{
+              width: '48px',
+              height: '24px',
+              backgroundColor: youtubeMode ? colors.green : colors.blue,
+              borderRadius: '12px',
+              position: 'relative',
+              cursor: 'pointer',
+              transition: 'background-color 0.3s',
+            }}
+          >
+            <div style={{
+              position: 'absolute',
+              width: '20px',
+              height: '20px',
+              backgroundColor: colors.white,
+              borderRadius: '50%',
+              top: '2px',
+              left: youtubeMode ? '26px' : '2px',
+              transition: 'left 0.3s',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
+            }}></div>
+          </div>
+          <span style={{
+            display: 'flex',
+            alignItems: 'center',
+            color: youtubeMode ? colors.green : colors.grey3,
+            marginLeft: '0.5rem',
+            fontWeight: youtubeMode ? 'bold' : 'normal',
+            fontSize: 'clamp(0.75rem, 1.2vw, 0.875rem)',
+          }}>
+            youtube
+          </span>
+        </div>
+        {youtubeMode ? ( 
+          <AddSongForm onSubmit={handleAddSong} />
+        ) : (
+          <AddCustomSong onSubmit={handleAddSong} />
+        )}
+
+        <ScreenRecorder />
       </div>
     </div>
   );
