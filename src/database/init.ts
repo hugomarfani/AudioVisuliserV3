@@ -4,23 +4,6 @@ import path from 'path';
 import { Song } from './models/Song';
 import { app } from 'electron';
 
-// const sampleSongs = [
-//   {
-//     title: 'How far ill go',
-//     audioPath: '/audios/cPAbx5kgCJo.wav',
-//     images: JSON.stringify(['image1.jpg', 'image2.jpg']),
-//     moods: JSON.stringify(['Happy', 'Energetic', 'Upbeat']),
-//     prompt: 'I want to listen to Moana how far ill go',
-//   },
-//   {
-//     title: 'Do you want to build a snowman',
-//     audioPath: '/audios/TeQ_TTyLGMs.wav',
-//     images: JSON.stringify(['frozen1.jpg', 'frozen2.jpg']),
-//     moods: JSON.stringify(['Playful', 'Cheerful', 'Winter']),
-//     prompt: 'I want to listen to Frozen let it go',
-//   },
-// ];
-
 const initDatabase = async () => {
   console.log('🔄 Starting database initialization...');
 
@@ -35,7 +18,7 @@ const initDatabase = async () => {
   });
 
   try {
-    // Initialize tables
+    // Initialise tables
     const createUsersTable = `
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,7 +28,6 @@ const initDatabase = async () => {
 
     await dbAsync.run(createUsersTable);
 
-    // Clear and recreate tables
     await sequelize.sync({ force: true });
     console.log('Database synced successfully');
 
@@ -61,13 +43,9 @@ const initDatabase = async () => {
       return songData;
     });
 
-    // Add sample songs
-    // console.log('Adding sample songs:', JSON.stringify(sampleSongs, null, 2));
     const createdSongs = await Song.bulkCreate(sampleSongs);
 
-    // Verify the songs were created
     const songs = await Song.findAll();
-    // console.log('Songs in database:', JSON.stringify(songs, null, 2));
 
     console.log('✅ Sample songs added successfully');
     console.log('✅ Database tables created successfully');

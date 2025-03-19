@@ -30,6 +30,7 @@ import {
 import { mainPaths, getResourcePath } from './paths';
 import { registerImageHandlers } from './ipc/imageHandlers';
 import HueService from './HueService';
+import {v4 as uuidv4} from 'uuid';
 
 const gotTheLock = app.requestSingleInstanceLock();
 let windowCreated = false;
@@ -339,6 +340,39 @@ ipcMain.handle('redownload-mp3', async (_, songId) => {
   }
 });
 
+async function makeNewSong(title: string, artist: string, thumbnailPath: string, ytId?: string) {
+  // create song entry in database
+  // temporarily assign random status
+  const statuses = ['Blue', 'Yellow', 'Red', 'Green'];
+  const randomStatus: 'Blue' | 'Yellow' | 'Red' | 'Green' = statuses[
+    Math.floor(Math.random() * statuses.length)
+  ] as 'Blue' | 'Yellow' | 'Red' | 'Green';
+  const songId = uuidv4();
+
+  const song = await Song.create({
+    id: songId,
+    title: title,
+    uploader: artist,
+    audioPath: 'audio/' + songId + '.mp3',
+    jacket: thumbnailPath, // Use the downloaded thumbnail path instead of icon.png
+    images: [thumbnailPath],
+    moods: [],
+    status: randomStatus,
+    colours: [],
+    colours_reason: [],
+    objects: [],
+    object_prompts: [],
+    backgrounds: [],
+    background_prompts: [],
+    particles: [],
+    particleColour: ["255", "255", "255"],
+    shaderBackground: '',
+    shaderTexture: '',
+    youtubeId: ytId || "",
+  });
+  return song;
+}
+
 ipcMain.handle('download-wav', async (_, url) => {
   try {
     const id = await downloadYoutubeAudioWav(url, false);
@@ -346,35 +380,7 @@ ipcMain.handle('download-wav', async (_, url) => {
     console.log(
       `Downloaded WAV with id: ${id}, title: ${title}, artist: ${artist}, thumbnail: ${thumbnailPath}`,
     );
-    // create song entry in database
-    // temporarily assign random status
-    const statuses = ['Blue', 'Yellow', 'Red', 'Green'];
-    const randomStatus: 'Blue' | 'Yellow' | 'Red' | 'Green' = statuses[
-      Math.floor(Math.random() * statuses.length)
-    ] as 'Blue' | 'Yellow' | 'Red' | 'Green';
-
-    const song = await Song.create({
-      id: id,
-      title: title,
-      uploader: artist,
-      audioPath: 'audio/' + id + '.mp3',
-      jacket: thumbnailPath, // Use the downloaded thumbnail path instead of icon.png
-      images: [thumbnailPath],
-      moods: [],
-      status: randomStatus,
-      colours: [],
-      colours_reason: [],
-      objects: [],
-      object_prompts: [],
-      backgrounds: [],
-      background_prompts: [],
-      particles: [],
-      particleColour: ["255", "255", "255"],
-      shaderBackground: '',
-      shaderTexture: '',
-      // shaderBackground: 'shader/background/'+ id + '.jpg',
-      // shaderTexture: 'shader/texture/'+ id + '.jpg',
-    });
+    const song = await makeNewSong(title, artist, thumbnailPath, id);
     saveSongAsJson(song);
     console.log('Song entry created:', song);
     return id;

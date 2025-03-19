@@ -1,14 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import colors from '../../theme/colors';
-import axios from 'axios';
-import {
-  FaMusic,
-  FaSync,
-  FaChevronLeft,
-  FaChevronRight,
-  FaCog,
-} from 'react-icons/fa';
 
 const ScreenRecorder = () => {
     const [recording, setRecording] = useState(false);
