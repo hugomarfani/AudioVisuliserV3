@@ -143,7 +143,6 @@ const Song = sequelize.define<SongModel>('Song', {
   }
 });
 
-// Songs are loaded in the init.ts file using the Song.bulkCreate method
 
 // Function to save a Song instance as a JSON file
 const saveSongAsJson = async (song: SongModel) => {
