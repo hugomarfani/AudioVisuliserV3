@@ -11,7 +11,7 @@ export const sequelize = new Sequelize({
   storage: dbPath,
   dialectModule: require('sqlite3'),
   // below only for debugging purposes
-  // logging: console.log, 
+  logging: console.log, 
   define: {
     timestamps: true 
   }

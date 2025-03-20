@@ -194,8 +194,8 @@ const AddCustomSong: React.FC<AddSongFormProps> = ({ onSubmit }) => {
                             padding: '0.75rem',
                             borderRadius: '4px',
                             border: `1px solid ${colors.grey4}`,
-                            backgroundColor: colors.black,
-                            color: colors.white
+                            backgroundColor: colors.white,
+                            color: colors.black
                         }}
                         required
                     />
@@ -217,8 +217,8 @@ const AddCustomSong: React.FC<AddSongFormProps> = ({ onSubmit }) => {
                             padding: '0.75rem',
                             borderRadius: '4px',
                             border: `1px solid ${colors.grey4}`,
-                            backgroundColor: colors.black,
-                            color: colors.white
+                            backgroundColor: colors.white,
+                            color: colors.black
                         }}
                         required
                     />

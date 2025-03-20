@@ -367,14 +367,22 @@ async function makeNewSong(id: string, title: string, artist: string, ytId?: str
   const randomStatus: 'Blue' | 'Yellow' | 'Red' | 'Green' = statuses[
     Math.floor(Math.random() * statuses.length)
   ] as 'Blue' | 'Yellow' | 'Red' | 'Green';
+  let jacket = 'images' + id + '/jacket.png';
+  if (ytId) {
+    jacket = 'images/' + ytId + '/jacket.png';
+  }
+  let audioPath = 'audio/' + id + '.mp3';
+  if (ytId) {
+    audioPath = 'audio/' + ytId + '.mp3';
+  }
 
   const song = await Song.create({
     id: id,
     title: title,
     uploader: artist,
-    audioPath: 'audio/' + id + '.mp3',
-    jacket: 'images/shoot' + id + '/jacket.png', 
-    images: ['images/' + id + '/jacket.png'],
+    audioPath: audioPath,
+    jacket: jacket, 
+    images: [jacket],
     moods: [],
     status: randomStatus,
     colours: [],
@@ -385,12 +393,13 @@ async function makeNewSong(id: string, title: string, artist: string, ytId?: str
     background_prompts: [],
     particles: [],
     particleColour: ["255", "255", "255"],
-    shaderBackground: '',
-    shaderTexture: '',
     youtubeId: ytId || "",
+    shaderBackground: '',
+    shaderTexture: ''
   });
   return song;
 }
+
 
 ipcMain.handle('download-wav', async (_, url) => {
   try {
@@ -969,6 +978,7 @@ app
   .then(async () => {
     try {
       await initDatabase();
+      // await db.sync();
       console.log('✨ Database system ready!');
       if (mainWindow) {
         mainWindow.setTitle('App (Database: Connected)');

@@ -198,17 +198,17 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: (youtubeId == "") ? '#FF0000' : '#4CAF50',
+            backgroundColor: (youtubeId !== "") ? '#FF0000' : '#4CAF50',
             color: 'white',
             borderRadius: '4px',
             padding: '2px 6px',
             marginRight: '8px',
             fontSize: '0.9rem'
           }}>
-            {(youtubeId == "") ? '▶ YouTube' : '🎵 Custom'}
+            {(youtubeId !== "") ? '▶ YouTube' : '🎵 Custom'}
           </span>
           <span style={{ color: colors.grey2 }}>
-            {(youtubeId == "") ? 'Downloaded from YouTube' : 'Custom audio file'}
+            {(youtubeId !== "") ? 'Downloaded from YouTube' : 'Custom audio file'}
           </span>
         </p>
         <p style={{ fontSize: '1rem', color: colors.grey2 }}>

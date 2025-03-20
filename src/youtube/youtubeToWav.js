@@ -41,6 +41,7 @@ const downloadYoutubeAudio = async (url, onlyMp3) => {
   const tempFile = path.join(downloadsPath, `temp_${videoId}.m4a`);
   const outputFile = path.join(downloadsPath, `${videoId}.wav`);
   const mp3OutputFile = path.join(downloadsPath, `${videoId}.mp3`);
+  console.log('Downloading audio from:', url);
 
   try {
     // Download audio
@@ -51,9 +52,8 @@ const downloadYoutubeAudio = async (url, onlyMp3) => {
       'prefer-free-formats': true,
     });
 
-    saveAudio(tempFile, outputFile, mp3OutputFile, onlyMp3);
-    // Cleanup temp file
-    fs.unlinkSync(tempFile);
+    await saveAudio(tempFile, outputFile, mp3OutputFile, onlyMp3);
+
 
 
 
@@ -98,7 +98,10 @@ const saveAudio = async (tempFile, outputFile, mp3OutputFile, onlyMp3) => {
     .save(mp3OutputFile);
   });
 
-
+  // Clean up the temporary file
+  if (tempFile.slice(-3) === 'm4a') {
+    fs.unlinkSync(tempFile);
+  }
 }
 
 

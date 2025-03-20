@@ -126,6 +126,11 @@ const Song = sequelize.define<SongModel>('Song', {
     allowNull: true,
     defaultValue: ["255", "255", "255"],
   },
+  youtubeId: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    defaultValue: '',
+  },
   createdAt: {
     type: DataTypes.DATE,
     allowNull: false,
@@ -135,11 +140,6 @@ const Song = sequelize.define<SongModel>('Song', {
     type: DataTypes.DATE,
     allowNull: false,
     defaultValue: DataTypes.NOW,
-  },
-  youtubeId: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    defaultValue: '',
   }
 });
 
@@ -165,9 +165,9 @@ const saveSongAsJson = async (song: SongModel) => {
     shaderBackground: song.shaderBackground,
     shaderTexture: song.shaderTexture,
     particleColour: song.particleColour,
-    createdAt: song.createdAt,
-    updatedAt: song.updatedAt,
     youtubeId: song.youtubeId,
+    createdAt: song.createdAt,
+    updatedAt: song.updatedAt
   };
 
   const songDataDir = getResourcePath('assets', 'songData');

@@ -499,9 +499,9 @@ const SongSelector: React.FC<SongSelectorProps> = ({
         </div>
       )}
 
-      {/* Screen Recorder */}
+      {/* Screen Recorder
       <ScreenRecorder
-      />
+      /> */}
 
       {/* Shader Warning Popup */}
       {showShaderWarning && (
