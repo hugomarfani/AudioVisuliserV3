@@ -5,6 +5,7 @@ import React, {
   CSSProperties,
   forwardRef,
   useImperativeHandle,
+  useCallback,
 } from 'react';
 import { AiOutlineForward, AiOutlineBackward } from 'react-icons/ai';
 import { FaPlay, FaPause, FaCog } from 'react-icons/fa';
@@ -49,6 +50,11 @@ const Player = forwardRef<any, PlayerProps>(
     const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
     const animationFrameRef = useRef<number | null>(null);
     const dataArrayRef = useRef<Uint8Array | null>(null);
+
+    // New ref for color sampling
+    const screenSamplerRef = useRef<HTMLCanvasElement | null>(null);
+    const lastScreenColorsRef = useRef<number[][]>([]);
+    const colorSamplingEnabledRef = useRef<boolean>(true);
 
     // Beat detection and reactive lighting refs
     const energyHistory = useRef<number[]>([]);
@@ -100,13 +106,13 @@ const Player = forwardRef<any, PlayerProps>(
       }
 
       // Always log the current state
-      console.log('🔍 Song data status:', { 
-        trackId: track.id, 
-        loading, 
+      console.log('🔍 Song data status:', {
+        trackId: track.id,
+        loading,
         songsCount: songs.length,
         songsLoaded: songs.length > 0 && songs[0] && !!songs[0].dataValues
       });
-      
+
       if (loading) {
         console.log('⏳ Songs are still loading, waiting...');
         return;
@@ -120,16 +126,16 @@ const Player = forwardRef<any, PlayerProps>(
       }
 
       console.log('🔍 Trying to find song with ID:', track.id);
-      
+
       // Check if songs are properly loaded with dataValues
       const validSongs = songs.filter(song => song && song.dataValues);
-      
+
       if (validSongs.length === 0) {
         console.log('⚠️ No valid songs loaded yet, retrying...');
         refetch();
         return;
       }
-      
+
       console.log('🔍 Available songs:', validSongs.map(song => ({
         id: song.dataValues.id,
         title: song.dataValues.title,
@@ -138,19 +144,19 @@ const Player = forwardRef<any, PlayerProps>(
 
       // Try to find the song by exact ID match first
       let currentSong = validSongs.find(song => song.dataValues.id === track.id);
-      
+
       // If not found, try case-insensitive comparison as fallback
       if (!currentSong && typeof track.id === 'string') {
-        currentSong = validSongs.find(song => 
-          typeof song.dataValues.id === 'string' && 
+        currentSong = validSongs.find(song =>
+          typeof song.dataValues.id === 'string' &&
           song.dataValues.id.toLowerCase() === track.id.toLowerCase()
         );
-        
+
         // If still not found, try partial matching as last resort
         if (!currentSong) {
-          currentSong = validSongs.find(song => 
-            typeof song.dataValues.id === 'string' && 
-            typeof track.id === 'string' && 
+          currentSong = validSongs.find(song =>
+            typeof song.dataValues.id === 'string' &&
+            typeof track.id === 'string' &&
             (song.dataValues.id.includes(track.id) || track.id.includes(song.dataValues.id))
           );
         }
@@ -225,6 +231,74 @@ const Player = forwardRef<any, PlayerProps>(
       getCurrentTime: () => audioRef.current?.currentTime || 0,
       getDuration: () => audioRef.current?.duration || 0,
       getAudioData: () => dataArrayRef.current,
+      // Add a new method to process beat data with extracted colors
+      processBeatWithColors: (colorZones: { left: number[], center: number[], right: number[] }) => {
+        if (!isStreamingActive) return false;
+
+        // We'll use the current audio analysis data if available
+        if (dataArrayRef.current && analyzerRef.current) {
+          // Get latest audio data
+          analyzerRef.current.getByteFrequencyData(dataArrayRef.current);
+
+          // Extract bass, mid, and high energy from the frequency data
+          const data = dataArrayRef.current;
+          const bassRange = Math.floor(data.length * 0.08);
+          const bassEnergy = Math.min(
+            255,
+            (data.slice(0, bassRange).reduce((sum, val) => sum + val, 0) / bassRange) * 2
+          );
+
+          const midRange = Math.floor(data.length * 0.6);
+          const midEnergy = Math.min(
+            255,
+            (data.slice(bassRange, midRange).reduce((sum, val) => sum + val, 0) / (midRange - bassRange)) * 2
+          );
+
+          const highEnergy = Math.min(
+            255,
+            (data.slice(midRange).reduce((sum, val) => sum + val, 0) / (data.length - midRange)) * 2
+          );
+
+          // Determine if there's a beat based on bass energy
+          const now = Date.now();
+          const isBeat =
+            bassEnergy > 100 &&
+            now - lastBeatTime.current > beatHoldTime.current;
+
+          if (isBeat) {
+            lastBeatTime.current = now;
+          }
+
+          // Create beat data with the color zones
+          const beatData = {
+            isBeat,
+            energy: (bassEnergy + midEnergy + highEnergy) / 3,
+            bassEnergy,
+            midEnergy,
+            highEnergy,
+            vocalEnergy: midEnergy, // Approximate vocal energy
+            colorZones,
+            screenColors: [colorZones.left, colorZones.center, colorZones.right],
+          };
+
+          // Send the beat data to Hue
+          processBeat(beatData);
+          return true;
+        }
+
+        // If no audio data is available, just send the colors
+        processBeat({
+          isBeat: false,
+          energy: 0,
+          bassEnergy: 0,
+          midEnergy: 0,
+          highEnergy: 0,
+          colorZones,
+          screenColors: [colorZones.left, colorZones.center, colorZones.right],
+        });
+
+        return true;
+      }
     }));
 
     // Initialise AudioContext and analyser for beat detection
@@ -291,6 +365,105 @@ const Player = forwardRef<any, PlayerProps>(
         });
       }
     }, [track.audioSrc]);
+
+    // Function to sample colors from the screen for Hue lighting
+    const sampleScreenColors = useCallback(() => {
+      try {
+        if (!colorSamplingEnabledRef.current) return null;
+        if (!screenSamplerRef.current) {
+          // Create a canvas element for sampling if it doesn't exist
+          const canvas = document.createElement('canvas');
+          canvas.width = 300; // Small size for performance
+          canvas.height = 150;
+          screenSamplerRef.current = canvas;
+        }
+
+        const canvas = screenSamplerRef.current;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return null;
+
+        // Capture the current visible area
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Scale down the screen to fit our canvas (improves performance)
+        const scale = Math.min(canvas.width / width, canvas.height / height);
+        ctx.scale(scale, scale);
+
+        // Try to capture the content of the document body
+        try {
+          // Create a temporary div to capture visible content
+          const captureDiv = document.createElement('div');
+          captureDiv.style.position = 'absolute';
+          captureDiv.style.top = '0';
+          captureDiv.style.left = '0';
+          captureDiv.style.width = width + 'px';
+          captureDiv.style.height = height + 'px';
+          captureDiv.style.overflow = 'hidden';
+          captureDiv.style.zIndex = '-1000';
+
+          // Clone visible body content
+          const clone = document.body.cloneNode(true) as HTMLElement;
+          // Remove any canvas elements to avoid recursive drawing
+          const canvasElements = clone.querySelectorAll('canvas');
+          canvasElements.forEach(el => el.remove());
+
+          captureDiv.appendChild(clone);
+          document.body.appendChild(captureDiv);
+
+          // Draw to our canvas
+          ctx.drawImage(captureDiv, 0, 0, width, height);
+
+          // Clean up
+          document.body.removeChild(captureDiv);
+        } catch (error) {
+          console.warn('Screen capture failed, using simplified method:', error);
+          // Fall back to background color
+          const bgColor = window.getComputedStyle(document.body).backgroundColor;
+          ctx.fillStyle = bgColor || '#000000';
+          ctx.fillRect(0, 0, width, height);
+        }
+
+        // Now sample colors from the canvas - divide into 3 zones
+        const zones = {
+          left: { x: Math.floor(canvas.width * 0.2), y: Math.floor(canvas.height / 2) },
+          center: { x: Math.floor(canvas.width / 2), y: Math.floor(canvas.height / 2) },
+          right: { x: Math.floor(canvas.width * 0.8), y: Math.floor(canvas.height / 2) }
+        };
+
+        // Sample colors from each zone
+        const zoneColors = {
+          left: sampleCanvasPoint(ctx, zones.left.x, zones.left.y),
+          center: sampleCanvasPoint(ctx, zones.center.x, zones.center.y),
+          right: sampleCanvasPoint(ctx, zones.right.x, zones.right.y)
+        };
+
+        // Also create an array of all sampled colors for compatibility
+        const allColors = [zoneColors.left, zoneColors.center, zoneColors.right];
+
+        // Store the results for next time
+        lastScreenColorsRef.current = allColors;
+
+        return { zoneColors, allColors };
+      } catch (error) {
+        console.error('Error sampling screen colors:', error);
+        return null;
+      }
+    }, []);
+
+    // Helper function to sample a single point from canvas
+    const sampleCanvasPoint = (ctx: CanvasRenderingContext2D, x: number, y: number): number[] => {
+      try {
+        const pixelData = ctx.getImageData(x, y, 1, 1).data;
+        return [pixelData[0], pixelData[1], pixelData[2]];
+      } catch (error) {
+        console.warn('Error sampling canvas point:', error);
+        return [255, 255, 255]; // Default to white on error
+      }
+    };
 
     // Beat detection and audio analysis loop
     const analyzeAudioAndDetectBeats = async () => {
@@ -439,6 +612,18 @@ const Player = forwardRef<any, PlayerProps>(
           const scaledMidEnergy = Math.min(255, ((midLowEnergy + midHighEnergy) / 2) * 2);
           const scaledHighEnergy = Math.min(255, highEnergy * 2);
 
+          // Sample colors from the screen every 5 frames or on beat
+          let screenColors = null;
+          let colorZones = null;
+
+          if (isBeat || debugCounter.current % 5 === 0) {
+            const sampledColors = sampleScreenColors();
+            if (sampledColors) {
+              screenColors = sampledColors.allColors;
+              colorZones = sampledColors.zoneColors;
+            }
+          }
+
           if (isStreamingActive) {
             const visualizationData = new Uint8Array(dataArrayRef.current.length);
             dataArrayRef.current.forEach((value, index) => {
@@ -453,6 +638,9 @@ const Player = forwardRef<any, PlayerProps>(
               highEnergy: scaledHighEnergy,
               color: finalColor,
               vocalEnergy: vocalEnergy,
+              // Add the new screen color properties
+              screenColors: screenColors,
+              colorZones: colorZones,
               audioData: visualizationData,
               brightness: brightness,
               vocalActive: isHighVocalEnergy.current,

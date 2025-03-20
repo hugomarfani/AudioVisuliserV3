@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { SongModel } from '../../database/models/Song';
 import Player from '../SongPlayer/Player';
@@ -23,6 +23,12 @@ const Particles: React.FC = () => {
   // Add state for cursor control
   const [cursorControlActive, setCursorControlActive] = useState(false);
 
+  // Add state for color sampling control
+  const [colorSamplingActive, setColorSamplingActive] = useState(true);
+
+  // Add a ref to track the dominant colors of the current displayed image
+  const dominantColorsRef = useRef<number[][]>([]);
+
   useEffect(() => {
     const loadAssets = async () => {
       if (songDetails) {
@@ -37,7 +43,7 @@ const Particles: React.FC = () => {
         );
 
         console.log("path test")
-        console.log(jacketPath, songDetails.jacket);''
+        console.log(jacketPath, songDetails.jacket);
 
         // Load all image paths with logging
         try {
@@ -58,7 +64,6 @@ const Particles: React.FC = () => {
         setFullAudioPath(audioPath);
         setFullJacketPath(jacketPath);
         console.log(fullAudioPath, fullJacketPath);
-
       }
     };
     loadAssets();
@@ -99,8 +104,70 @@ const Particles: React.FC = () => {
     if (backgroundImages.length > 0) {
       console.log('Setting initial background image:', backgroundImages[0]);
       setCurrentImageIndex(0);
+
+      // Extract colors from the initial image
+      extractDominantColors(backgroundImages[0]);
     }
   }, [backgroundImages]);
+
+  // Function to extract dominant colors from an image
+  const extractDominantColors = useCallback((imageSrc: string) => {
+    try {
+      // Create a temporary canvas for image analysis
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      if (!context) return;
+
+      // Create a temporary image
+      const img = new Image();
+
+      // Set CORS policy to allow loading the image
+      img.crossOrigin = 'Anonymous';
+
+      // Once the image loads, analyze it
+      img.onload = () => {
+        // Resize canvas to match image (scaled down for performance)
+        const maxSize = 150;
+        const scale = Math.min(maxSize / img.width, maxSize / img.height);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+
+        // Draw the image onto the canvas
+        context.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        // Define regions to sample (left, center, right)
+        const regions = [
+          { name: 'left', x: canvas.width * 0.2, y: canvas.height * 0.5 },
+          { name: 'center', x: canvas.width * 0.5, y: canvas.height * 0.5 },
+          { name: 'right', x: canvas.width * 0.8, y: canvas.height * 0.5 }
+        ];
+
+        // Sample colors from each region
+        const colors = regions.map(region => {
+          const pixelData = context.getImageData(
+            region.x, region.y, 1, 1
+          ).data;
+          return [pixelData[0], pixelData[1], pixelData[2]];
+        });
+
+        // Store the dominant colors for use with Hue lights
+        dominantColorsRef.current = colors;
+        console.log('Extracted dominant colors:', colors);
+      };
+
+      // Set the image source to start loading
+      img.src = imageSrc;
+
+      // Handle errors
+      img.onerror = (err) => {
+        console.error('Error loading image for color extraction:', err);
+        dominantColorsRef.current = [[255, 255, 255], [255, 255, 255], [255, 255, 255]];
+      };
+    } catch (error) {
+      console.error('Color extraction error:', error);
+      dominantColorsRef.current = [[255, 255, 255], [255, 255, 255], [255, 255, 255]];
+    }
+  }, []);
 
   // Add cursor tracking effect
   useEffect(() => {
@@ -143,6 +210,13 @@ const Particles: React.FC = () => {
     console.log(`Cursor control ${newState ? 'enabled' : 'disabled'}`);
   };
 
+  // Toggle color sampling on/off
+  const toggleColorSampling = () => {
+    const newState = !colorSamplingActive;
+    setColorSamplingActive(newState);
+    console.log(`Color sampling ${newState ? 'enabled' : 'disabled'}`);
+  };
+
   // Handle leaving the page
   const handleBack = () => {
     setIsActive(false); // Stop particle generation
@@ -176,6 +250,39 @@ const Particles: React.FC = () => {
       console.log('Switching to image index:', newIndex);
       console.log('Current image path:', backgroundImages[newIndex]);
       setCurrentImageIndex(newIndex);
+
+      // Extract colors from the new image
+      extractDominantColors(backgroundImages[newIndex]);
+    }
+  };
+
+  // Handle player playback state changes
+  const handlePlayStateChange = (isPlaying: boolean, audioData?: Uint8Array) => {
+    // When playing and we have dominant colors extracted from the current image,
+    // send them to the Hue lights for synchronized coloring
+    if (isPlaying && colorSamplingActive && dominantColorsRef.current.length > 0) {
+      // Define the zones based on our extracted colors
+      const colorZones = {
+        left: dominantColorsRef.current[0],
+        center: dominantColorsRef.current[1],
+        right: dominantColorsRef.current[2],
+      };
+
+      // If we have a player reference, use our new method to send colors to the Hue lights
+      if (playerRef.current && typeof playerRef.current.processBeatWithColors === 'function') {
+        playerRef.current.processBeatWithColors(colorZones);
+      } else if (window.electron?.hue?.processBeat) {
+        // Fallback: Send directly to electron IPC if player ref isn't available
+        window.electron.hue.processBeat({
+          isBeat: false, // Not a beat event, just color update
+          energy: audioData ? (Array.from(audioData).reduce((sum, val) => sum + val, 0) / audioData.length) : 0,
+          bassEnergy: 0,
+          midEnergy: 0,
+          highEnergy: 0,
+          colorZones: colorZones, // Pass our zone-based colors
+          screenColors: dominantColorsRef.current, // Also pass as array
+        });
+      }
     }
   };
 
@@ -264,9 +371,36 @@ const Particles: React.FC = () => {
           cursor: 'pointer',
           transition: 'all 0.3s ease',
         }}
+        title="Toggle cursor-based lighting"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill={cursorControlActive ? "rgb(0,255,128)" : "white"}>
           <path d="M13 6v15h-2V6H5l7-5 7 5h-6z" />
+        </svg>
+      </button>
+
+      {/* Color Sampling Toggle Button */}
+      <button
+        onClick={toggleColorSampling}
+        style={{
+          position: 'fixed',
+          top: 20,
+          right: 70,
+          zIndex: 10,
+          background: colorSamplingActive ? 'rgba(128,0,255,0.4)' : 'rgba(255,255,255,0.2)',
+          borderRadius: '50%',
+          width: 40,
+          height: 40,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          border: colorSamplingActive ? '2px solid rgba(128,0,255,0.8)' : 'none',
+          cursor: 'pointer',
+          transition: 'all 0.3s ease',
+        }}
+        title="Toggle screen color sampling"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill={colorSamplingActive ? "rgb(128,0,255)" : "white"}>
+          <path d="M12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,11A1,1 0 0,1 13,12A1,1 0 0,1 12,13A1,1 0 0,1 11,12A1,1 0 0,1 12,11M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z" />
         </svg>
       </button>
 
@@ -292,7 +426,40 @@ const Particles: React.FC = () => {
             }}
             autoPlay={true}
             onTimeUpdate={handleTimeUpdate}
+            onPlayStateChange={handlePlayStateChange}
           />
+        </div>
+      )}
+
+      {/* Color preview indicators to show detected colors */}
+      {colorSamplingActive && dominantColorsRef.current.length > 0 && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 130,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            gap: '10px',
+            zIndex: 10,
+            padding: '5px 10px',
+            background: 'rgba(0,0,0,0.3)',
+            borderRadius: '15px',
+          }}
+        >
+          {dominantColorsRef.current.map((color, index) => (
+            <div
+              key={index}
+              style={{
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                backgroundColor: `rgb(${color[0]}, ${color[1]}, ${color[2]})`,
+                border: '1px solid white',
+              }}
+              title={`Zone ${index + 1}: RGB(${color.join(', ')})`}
+            />
+          ))}
         </div>
       )}
 

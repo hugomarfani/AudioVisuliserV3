@@ -27,8 +27,11 @@ interface BeatData {
   bassEnergy: number;
   midEnergy: number;
   highEnergy: number;
-  color?: number[]; // Optional color parameter
-  vocalEnergy?: number; // Optional vocal energy parameter
+  color?: number[]; // Overall/main color
+  vocalEnergy?: number;
+  // New properties for screen-based color mapping
+  screenColors?: number[][]; // Array of colors sampled from the screen (up to 5 zones)
+  colorZones?: { left: number[], center: number[], right: number[] }; // Simplified zone mapping
 }
 
 // Interface for cursor position data
@@ -123,6 +126,15 @@ export default class HueService {
     screenHeight: 1080
   };
   private useCursorControl: boolean = false;
+
+  // Screen color mapping
+  private useScreenColorMapping: boolean = true; // Enable by default
+  private lastScreenColors: number[][] = []; // Store the last set of screen colors
+  private zoneColors: { [key: string]: number[] } = {
+    left: [255, 255, 255],
+    center: [255, 255, 255],
+    right: [255, 255, 255]
+  };
 
   // Add a new property to store the settings file path
   private settingsFilePath: string;
@@ -1271,22 +1283,30 @@ export default class HueService {
 
       const now = Date.now();
 
+      // If we have screen colors, use them for zone-based coloring
+      if (beatData.screenColors && beatData.screenColors.length > 0) {
+        this.lastScreenColors = beatData.screenColors;
+      }
+
+      // If we have zone colors, use them directly
+      if (beatData.colorZones) {
+        this.zoneColors.left = beatData.colorZones.left || this.zoneColors.left;
+        this.zoneColors.center = beatData.colorZones.center || this.zoneColors.center;
+        this.zoneColors.right = beatData.colorZones.right || this.zoneColors.right;
+      }
+
       // Check if we have a specific color from the renderer
       let targetColor: number[];
       let flashColor: number[];
 
-      // If specific color is provided, use it instead of cycling through colors
+      // If specific color is provided, use it as the main/center color
       if (beatData.color && beatData.color.length === 3) {
-        // Use the provided color
         flashColor = [...beatData.color];
-        // Create a dimmer version for between beats
         targetColor = beatData.color.map(c => Math.round(c * 0.2)); // 20% brightness
-
-        // Skip normal color cycling logic since color is specified
         this.currentBeatColor = flashColor;
       } else {
-        // Process beat detection and update lights with original cycling color logic
-        if (beatData.isBeat && now - this.lastBeatTime > 100) { // Minimum time between beats
+        // Process beat detection with cycling color logic
+        if (beatData.isBeat && now - this.lastBeatTime > 100) {
           this.lastBeatDetected = true;
           this.lastBeatTime = now;
 
@@ -1294,7 +1314,7 @@ export default class HueService {
           const beatColor = this.beatColors[this.beatColorIndex];
           this.beatColorIndex = (this.beatColorIndex + 1) % this.beatColors.length;
           flashColor = beatColor;
-          targetColor = beatColor.map(c => Math.round(c * 0.2)); // 20% brightness
+          targetColor = beatColor.map(c => Math.round(c * 0.2));
         } else {
           // Use ambient lighting based on audio energy if no beat detected
           flashColor = [
@@ -1306,36 +1326,26 @@ export default class HueService {
         }
       }
 
-      // Check for high vocal energy - improved handling
+      // Apply vocal energy boost if detected
       if (beatData.vocalEnergy && beatData.vocalEnergy > 30) {
-        // More responsive scaling of brightness based on energy level
-        const baseVocalBoost = beatData.vocalEnergy / 200; // 0-1.275 range for typical values
-        const vocalBoostFactor = Math.min(2.0, 1.0 + baseVocalBoost); // Cap at 200% brightness
+        const baseVocalBoost = beatData.vocalEnergy / 200;
+        const vocalBoostFactor = Math.min(2.0, 1.0 + baseVocalBoost);
 
-        // Apply vocal boost - stronger effect
+        // Apply to main colors
         flashColor = flashColor.map(c => Math.min(255, Math.round(c * vocalBoostFactor)));
-
-        // Also boost the target color for between beats
         targetColor = targetColor.map(c => Math.min(255, Math.round(c * (1 + baseVocalBoost * 0.5))));
-
-        // Log the vocal boost for significant changes
-        if (vocalBoostFactor > 1.3) {
-          // console.log(`🎤 Strong vocal boost: ${vocalBoostFactor.toFixed(2)}, Energy: ${beatData.vocalEnergy.toFixed(1)}`);
-        }
       }
 
-      // If a beat is detected, flash with the chosen color
+      // If a beat is detected, flash with colors
       if (beatData.isBeat && now - this.lastBeatTime < 100) {
-        // console.log('\n=======FLASH=======');
-        // console.log(`Beat Energy: ${beatData.energy.toFixed(2)}`);
-        // console.log(`Flash color: ${flashColor.join(', ')}`);
-
-        // Set flash color as current for immediate effect
-        if (this.useCursorControl) {
-          // Apply cursor position effect to the flash when cursor control is enabled
+        if (this.useScreenColorMapping && this.lightPositions.length > 1) {
+          // Apply zoned colors based on light positions
+          this.applyZonedColors(flashColor, true);
+        } else if (this.useCursorControl) {
+          // Apply cursor position effect
           this.applyCursorPositionEffect(flashColor, targetColor);
         } else {
-          // Set the same color for all lights if cursor control is disabled
+          // Set the same color for all lights
           this.currentRgbValues = Array(this.lightCount).fill(flashColor);
           this.targetRgbValues = Array(this.lightCount).fill(targetColor);
         }
@@ -1347,11 +1357,13 @@ export default class HueService {
         this.lastBeatDetected = false;
 
         // Smoother transitions between non-beat frames
-        // Use the provided color or our calculated color
-        if (this.useCursorControl) {
-          // Apply cursor position effect between beats too
+        if (this.useScreenColorMapping && this.lightPositions.length > 1) {
+          // Use zoned colors but with reduced brightness
+          this.applyZonedColors(flashColor, false);
+        } else if (this.useCursorControl) {
+          // Apply cursor effect with reduced brightness
           this.applyCursorPositionEffect(
-            flashColor.map(c => Math.round(c * 0.5)), // Half brightness between beats
+            flashColor.map(c => Math.round(c * 0.5)),
             targetColor
           );
         } else {
@@ -1366,6 +1378,49 @@ export default class HueService {
       return false;
     }
   };
+
+  /**
+   * Apply different colors to different light zones based on screen content or audio spectrum
+   * Left lights will use left zone colors, center lights center colors, and right lights right colors
+   */
+  private applyZonedColors(baseColor: number[], isBeat: boolean) {
+    if (!this.isStreaming || this.lightCount < 2) return;
+
+    // Use screen zones or default to base color
+    let leftColor = this.zoneColors.left || baseColor;
+    let centerColor = this.zoneColors.center || baseColor;
+    let rightColor = this.zoneColors.right || baseColor;
+
+    // If not a beat, reduce brightness
+    if (!isBeat) {
+      leftColor = leftColor.map(c => Math.round(c * 0.5));
+      centerColor = centerColor.map(c => Math.round(c * 0.5));
+      rightColor = rightColor.map(c => Math.round(c * 0.5));
+    }
+
+    // Apply colors to lights based on their horizontal position
+    for (let i = 0; i < this.lightCount; i++) {
+      // Get light position or use default
+      const lightPos = this.lightPositions[i] || { id: i, x: 0, y: 0, z: 0 };
+
+      // Determine zone based on x position (-1 to 1 range)
+      let zoneColor;
+      if (lightPos.x < -0.33) {
+        // Left zone
+        zoneColor = leftColor;
+      } else if (lightPos.x > 0.33) {
+        // Right zone
+        zoneColor = rightColor;
+      } else {
+        // Center zone
+        zoneColor = centerColor;
+      }
+
+      // Apply color to this light
+      this.currentRgbValues[i] = [...zoneColor];
+      this.targetRgbValues[i] = zoneColor.map(c => Math.round(c * 0.8)); // Slightly dimmer target
+    }
+  }
 
   /**
    * Apply cursor position effect to lights
