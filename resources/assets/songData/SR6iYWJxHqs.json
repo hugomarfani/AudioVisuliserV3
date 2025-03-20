@@ -22,7 +22,9 @@
   ],
   "objects": [],
   "object_prompts": [],
-  "particles": [],
+  "particles": [
+    "hearts"
+  ],
   "backgrounds": [],
   "background_prompts": [],
   "shaderBackground": "shader/background/SR6iYWJxHqs.jpg",

@@ -11,6 +11,26 @@ This project provides an affordable, AI-powered sensory room designed to support
 
 ### Particle Visualiser
 
+https://github.com/user-attachments/assets/98da8b35-53a8-44fd-baab-022650dd28d2
+
+The Particle Visualiser creates dynamic, responsive and interactive particle systems tailored to each song's theme and mood. Using a physics-based engine, particles exhibit realistic behaviors including gravity, bounce effects, air resistance, and custom lifespans.
+
+Key features include:
+
+- **Customizable Particles**: Each particle type has adjustable physical properties (weight, gravity, bounce, air resistance, lifespan) that can be modified through an intuitive settings interface.
+  
+- **Custom Imagery**: Upload and manage multiple images for each particle type, allowing for rich visual diversity.
+  
+- **Interactive Experience**: Particles respond to user interaction - they can be generated with clicks and move according to the music's rhythm and intensity.
+  
+- **Song-Specific Selection**: Each song can have multiple particle types assigned to it, with a simple interface to add or remove particles based on the desired visual effect and mood.
+  
+- **Create Custom Particles**: Users can create their own particle types with custom names and configure all their properties to achieve unique visual effects.
+  
+- **Glow Effects**: Toggle glow effects for particles to enhance visual appeal during moments of musical intensity.
+
+The particle system is designed to be highly performant while providing soothing yet engaging visual representations of sound that can be fully customized to support different sensory preferences and needs.
+
 ### Shader Visualiser
 
 ![ezgif-7490fcba69ce7e](https://github.com/user-attachments/assets/ae00afd0-27ca-423f-93c2-6d845fa9484a)
@@ -89,17 +109,23 @@ To package apps for the local platform:
 npm run package
 ```
 
+## Coders
+- [Hugo Marfani](https://github.com/hugomarfani)
+- [Horesh Lopian](https://github.com/HoreshLupi)
+- [Kiminao Usami](https://github.com/NaokiRe)
+- [Aiden Cheng](https://github.com/AidCheng)
+
 ## Dependencies
 This repository was forked off [electron-react-boilerplate](https://github.com/electron-react-boilerplate/electron-react-boilerplate).
 
-## Maintainers
+### Maintainers for Electron Boilerplate
 
 - [Amila Welihinda](https://github.com/amilajack)
 - [John Tran](https://github.com/jooohhn)
 - [C. T. Lin](https://github.com/chentsulin)
 - [Jhen-Jie Hong](https://github.com/jhen0409)
 
-## License
+### License
 
 MIT © [Electron React Boilerplate](https://github.com/electron-react-boilerplate)
 
