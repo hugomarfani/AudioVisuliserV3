@@ -1,5 +1,6 @@
 import p5 from "p5";
-import { particlePhysics, getRandomParticleImage } from "./particlePhysics";
+import { getParticlePhysics, getRandomParticleImage } from "./particlePhysics";
+import particleListData from './particleList.json';
 
 class Particle {
   pos: p5.Vector;
@@ -29,8 +30,8 @@ class Particle {
       this.loadImage();
     }
 
-    // Get physics properties
-    const physics = particlePhysics[type] || particlePhysics["musicNote"];
+    // Get physics properties from JSON
+    const physics = getParticlePhysics(type);
     this.lifespan = physics.lifespan;
   }
 
@@ -69,7 +70,8 @@ class Particle {
   }
 
   update() {
-    const physics = particlePhysics[this.type] || particlePhysics["musicNote"];
+    // Always get the latest physics from JSON
+    const physics = getParticlePhysics(this.type);
     
     // Apply gravity (positive y is downward in p5)
     const gravity = this.p.createVector(0, physics.gravity * physics.weight);
@@ -113,6 +115,16 @@ class Particle {
 
   display() {
     this.p.push();
+    
+    // Get the latest physics to check for glow effect
+    const physics = getParticlePhysics(this.type);
+    
+    // Apply glow effect if enabled
+    if (physics.glow) {
+      this.p.drawingContext.shadowBlur = 15;
+      this.p.drawingContext.shadowColor = 'rgba(255, 255, 255, 0.8)';
+    }
+    
     if (this.img) {
       this.p.imageMode(this.p.CENTER);
       this.p.tint(255, this.lifespan * 0.5); // Add fade effect based on lifespan
@@ -128,7 +140,8 @@ class Particle {
   }
 
   isDead() {
-    const physics = particlePhysics[this.type] || particlePhysics["musicNote"];
+    // Always get the latest physics from JSON
+    const physics = getParticlePhysics(this.type);
     
     // Check if particle has expired based on lifespan
     if (this.lifespan <= 0) return true;

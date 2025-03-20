@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { FaStar, FaPlus, FaCheck, FaTrash, FaImage, FaUpload } from 'react-icons/fa';
+import { FaStar, FaPlus, FaCheck, FaTrash, FaCog } from 'react-icons/fa';
 import { SongModel } from '../../database/models/Song';
 import colors from '../../theme/colors';
 import particleListData from '../../particles/particleList.json';
+import ParticleSettings from './ParticleSettings';
 
 interface ParticleSelectorProps {
   song: SongModel;
@@ -10,30 +11,53 @@ interface ParticleSelectorProps {
   refetch: () => void;
 }
 
+// Define TypeScript interface for the new particle structure
+interface ParticleData {
+  id: string;
+  name: string;
+  weight: number;
+  gravity: number;
+  bounce: number;
+  airResistance: number;
+  lifespan: number;
+  glow: boolean;
+  images: string[];
+  moods: string[];
+  dir: string;
+  count: number;
+}
+
 const ParticleSelector: React.FC<ParticleSelectorProps> = ({ song, songId, refetch }) => {
-  const [particleList] = useState<string[]>(particleListData.particles);
+  const [particleList, setParticleList] = useState<ParticleData[]>(particleListData.particles);
   const [showParticleSelector, setShowParticleSelector] = useState<boolean>(false);
   const [customParticleName, setCustomParticleName] = useState<string>('');
-  const [selectedParticleImage, setSelectedParticleImage] = useState<{name: string, path: string} | null>(null);
   const [particleUploadStatus, setParticleUploadStatus] = useState<string>('');
+  const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [selectedParticleForSettings, setSelectedParticleForSettings] = useState<string>('');
+
+  // Helper function to find particle name by ID
+  const getParticleNameById = (particleId: string): string => {
+    const particle = particleList.find(p => p.id === particleId);
+    return particle ? particle.name : particleId;
+  };
 
   // Handler for selecting predefined particles
-  const handleSelectParticle = async (particleName: string) => {
+  const handleSelectParticle = async (particleId: string) => {
     if (!song) return;
 
     // Clone the current particles array or create a new one
     const currentParticles = [...(song.dataValues.particles || [])];
     
     // Check if the particle is already selected
-    const isAlreadySelected = currentParticles.includes(particleName);
+    const isAlreadySelected = currentParticles.includes(particleId);
     
     let updatedParticles;
     if (isAlreadySelected) {
       // Remove the particle if already selected
-      updatedParticles = currentParticles.filter(p => p !== particleName);
+      updatedParticles = currentParticles.filter(p => p !== particleId);
     } else {
       // Add the particle if not selected
-      updatedParticles = [...currentParticles, particleName];
+      updatedParticles = [...currentParticles, particleId];
     }
     
     // Update the song in the database
@@ -54,64 +78,74 @@ const ParticleSelector: React.FC<ParticleSelectorProps> = ({ song, songId, refet
     }
   };
 
-  // Handler to open file dialog for custom particles
-  const openParticleFileDialog = async () => {
-    try {
-      const result = await window.electron.ipcRenderer.invoke('open-file-dialog');
-      
-      if (!result.canceled && result.filePaths.length > 0) {
-        const filePath = result.filePaths[0];
-        const fileName = filePath.split('\\').pop().split('/').pop(); // Extract filename
-        
-        setSelectedParticleImage({
-          name: fileName,
-          path: filePath
-        });
-      }
-    } catch (error) {
-      console.error('Error opening file dialog for particle:', error);
-    }
-  };
-
-  // Handler for uploading custom particle images
-  const handleParticleImageUpload = async () => {
-    if (!selectedParticleImage || !song || !customParticleName) {
-      setParticleUploadStatus('Please provide both a name and select an image');
+  // Handler for creating and adding a custom particle
+  const handleAddCustomParticle = async () => {
+    if (!customParticleName || !song) {
+      setParticleUploadStatus('Please provide a name for the custom particle');
       return;
     }
 
-    setParticleUploadStatus('Uploading particle image...');
-    try {
-      // Save the image with a prefix to identify it as a particle
-      const result = await window.electron.ipcRenderer.invoke('save-image', {
-        songId: songId,
-        filePath: selectedParticleImage.path,
-        fileName: `particle_${customParticleName}_${selectedParticleImage.name}`
-      });
+    // Validate that the particle name is a single word (no spaces)
+    if (customParticleName.includes(' ')) {
+      setParticleUploadStatus('Particle name must be a single word (no spaces)');
+      return;
+    }
 
+    setParticleUploadStatus('Creating custom particle...');
+    try {
+      // Create a safe ID from the name (lowercase)
+      const customParticleId = `custom_${customParticleName.toLowerCase()}`;
+      
+      // Create new particle object
+      const newParticle: ParticleData = {
+        id: customParticleId,
+        name: customParticleName,
+        weight: 1.0,
+        gravity: 0.1,
+        bounce: 0.5,
+        airResistance: 0.02,
+        lifespan: 5000,
+        glow: false,
+        images: [],
+        moods: ["custom"],
+        dir: customParticleId,
+        count: 0
+      };
+      
+      // Update particle list with the new custom particle
+      const updatedParticles = [...particleList, newParticle];
+      
+      // Save the updated particle list to particleList.json
+      const result = await window.electron.ipcRenderer.invoke('update-particle-settings', {
+        particles: updatedParticles
+      });
+      
       if (result.success) {
         // Update the song with the new custom particle
-        const customParticleId = `custom_${customParticleName}`;
-        const updatedParticles = [...(song.dataValues.particles || []), customParticleId];
+        const updatedSongParticles = [...(song.dataValues.particles || []), customParticleId];
         
         await window.electron.ipcRenderer.invoke('update-song', {
           id: songId,
-          particles: updatedParticles,
-          // Store the mapping of custom particle ID to the image path
-          [`particle_${customParticleId}`]: result.savedPath
+          particles: updatedSongParticles
         });
         
         // Save the updated song as JSON
         await window.electron.ipcRenderer.invoke('save-song-as-json', { id: songId });
         
-        setParticleUploadStatus('Custom particle added successfully');
-        setSelectedParticleImage(null);
+        // Update local state
+        setParticleList(updatedParticles);
         setCustomParticleName('');
+        
+        // Open particle settings with the new particle selected
+        setSelectedParticleForSettings(customParticleId);
+        //setShowSettings(true);
+        
+        setParticleUploadStatus('Custom particle added successfully');
         
         // Refresh the song data
         refetch();
       } else {
-        setParticleUploadStatus(`Upload failed: ${result.error}`);
+        setParticleUploadStatus(`Failed to add custom particle: ${result.error}`);
       }
     } catch (error) {
       setParticleUploadStatus(`Error: ${error.message || 'Unknown error occurred'}`);
@@ -119,15 +153,15 @@ const ParticleSelector: React.FC<ParticleSelectorProps> = ({ song, songId, refet
   };
 
   // Handler for deleting particles
-  const handleDeleteParticle = async (particleName: string) => {
+  const handleDeleteParticle = async (particleId: string) => {
     if (!song) return;
     
     try {
       // Remove from particles array
-      const updatedParticles = (song.dataValues.particles || []).filter(p => p !== particleName);
+      const updatedParticles = (song.dataValues.particles || []).filter(p => p !== particleId);
       
       // If it's a custom particle, also clean up the image reference
-      if (particleName.startsWith('custom_')) {
+      if (particleId.startsWith('custom_')) {
         // Logic to delete the particle image if needed
         // This would depend on how you're storing custom particle images
       }
@@ -150,16 +184,64 @@ const ParticleSelector: React.FC<ParticleSelectorProps> = ({ song, songId, refet
     }
   };
 
+  // Handle closing the settings modal
+  const handleSettingsClose = () => {
+    setShowSettings(false);
+    setSelectedParticleForSettings('');
+  };
+
+  // Handle settings saved
+  const handleSettingsSaved = () => {
+    setParticleUploadStatus('Particle settings updated successfully');
+    // Use a simple timeout instead of immediately trying to fetch
+    setTimeout(() => {
+      // Silently update the particle list without showing errors to the user
+      window.electron.ipcRenderer.invoke('get-particle-list')
+        .then(result => {
+          if (result.success) {
+            setParticleList(result.particles);
+          }
+        })
+        .catch(() => {
+          // Silent fail - we'll use the existing data
+          console.log('Using cached particle list data');
+        });
+      refetch();
+    }, 1000); // Wait a second before refreshing to allow the file to be written
+  };
+
   return (
-    <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>
+    <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem', position: 'relative' }}>
       <h3 style={{ 
         fontSize: '1.2rem', 
         marginBottom: '1rem',
         display: 'flex',
-        alignItems: 'center'
+        alignItems: 'center',
+        justifyContent: 'space-between'
       }}>
-        <FaStar style={{ marginRight: '0.5rem' }} />
-        Particle Effects
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <FaStar style={{ marginRight: '0.5rem' }} />
+          Particle Effects
+        </div>
+        <button 
+          onClick={() => setShowSettings(true)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: colors.grey3,
+            color: colors.white,
+            border: 'none',
+            borderRadius: '50%',
+            width: '32px',
+            height: '32px',
+            cursor: 'pointer',
+            transition: 'background-color 0.2s',
+          }}
+          title="Particle Settings"
+        >
+          <FaCog />
+        </button>
       </h3>
       
       {/* Display selected particles */}
@@ -167,35 +249,39 @@ const ParticleSelector: React.FC<ParticleSelectorProps> = ({ song, songId, refet
         <h4 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: '0.5rem' }}>Selected Particles:</h4>
         {song.dataValues.particles && song.dataValues.particles.length > 0 ? (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {song.dataValues.particles.map((particle, index) => (
-              <div 
-                key={`particle-${index}`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  backgroundColor: colors.grey5,
-                  borderRadius: '16px',
-                  padding: '6px 12px',
-                  fontSize: '0.9rem',
-                }}
-              >
-                <span>{particle}</span>
-                <button
-                  onClick={() => handleDeleteParticle(particle)}
+            {song.dataValues.particles.map((particleId, index) => {
+              // Find the particle object to display the proper name
+              const particleName = getParticleNameById(particleId);
+              return (
+                <div 
+                  key={`particle-${index}`}
                   style={{
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    color: colors.grey2,
-                    marginLeft: '6px',
-                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
+                    backgroundColor: colors.grey5,
+                    borderRadius: '16px',
+                    padding: '6px 12px',
+                    fontSize: '0.9rem',
                   }}
                 >
-                  <FaTrash size={12} />
-                </button>
-              </div>
-            ))}
+                  <span>{particleName}</span>
+                  <button
+                    onClick={() => handleDeleteParticle(particleId)}
+                    style={{
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      color: colors.grey2,
+                      marginLeft: '6px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <FaTrash size={12} />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <p style={{ color: colors.grey2, fontStyle: 'italic' }}>No particles selected</p>
@@ -234,11 +320,11 @@ const ParticleSelector: React.FC<ParticleSelectorProps> = ({ song, songId, refet
           <h4 style={{ fontSize: '1rem', marginBottom: '0.75rem' }}>Select from predefined particles:</h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '1rem' }}>
             {particleList.map((particle) => {
-              const isSelected = song.dataValues.particles?.includes(particle);
+              const isSelected = song.dataValues.particles?.includes(particle.id);
               return (
                 <button
-                  key={particle}
-                  onClick={() => handleSelectParticle(particle)}
+                  key={particle.id}
+                  onClick={() => handleSelectParticle(particle.id)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -253,13 +339,13 @@ const ParticleSelector: React.FC<ParticleSelectorProps> = ({ song, songId, refet
                   }}
                 >
                   {isSelected && <FaCheck size={12} style={{ marginRight: '6px' }} />}
-                  {particle}
+                  {particle.name}
                 </button>
               );
             })}
           </div>
           
-          <h4 style={{ fontSize: '1rem', marginTop: '1rem', marginBottom: '0.75rem' }}>Upload custom particle:</h4>
+          <h4 style={{ fontSize: '1rem', marginTop: '1rem', marginBottom: '0.75rem' }}>Create custom particle:</h4>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
               <input
@@ -275,53 +361,41 @@ const ParticleSelector: React.FC<ParticleSelectorProps> = ({ song, songId, refet
                   marginRight: '8px',
                 }}
               />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
               <button
-                onClick={openParticleFileDialog}
+                onClick={handleAddCustomParticle}
+                disabled={!customParticleName}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  backgroundColor: colors.grey3,
+                  backgroundColor: customParticleName ? colors.blue : colors.grey3,
                   color: colors.white,
                   border: 'none',
                   borderRadius: '9999px',
                   padding: '0.5rem 1rem',
-                  cursor: 'pointer',
+                  cursor: customParticleName ? 'pointer' : 'not-allowed',
                   fontSize: '0.9rem',
                 }}
               >
-                <FaImage style={{ marginRight: '0.5rem' }} />
-                Select Image
-              </button>
-              {selectedParticleImage && <span style={{marginLeft: '1rem', fontSize: '0.9rem'}}>{selectedParticleImage.name}</span>}
-              <button
-                onClick={handleParticleImageUpload}
-                disabled={!selectedParticleImage || !customParticleName}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  backgroundColor: selectedParticleImage && customParticleName ? colors.blue : colors.grey3,
-                  color: colors.white,
-                  border: 'none',
-                  borderRadius: '9999px',
-                  padding: '0.5rem 1rem',
-                  cursor: selectedParticleImage && customParticleName ? 'pointer' : 'not-allowed',
-                  fontSize: '0.9rem',
-                  marginLeft: 'auto',
-                }}
-              >
-                <FaUpload style={{ marginRight: '0.5rem' }} />
-                Upload
+                <FaPlus style={{ marginRight: '0.5rem' }} />
+                Create Particle
               </button>
             </div>
             {particleUploadStatus && (
-              <p style={{ fontSize: '0.9rem', marginTop: '0.5rem', color: particleUploadStatus.includes('Error') || particleUploadStatus.includes('failed') ? 'red' : 'green' }}>
+              <p style={{ fontSize: '0.9rem', marginTop: '0.5rem', color: particleUploadStatus.includes('Error') || particleUploadStatus.includes('Failed') ? 'red' : 'green' }}>
                 {particleUploadStatus}
               </p>
             )}
           </div>
         </div>
+      )}
+
+      {/* Particle Settings Modal */}
+      {showSettings && (
+        <ParticleSettings 
+          onClose={handleSettingsClose} 
+          onSaved={handleSettingsSaved}
+          initialSelectedParticleId={selectedParticleForSettings}
+        />
       )}
     </div>
   );

@@ -22,7 +22,9 @@
   ],
   "objects": [],
   "object_prompts": [],
-  "particles": [],
+  "particles": [
+    "hearts"
+  ],
   "backgrounds": [],
   "background_prompts": [],
   "shaderBackground": "shader/background/SR6iYWJxHqs.jpg",
@@ -33,5 +35,5 @@
     "255"
   ],
   "createdAt": "2025-03-08T16:35:12.470Z",
-  "updatedAt": "2025-03-11T10:19:38.897Z"
+  "updatedAt": "2025-03-20T18:05:01.185Z"
 }
