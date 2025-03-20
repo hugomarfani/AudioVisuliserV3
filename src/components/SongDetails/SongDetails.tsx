@@ -18,9 +18,39 @@ interface SongDetailsProps {
 const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
   const { songs, refetch } = useSongs();
   const [song, setSong] = useState<SongModel | null>(null);
+  const [youtubeId, setYoutubeId] = useState<string>("");
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [jacketImage, setJacketImage] = useState<string>("");
   const [redownloading, setRedownloading] = useState(false);
+
+  const [linkingFile, setLinkingFile] = useState(false);
+
+  const handleLinkAudioFile = async () => {
+    try {
+      setLinkingFile(true);
+
+      // Open file dialog and get selected path
+      const result = await window.electron.fileSystem.selectAudioFile();
+
+      if (result.cancelled) {
+        setLinkingFile(false);
+        return;
+      }
+
+      // Link the selected file to this song
+      await window.electron.fileSystem.linkNewMp3(songId, result.filePath);
+
+      setLinkingFile(false);
+      alert("Audio file linked successfully!");
+
+      // Refresh song data
+      refetch();
+    } catch (error) {
+      setLinkingFile(false);
+      console.error("Error linking audio file:", error);
+      alert(`Failed to link audio file: ${error}`);
+    }
+  };
 
   const findImagePath = async (P: string) => {
     const response = await window.electron.fileSystem.mergeAssetPath(P);
@@ -47,6 +77,9 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
           setJacketImage(jacketImagePath);
           console.log('Jacket Image:', jacketImagePath);
         }
+        if (song && song.dataValues.youtubeId) {
+          setYoutubeId(song.dataValues.youtubeId);
+        }
       }
     };
 
@@ -70,7 +103,7 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
 
     try {
       setRedownloading(true);
-      await window.electron.ipcRenderer.invoke('redownload-mp3', songId);
+      await window.electron.ipcRenderer.invoke('redownload-mp3', youtubeId);
       setRedownloading(false);
       alert("MP3 redownloaded successfully!");
       // Refresh song data
@@ -160,6 +193,24 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
         <p style={{ fontSize: '1rem', color: colors.grey2 }}>
           Status: {song.dataValues.status}
         </p>
+        <p style={{ fontSize: '1rem', display: 'flex', alignItems: 'center', marginBottom: '0.5rem' }}>
+          <span style={{ 
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: (youtubeId !== "") ? '#FF0000' : '#4CAF50',
+            color: 'white',
+            borderRadius: '4px',
+            padding: '2px 6px',
+            marginRight: '8px',
+            fontSize: '0.9rem'
+          }}>
+            {(youtubeId !== "") ? '▶ YouTube' : '🎵 Custom'}
+          </span>
+          <span style={{ color: colors.grey2 }}>
+            {(youtubeId !== "") ? 'Downloaded from YouTube' : 'Custom audio file'}
+          </span>
+        </p>
         <p style={{ fontSize: '1rem', color: colors.grey2 }}>
           Moods: {song.dataValues.moods.join(', ')}
         </p>
@@ -173,41 +224,65 @@ const SongDetails: React.FC<SongDetailsProps> = ({ onClose, songId }) => {
           Backgrounds: {song.dataValues.backgrounds.join(', ')}
         </p>
 
-        {/* MP3 Redownload component */}
+        {/* MP3 Redownload component - only for youtube*/}
+        { 
+          youtubeId && youtubeId !== '' &&
+          <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>
+              Redownload MP3
+            </h3>
+            <p style={{ fontSize: '0.9rem', color: colors.grey2, marginBottom: '1rem' }}>
+              If there was an issue with the original MP3 download, you can redownload it.
+            </p>
+            <button
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: redownloading ? colors.blue : colors.grey2,
+                color: colors.white,
+                border: 'none',
+                borderRadius: '4px',
+                cursor: redownloading ? 'not-allowed' : 'pointer',
+                fontWeight: 'bold',
+              }}
+              onClick={handleMp3Redownload}
+              disabled={redownloading}
+            >
+              {redownloading ? 'Downloading...' : 'Redownload MP3'}
+            </button>
+          </div>
+        } 
+
+        {/* Link New Audio File section */}
         <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>
           <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>
-            Redownload MP3
+            Link Local Audio File
           </h3>
           <p style={{ fontSize: '0.9rem', color: colors.grey2, marginBottom: '1rem' }}>
-            If there was an issue with the original MP3 download, you can redownload it.
+            Select a local audio file to use with this song instead of downloading from YouTube.
           </p>
           <button
             style={{
               padding: '0.5rem 1rem',
-              backgroundColor: redownloading ? colors.blue : colors.grey2,
+              backgroundColor: colors.green,
               color: colors.white,
               border: 'none',
               borderRadius: '4px',
-              cursor: redownloading ? 'not-allowed' : 'pointer',
+              cursor: 'pointer',
               fontWeight: 'bold',
+              marginRight: '10px'
             }}
-            onClick={handleMp3Redownload}
-            disabled={redownloading}
+            onClick={handleLinkAudioFile}
           >
-            {redownloading ? 'Downloading...' : 'Redownload MP3'}
+            Select Audio File
           </button>
         </div>
 
-
-
-        {/*
-
-        DEPRECATED WARNING -> WHISPER NOW DELETES THE WAV FILE AFTER PROCESSING SO NO NEED TO RERUN WHISPER
+        {/* DEPRECATED WARNING -> WHISPER NOW DELETES THE WAV FILE AFTER PROCESSING SO NO NEED TO RERUN WHISPER
         HOWEVER, LEAVING THIS COMMENTED OUT IN CASE WE NEED TO REVERT BACK TO THIS
         THIS WOULD REQUIRE SD.EXE BEING UPDATED WITH THE NEW WHISPER COMMANDS
 
-        Whisper Runner component - add this before LLM Runner
-        <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>
+        Whisper Runner component - add this before LLM Runner */}
+        {/* <div style={{ marginTop: '2rem', borderTop: `1px solid ${colors.grey4}`, paddingTop: '1rem' }}>
           <WhisperRunner
             song={song}
             songId={songId}

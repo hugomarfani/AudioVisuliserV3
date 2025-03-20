@@ -1,37 +1,32 @@
-import React, { useState, useEffect } from 'react';
-import { FaPlay, FaList, FaCheckSquare, FaSpinner } from 'react-icons/fa';
-import { SongModel } from '../../database/models/Song';
+import React, { useState } from 'react';
+import { FaCheck, FaPlay, FaSpinner } from 'react-icons/fa';
 import colors from '../../theme/colors';
 import AIProgressTracker from './AIProgressTracker';
+import { useAIProcessTracking } from '../../hooks/useAIProcessTracking';
+import { SongModel } from '../../database/models/Song';
 
 interface AIOption {
   key: string;
   label: string;
-  flag: string;
-  description: string;
+  flag?: string;
+  description?: string;
   dependsOn?: string;
   disabled?: boolean;
   disabledReason?: string;
 }
 
-export interface ProgressStep {
-  key: string;
-  label: string;
-  completed: boolean;
-}
-
-export interface AIRunnerProps {
+interface AIRunnerProps {
   song: SongModel;
   songId: string;
   refetch: () => void;
   title: string;
-  description: string;
+  description?: string;
   options: AIOption[];
   progressLabels: Record<string, string>;
   invokeChannel: string;
   runAllKey?: string;
   validateOptions?: (selectedOptions: string[], song: SongModel) => { isValid: boolean; message?: string };
-  prepareOptions?: (selectedOptions: string[]) => Record<string, boolean>;
+  prepareOptions?: (selectedOptions: string[]) => Record<string, any>;
 }
 
 const AIRunner: React.FC<AIRunnerProps> = ({
@@ -43,336 +38,226 @@ const AIRunner: React.FC<AIRunnerProps> = ({
   options,
   progressLabels,
   invokeChannel,
-  runAllKey = 'all',
+  runAllKey,
   validateOptions,
-  prepareOptions,
+  prepareOptions
 }) => {
-  const [status, setStatus] = useState<string>('');
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
-  const [showOptions, setShowOptions] = useState<boolean>(false);
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [currentOperationId, setCurrentOperationId] = useState<string | null>(null);
-  const [progressSteps, setProgressSteps] = useState<ProgressStep[]>([]);
-
-  // Set up listeners for AI progress events
-  useEffect(() => {
-    // Create references to store removal functions
-    let removeProgressListener: (() => void) | undefined;
-    let removeErrorListener: (() => void) | undefined;
-    let removeCompleteListener: (() => void) | undefined;
-    
-    const progressListener = (data: any) => {
-      console.log("Progress update received in component:", data);
-      if (data && data.operationId === currentOperationId) {
-        // Force a more direct state update by creating a completely new array each time
-        setProgressSteps(prevSteps => {
-          const stepIndex = prevSteps.findIndex(step => step.key === data.step);
-          
-          let newSteps;
-          if (stepIndex >= 0) {
-            // Create a new array with the updated step
-            newSteps = [...prevSteps];
-            newSteps[stepIndex] = {
-              ...newSteps[stepIndex],
-              completed: data.completed
-            };
-          } else {
-            // Add new step to the array
-            newSteps = [
-              ...prevSteps,
-              {
-                key: data.step,
-                label: progressLabels[data.step] || data.step,
-                completed: data.completed
-              }
-            ];
-          }
-          
-          console.log("Updating progress steps:", newSteps);
-          return newSteps;
-        });
-      }
-    };
-
-    const errorListener = (data: any) => {
-      console.log("Error received in component:", data);
-      if (data && data.operationId === currentOperationId) {
-        setStatus(`Error: ${data.error}`);
-        setIsProcessing(false);
-        
-        // Clean up listeners when error occurs
-        console.log("Cleaning up event listeners due to error");
-        if (removeProgressListener) removeProgressListener();
-        if (removeErrorListener) removeErrorListener();
-        if (removeCompleteListener) removeCompleteListener();
-      }
-    };
-
-    const completeListener = (data: any) => {
-      console.log("Process complete received in component:", data);
-      if (data && data.operationId === currentOperationId) {
-        setIsProcessing(false);
-        setStatus(`Process completed with code: ${data.exitCode}`);
-        refetch();
-        
-        // Clean up listeners when process completes
-        console.log("Cleaning up event listeners due to completion");
-        if (removeProgressListener) removeProgressListener();
-        if (removeErrorListener) removeErrorListener();
-        if (removeCompleteListener) removeCompleteListener();
-      }
-    };
-
-    // Set up listeners
-    console.log("Setting up event listeners for operation:", currentOperationId);
-    removeProgressListener = window.electron.ipcRenderer.on('ai-progress-update', progressListener);
-    removeErrorListener = window.electron.ipcRenderer.on('ai-error', errorListener);
-    removeCompleteListener = window.electron.ipcRenderer.on('ai-process-complete', completeListener);
-
-    return () => {
-      // This cleanup function will run when the component unmounts or when currentOperationId changes
-      console.log("Cleaning up event listeners on unmount/change");
-      if (removeProgressListener) removeProgressListener();
-      if (removeErrorListener) removeErrorListener();
-      if (removeCompleteListener) removeCompleteListener();
-    };
-  }, [currentOperationId, refetch, progressLabels]);
+  
+  // Use the AI process tracking hook
+  const handleComplete = (data: any) => {
+    refetch();
+  };
+  
+  const {
+    isProcessing,
+    status,
+    progressSteps,
+    startProcessing,
+    setStatus
+  } = useAIProcessTracking({
+    operationId: currentOperationId,
+    onComplete: handleComplete
+  });
 
   const toggleOption = (optionKey: string) => {
     setSelectedOptions(prev => {
-      const isSelected = prev.includes(optionKey);
+      // Clear validation errors when options change
+      setValidationError(null);
       
-      // If "all" is selected, clear all other options
-      if (optionKey === runAllKey && !isSelected) {
-        return [runAllKey];
-      }
-      
-      // If another option is selected while "all" is active, remove "all"
-      const newOptions = prev.filter(key => key !== runAllKey && key !== optionKey);
-      
-      if (!isSelected) {
-        newOptions.push(optionKey);
-      }
-      
-      return newOptions;
-    });
-  };
-
-  const handleRunAI = async () => {
-    if (selectedOptions.length === 0) {
-      setStatus('Please select at least one option');
-      return;
-    }
-
-    // Validate options if validation function is provided
-    if (validateOptions) {
-      const validation = validateOptions(selectedOptions, song);
-      if (!validation.isValid) {
-        setStatus(validation.message || 'Invalid options selected');
-        return;
-      }
-    }
-
-    // Generate operation ID locally
-    const operationId = `ai-${songId}-${Date.now()}`;
-    
-    // Clear any previous progress steps and set processing state first
-    setProgressSteps([]);
-    setIsProcessing(true);
-    setStatus('Processing...');
-    
-    // Set operation ID after clearing progress steps to ensure clean state
-    setCurrentOperationId(operationId);
-    
-    try {
-      // Prepare the options to send to main process
-      let options: Record<string, boolean>;
-      
-      if (prepareOptions) {
-        options = prepareOptions(selectedOptions);
-      } else {
-        options = {};
-        if (selectedOptions.includes(runAllKey)) {
-          options[runAllKey] = true;
+      // If this is the "run all" option
+      if (runAllKey && optionKey === runAllKey) {
+        if (prev.includes(optionKey)) {
+          return prev.filter(key => key !== optionKey);
         } else {
-          selectedOptions.forEach(opt => {
-            options[opt] = true;
-          });
+          return [optionKey];
         }
       }
       
-      // Send operationId to main process
+      // If "run all" is selected and we're selecting another option
+      if (runAllKey && prev.includes(runAllKey)) {
+        return prev.filter(key => key !== runAllKey).concat(optionKey);
+      }
+      
+      // Normal toggle behavior
+      const isSelected = prev.includes(optionKey);
+      if (isSelected) {
+        return prev.filter(key => key !== optionKey);
+      } else {
+        return [...prev, optionKey];
+      }
+    });
+  };
+
+  const runSelectedOptions = async () => {
+    // Validate selected options if validator provided
+    if (validateOptions) {
+      const validation = validateOptions(selectedOptions, song);
+      if (!validation.isValid) {
+        setValidationError(validation.message || 'Invalid options selected');
+        return;
+      }
+    }
+    
+    // Create unique operation ID
+    const operationId = `${invokeChannel}-${Date.now()}`;
+    setCurrentOperationId(operationId);
+    
+    // Prepare options payload
+    let optionsPayload = {};
+    if (prepareOptions) {
+      optionsPayload = prepareOptions(selectedOptions);
+    } else {
+      // Default behavior: create an object with selected options as true
+      selectedOptions.forEach(opt => {
+        optionsPayload[opt] = true;
+      });
+    }
+    
+    // Start processing tracking
+    startProcessing([]);
+    setStatus('Starting process...');
+    
+    try {
+      // Invoke the IPC call
       await window.electron.ipcRenderer.invoke(
         invokeChannel,
         {
           songId,
-          options,
+          options: optionsPayload,
           operationId
         }
       );
       
-      setStatus(`Processing with operation ID: ${operationId}`);
+      setStatus('Process started successfully');
     } catch (error) {
-      setIsProcessing(false);
-      setCurrentOperationId(null); // Clear operation ID on error
-      setStatus(`Error: ${error.message || 'Unknown error occurred'}`);
+      setStatus(`Error: ${error.message || 'Failed to start process'}`);
     }
-  };
-
-  const isOptionDisabled = (option: AIOption): boolean => {
-    // If "all" is selected, disable all other options
-    if (selectedOptions.includes(runAllKey) && option.key !== runAllKey) {
-      return true;
-    }
-    
-    // Check option's own disabled status
-    if (option.disabled) {
-      return true;
-    }
-    
-    // If option depends on another option
-    if (option.dependsOn && !selectedOptions.includes(option.dependsOn)) {
-      return true;
-    }
-    
-    return false;
-  };
-
-  const getOptionTooltip = (option: AIOption): string => {
-    if (selectedOptions.includes(runAllKey) && option.key !== runAllKey) {
-      return `Disabled when "${options.find(o => o.key === runAllKey)?.label}" is selected`;
-    }
-    
-    if (option.disabled && option.disabledReason) {
-      return option.disabledReason;
-    }
-    
-    if (option.dependsOn && !selectedOptions.includes(option.dependsOn)) {
-      return `Requires "${options.find(o => o.key === option.dependsOn)?.label}" to be selected`;
-    }
-    
-    return option.description;
   };
 
   return (
-    <div>
-      <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', display: 'flex', alignItems: 'center' }}>
-        <FaList style={{ marginRight: '0.5rem' }} />
-        {title}
-      </h3>
-      
-      <p style={{ fontSize: '1rem', color: colors.grey2, marginBottom: '1rem' }}>
-        {description}
-      </p>
-      
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '1rem' }}>
-        <button
-          onClick={() => setShowOptions(!showOptions)}
-          disabled={isProcessing}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            backgroundColor: colors.grey3,
-            color: colors.white,
-            border: 'none',
-            borderRadius: '9999px',
-            padding: '0.5rem 1rem',
-            cursor: isProcessing ? 'not-allowed' : 'pointer',
-            opacity: isProcessing ? 0.7 : 1,
-            fontSize: '0.9rem',
-          }}
-        >
-          <FaCheckSquare style={{ marginRight: '0.5rem' }} />
-          {showOptions ? 'Hide Options' : 'Show Options'}
-        </button>
-        
-        <button
-          onClick={handleRunAI}
-          disabled={isProcessing || selectedOptions.length === 0}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            backgroundColor: selectedOptions.length > 0 && !isProcessing ? colors.blue : colors.grey3,
-            color: colors.white,
-            border: 'none',
-            borderRadius: '9999px',
-            padding: '0.5rem 1rem',
-            cursor: (selectedOptions.length > 0 && !isProcessing) ? 'pointer' : 'not-allowed',
-            fontSize: '1rem',
-          }}
-        >
-          {isProcessing ? (
-            <FaSpinner style={{ marginRight: '0.5rem', animation: 'spin 1s linear infinite' }} />
-          ) : (
-            <FaPlay style={{ marginRight: '0.5rem' }} />
-          )}
-          {isProcessing ? 'Processing...' : 'Run Selected Features'}
-        </button>
-      </div>
+    <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: colors.grey6, borderRadius: '8px' }}>
+      <h3 style={{ margin: '0 0 0.5rem 0' }}>{title}</h3>
+      {description && (
+        <p style={{ fontSize: '0.9rem', color: colors.grey2, margin: '0 0 1rem 0' }}>
+          {description}
+        </p>
+      )}
       
       {/* Options Selection */}
-      {showOptions && !isProcessing && (
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+        gap: '0.5rem',
+        marginBottom: '1rem' 
+      }}>
+        {options.map((option) => {
+          const isSelected = selectedOptions.includes(option.key);
+          const isDisabled = isProcessing || option.disabled || 
+            (runAllKey && selectedOptions.includes(runAllKey) && option.key !== runAllKey);
+          
+          return (
+            <div
+              key={option.key}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0.5rem',
+                backgroundColor: isSelected ? colors.blue + '20' : colors.grey5,
+                borderRadius: '4px',
+                cursor: isDisabled ? 'not-allowed' : 'pointer',
+                opacity: isDisabled ? 0.6 : 1,
+                border: isSelected ? `1px solid ${colors.blue}` : '1px solid transparent'
+              }}
+              onClick={() => !isDisabled && toggleOption(option.key)}
+              title={option.disabled ? option.disabledReason : option.description}
+            >
+              <div style={{ 
+                width: '20px', 
+                height: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: '0.5rem' 
+              }}>
+                {isSelected ? (
+                  <div style={{
+                    width: '16px',
+                    height: '16px',
+                    backgroundColor: colors.blue,
+                    borderRadius: '2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <FaCheck size={10} color={colors.white} />
+                  </div>
+                ) : (
+                  <div style={{
+                    width: '16px',
+                    height: '16px',
+                    border: `1px solid ${colors.grey3}`,
+                    borderRadius: '2px'
+                  }} />
+                )}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '0.9rem' }}>{option.label}</div>
+                {option.flag && (
+                  <div style={{ fontSize: '0.75rem', color: colors.grey2 }}>{option.flag}</div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      
+      {/* Validation Error */}
+      {validationError && (
         <div style={{ 
-          backgroundColor: colors.grey5, 
-          borderRadius: '12px', 
-          padding: '1rem', 
+          padding: '0.5rem',
+          backgroundColor: colors.red + '20',
+          color: colors.red,
+          borderRadius: '4px',
+          fontSize: '0.9rem',
           marginBottom: '1rem'
         }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {options.map((option) => (
-              <div 
-                key={option.key} 
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center',
-                }}
-                title={getOptionTooltip(option)}
-              >
-                <label 
-                  style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    opacity: isOptionDisabled(option) ? 0.5 : 1,
-                    cursor: isOptionDisabled(option) ? 'not-allowed' : 'pointer' 
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedOptions.includes(option.key)}
-                    onChange={() => !isOptionDisabled(option) && toggleOption(option.key)}
-                    disabled={isOptionDisabled(option)}
-                    style={{ marginRight: '0.5rem' }}
-                  />
-                  {option.label}
-                </label>
-                <span style={{ 
-                  marginLeft: '0.5rem', 
-                  fontSize: '0.8rem', 
-                  color: colors.grey2,
-                  opacity: isOptionDisabled(option) ? 0.5 : 0.8,
-                }}>
-                  {option.flag}
-                </span>
-              </div>
-            ))}
-          </div>
+          {validationError}
         </div>
       )}
       
-      {/* Use AIProgressTracker component */}
-      <AIProgressTracker 
+      {/* Run Button */}
+      <button
+        onClick={runSelectedOptions}
+        disabled={isProcessing || selectedOptions.length === 0}
+        style={{
+          padding: '0.5rem 1rem',
+          backgroundColor: isProcessing || selectedOptions.length === 0 ? colors.grey3 : colors.blue,
+          color: colors.white,
+          border: 'none',
+          borderRadius: '4px',
+          cursor: isProcessing || selectedOptions.length === 0 ? 'not-allowed' : 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}
+      >
+        {isProcessing ? (
+          <FaSpinner style={{ animation: 'spin 1s linear infinite' }} />
+        ) : (
+          <FaPlay />
+        )}
+        {isProcessing ? 'Processing...' : 'Run Selected Features'}
+      </button>
+      
+      {/* Progress Tracker */}
+      <AIProgressTracker
         isProcessing={isProcessing}
         progressSteps={progressSteps}
         statusMessage={status}
       />
-      
-      {/* Add keyframe animation for spinner */}
-      <style >{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 };

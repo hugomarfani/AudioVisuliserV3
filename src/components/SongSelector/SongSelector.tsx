@@ -2,23 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FilterButton from './FilterButton';
 import SongCard from './SongCard';
+import ScreenRecorder from '../ScreenRecorder/ScreenRecorder';
 import SongDetails from '../SongDetails/SongDetails';
 import Library from '../Library/Library';
-import Database from '../Database/Database'; // (Optional: currently not rendered)
 import HueSettings from '../HueSettings/HueSettings';
-import { SongModel } from '../../database/models/Song'; // Import Song type if needed
 import { useSongs } from '../../hooks/useSongs';
 import { useHue } from '../../hooks/useHue';
 import colors from '../../theme/colors';
 import axios from 'axios';
 import {
   FaMusic,
-  FaDatabase,
   FaSync,
   FaChevronLeft,
   FaChevronRight,
   FaCog,
+  FaServer,
 } from 'react-icons/fa';
+import BatchLLMRunner from './BatchLLMRunner';
 
 interface SongSelectorProps {
   onTrackSelect: (uri: string) => void;
@@ -40,7 +40,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
   const { songs, loading, error, refetch } = useSongs();
   const { isConfigured } = useHue();
 
-  // States for filters, search and devices
+
   const [selectedFilters, setSelectedFilters] = useState<
     Array<'Blue' | 'Green' | 'Yellow' | 'Red'>
   >([]);
@@ -48,19 +48,18 @@ const SongSelector: React.FC<SongSelectorProps> = ({
   const [devices, setDevices] = useState<Device[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
 
-  // States for modals/popups
-  const [isDatabaseOpen, setIsDatabaseOpen] = useState(false); // (Optional)
+
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [isSongDetailsOpen, setIsSongDetailsOpen] = useState(false);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   const [isHueSettingsOpen, setIsHueSettingsOpen] = useState(false);
+  const [isBatchLLMOpen, setIsBatchLLMOpen] = useState(false);
 
   // Additional states from file A
   const [visualMode, setVisualMode] = useState(() => {
     const savedMode = localStorage.getItem('visualizationMode');
     return savedMode !== null ? savedMode === 'true' : useShader;
   });
-  const [showParticleManager, setShowParticleManager] = useState<boolean>(false);
   const [selectedParticleSong, setSelectedParticleSong] = useState<string | null>(null);
   const [showShaderWarning, setShowShaderWarning] = useState(false);
   const [selectedInvalidSong, setSelectedInvalidSong] = useState<string | null>(null);
@@ -68,28 +67,6 @@ const SongSelector: React.FC<SongSelectorProps> = ({
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const songsPerPage = 8;
-
-  // Fetch devices from Spotify API
-  useEffect(() => {
-    async function fetchDevices() {
-      try {
-        const response = await axios.get(
-          'https://api.spotify.com/v1/me/player/devices',
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          },
-        );
-        setDevices(response.data.devices);
-      } catch (error) {
-        console.error('Error fetching devices:', error);
-      }
-    }
-    if (accessToken) {
-      fetchDevices();
-    }
-  }, [accessToken]);
 
   // Filter songs based on colour filters and search term
   const filteredSongs = songs.filter((song) => {
@@ -141,7 +118,6 @@ const SongSelector: React.FC<SongSelectorProps> = ({
   const openParticleManager = (songId: string) => {
     setSelectedParticleSong(songId);
     setIsSongDetailsOpen(true);
-    // Additional logic for particle management can be added here
   };
 
   // Pagination calculations
@@ -255,6 +231,24 @@ const SongSelector: React.FC<SongSelectorProps> = ({
         >
           <FaSync />
           <span style={{ marginLeft: '0.5rem' }}>Reload</span>
+        </button>
+        <button
+          onClick={() => setIsBatchLLMOpen(true)}
+          style={{
+            backgroundColor: colors.grey2,
+            color: colors.white,
+            border: 'none',
+            borderRadius: '9999px',
+            padding: '0.5rem 1rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 'clamp(0.75rem, 1vw, 1rem)',
+          }}
+        >
+          <FaServer />
+          <span style={{ marginLeft: '0.5rem' }}>Batch LLM</span>
         </button>
         <button
           onClick={() => setIsHueSettingsOpen(true)}
@@ -505,6 +499,10 @@ const SongSelector: React.FC<SongSelectorProps> = ({
         </div>
       )}
 
+      {/* Screen Recorder
+      <ScreenRecorder
+      /> */}
+
       {/* Shader Warning Popup */}
       {showShaderWarning && (
         <>
@@ -608,6 +606,18 @@ const SongSelector: React.FC<SongSelectorProps> = ({
       {/* Hue Settings Modal */}
       {isHueSettingsOpen && (
         <HueSettings onClose={() => setIsHueSettingsOpen(false)} />
+      )}
+
+      {/* BatchLLM Modal */}
+      {isBatchLLMOpen && (
+        <BatchLLMRunner
+          onClose={() => {
+            setIsBatchLLMOpen(false);
+            refetch();
+          }}
+          songs={songs}
+          refetch={refetch}
+        />
       )}
     </div>
   );

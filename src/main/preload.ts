@@ -1,13 +1,12 @@
 // Disable no-unused-vars, broken for spread args
 /* eslint no-unused-vars: off */
-import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, IpcRendererEvent, desktopCapturer } from 'electron';
 
 export type Channels =
   | 'ipc-example'
   | 'run-gemma-test'
   | 'run-gemma-test-reply'
   | 'download-wav'
-  | 'download-mp3'
   | 'run-whisper'
   | 'run-gemma'
   | 'run-gemma-with-options'
@@ -18,9 +17,9 @@ export type Channels =
   | 'save-image'
   | 'open-file-dialog'
   | 'delete-image'
-  | 'ai-progress-update'  // New channel for progress updates
-  | 'ai-error'           // New channel for error reporting
-  | 'ai-process-complete' // New channel for process completion
+  | 'ai-progress-update'
+  | 'ai-error'          
+  | 'ai-process-complete' 
   | 'redownload-mp3'
   | 'hue-discover'
   | 'hue-register'
@@ -97,6 +96,12 @@ const electronHandler = {
       ipcRenderer.invoke('merge-asset-path', path),
     downloadWav: (url: string) => ipcRenderer.invoke('download-wav', url),
     downloadMp3: (url: string) => ipcRenderer.invoke('download-mp3', url),
+    saveAudioRecording: (data: {blob: Blob, fileName: string}) =>
+      ipcRenderer.invoke('save-audio-recording', data),
+    linkNewMp3: (songId: string, filePath: string) =>
+      ipcRenderer.invoke('link-new-mp3', songId, filePath),
+    selectAudioFile: () => ipcRenderer.invoke('select-audio-file'),
+
   },
   hue: {
     discoverBridges: () => ipcRenderer.invoke('hue-discover'),
@@ -158,6 +163,11 @@ const electronHandler = {
     removeBeatListener: (callback) => {
       ipcRenderer.removeListener('hue:beatDetected', callback);
     },
+  },
+  recorder: {
+    sourceIds: () => {ipcRenderer.invoke('get-sources');},
+    saveCustomSong: (title: string, artist: string, thumbnailPath: string) => {
+      ipcRenderer.invoke('save-custom-song', title, artist, thumbnailPath);} 
   },
 };
 

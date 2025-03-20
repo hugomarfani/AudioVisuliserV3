@@ -8,7 +8,6 @@ import {
 import { sequelize } from '../config';
 import fs from 'fs';
 import path from 'path';
-import { app } from 'electron';
 import { getResourcePath } from '../../main/paths';
 
 interface SongModel
@@ -34,6 +33,7 @@ interface SongModel
   shaderBackground: string;
   shaderTexture: string;
   particleColour: string[];
+  youtubeId: string;
   createdAt: CreationOptional<Date>;
   updatedAt: CreationOptional<Date>;
 }
@@ -126,6 +126,11 @@ const Song = sequelize.define<SongModel>('Song', {
     allowNull: true,
     defaultValue: ["255", "255", "255"],
   },
+  youtubeId: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    defaultValue: '',
+  },
   createdAt: {
     type: DataTypes.DATE,
     allowNull: false,
@@ -135,10 +140,9 @@ const Song = sequelize.define<SongModel>('Song', {
     type: DataTypes.DATE,
     allowNull: false,
     defaultValue: DataTypes.NOW,
-  },
+  }
 });
 
-// Songs are loaded in the init.ts file using the Song.bulkCreate method
 
 // Function to save a Song instance as a JSON file
 const saveSongAsJson = async (song: SongModel) => {
@@ -161,8 +165,9 @@ const saveSongAsJson = async (song: SongModel) => {
     shaderBackground: song.shaderBackground,
     shaderTexture: song.shaderTexture,
     particleColour: song.particleColour,
+    youtubeId: song.youtubeId,
     createdAt: song.createdAt,
-    updatedAt: song.updatedAt,
+    updatedAt: song.updatedAt
   };
 
   const songDataDir = getResourcePath('assets', 'songData');

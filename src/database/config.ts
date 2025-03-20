@@ -6,18 +6,18 @@ import path from 'path';
 const dbPath = path.join(app.getPath('userData'), 'database.sqlite');
 console.log('Database path:', dbPath);
 
-// Initialize Sequelize with SQLite
 export const sequelize = new Sequelize({
   dialect: 'sqlite',
   storage: dbPath,
   dialectModule: require('sqlite3'),
-  logging: console.log, // Enable logging temporarily to debug
+  // below only for debugging purposes
+  logging: console.log, 
   define: {
-    timestamps: true // Ensure timestamps are enabled globally
+    timestamps: true 
   }
 });
 
-// Test the connection
+// testing stuff
 sequelize.authenticate()
   .then(() => {
     console.log('✅ Sequelize connection established successfully.');
@@ -26,7 +26,7 @@ sequelize.authenticate()
     console.error('❌ Unable to connect to the database:', err);
   });
 
-// Enable verbose logging
+// just for debugging stuff
 sqlite3.verbose();
 
 export const db = new sqlite3.Database(dbPath, (err) => {

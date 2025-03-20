@@ -1,38 +1,25 @@
-/* eslint global-require: off, no-console: off, promise/always-return: off */
-
-/**
- * This module executes inside of electron's main process. You can start
- * electron renderer process from here and communicate with the other processes
- * through IPC.
- *
- * When running `npm run build` or `npm run build:main`, this file is compiled to
- * `./src/main.js` using webpack. This gives us some performance wins.
- */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, dialog, desktopCapturer, session } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
-import { exec, spawn, execSync } from 'child_process';
-import os from 'os';
-import fs from 'fs';
-import { promisify } from 'util';
+import { spawn, execSync } from 'child_process';
+import fs, { unlink } from 'fs';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 import initDatabase from '../database/init';
 import { UserDB } from '../database/models/User';
 import { db } from '../database/config';
 import { Song, saveSongAsJson } from '../database/models/Song';
-import { downloadYoutubeAudio } from '../youtube/youtubeToMP3';
 import {
   downloadYoutubeAudio as downloadYoutubeAudioWav,
   getYoutubeMetadata,
+  saveAudio
 } from '../youtube/youtubeToWav';
 import { mainPaths, getResourcePath } from './paths';
 import { registerImageHandlers } from './ipc/imageHandlers';
 import HueService from './HueService';
+import {v4 as uuidv4} from 'uuid';
 
-// Add this near the top of the file
-// Ensure this app is only running one instance
 const gotTheLock = app.requestSingleInstanceLock();
 let windowCreated = false;
 
@@ -50,6 +37,7 @@ if (!gotTheLock) {
   });
 }
 
+
 class AppUpdater {
   constructor() {
     log.transports.file.level = 'info';
@@ -64,7 +52,7 @@ const ps1Path = mainPaths.ps1Path;
 const exePath = mainPaths.llmWhisperPath;
 const SDPath = mainPaths.SDPath;
 
-// Initialize Hue Service
+// Initialise Hue Service
 const hueService = new HueService();
 
 registerImageHandlers();
@@ -91,12 +79,10 @@ const progressSteps = {
   imageObj3: 'Finished object_prompts_3',
 };
 
-// Helper function to parse stdout and track progress
 function trackProgressFromStdout(data: Buffer, sender: Electron.WebContents, operationId: string) {
   const output = data.toString();
   console.log(`📜 stdout: ${output}`);
 
-  // Check for each progress step
   Object.entries(progressSteps).forEach(([key, message]) => {
     if (output.includes(message)) {
       const progressData = {
@@ -106,16 +92,15 @@ function trackProgressFromStdout(data: Buffer, sender: Electron.WebContents, ope
         completed: true
       };
       console.log("Sending progress update:", progressData);
-      // Send with explicit event name
       sender.send('ai-progress-update', progressData);
     }
   });
 }
 
-// Track active child processes
+
 const activeProcesses: { [key: string]: ReturnType<typeof spawn> } = {};
 
-// General purpose function to run AI processes with tracking
+
 function runAIProcessWithTracking(
   command: string,
   args: string[],
@@ -123,7 +108,6 @@ function runAIProcessWithTracking(
   operationId: string,
   expectedSteps: string[]
 ) {
-  // Initialize all expected steps as not completed
   expectedSteps.forEach(step => {
     const progressData = {
       operationId,
@@ -132,7 +116,6 @@ function runAIProcessWithTracking(
       completed: false
     };
     console.log("Sending initial step:", progressData);
-    // Use explicit event name
     sender.send('ai-progress-update', progressData);
   });
 
@@ -173,6 +156,12 @@ function runAIProcessWithTracking(
   });
 }
 
+// DEPRECATED - CAN'T SEND SOURCES PROPERLY
+// ipcMain.handle('get-sources', async () => {
+//   return desktopCapturer.getSources({ types: ['window', 'screen'] });
+// });
+
+
 ipcMain.on('reload-window', (event) => {
   const win = BrowserWindow.getFocusedWindow();
   if (win) win.reload();
@@ -209,7 +198,6 @@ ipcMain.handle('fetch-songs', async () => {
     const songs = await Song.findAll({
       order: [['createdAt', 'DESC']],
     });
-    // console.log('Fetched songs:', JSON.stringify(songs, null, 2));
     return songs;
   } catch (error) {
     console.error('Error fetching songs:', error);
@@ -217,7 +205,7 @@ ipcMain.handle('fetch-songs', async () => {
   }
 });
 
-// In your main.ts or preload.ts
+
 ipcMain.handle('open-file-dialog', async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openFile'],
@@ -225,6 +213,32 @@ ipcMain.handle('open-file-dialog', async () => {
   });
   return result;
 });
+
+// Add this handler to open file dialog
+ipcMain.handle('select-audio-file', async () => {
+  try {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [
+        { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg', 'm4a', 'flac', 'webm'] }
+      ],
+      title: 'Select Audio File'
+    });
+    
+    if (canceled || filePaths.length === 0) {
+      return { cancelled: true };
+    }
+    
+    return { 
+      cancelled: false, 
+      filePath: filePaths[0]
+    };
+  } catch (error) {
+    console.error('Error selecting audio file:', error);
+    throw error;
+  }
+});
+
 
 ipcMain.handle('add-song', async (_event, songData) => {
   try {
@@ -264,6 +278,38 @@ ipcMain.handle('reload-songs', async () => {
 //   }
 // });
 
+ipcMain.handle('link-new-mp3', async (_, songId, filePath) => {
+  const pathToAdd = `audio/${songId}`;
+  const mp3Path = getResourcePath('assets',pathToAdd+".mp3");
+  const wavPath = getResourcePath('assets',pathToAdd+".wav");
+  await saveAudio(filePath, wavPath, mp3Path, false);
+  return { mp3Path, wavPath };
+});
+
+ipcMain.handle('save-audio-recording', async (_, { blob, fileName }) => {
+  try {
+    console.log('Saving audio recording:', fileName);
+    // Get the path to resources/assets/audio
+    const audioDir = getResourcePath('assets', 'audio');
+    
+    if (!fs.existsSync(audioDir)) {
+        fs.mkdirSync(audioDir, { recursive: true });
+    }
+    
+    const filePath = path.join(audioDir, fileName);
+    fs.writeFileSync(filePath, blob);
+
+    // convert to mp3 and wav
+    console.log('Converting to mp3 and wav');
+    await saveAudio(filePath, false);
+    
+    return { success: true};
+  } catch (error) {
+      console.error('Failed to save audio recording:', error);
+      return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle('redownload-mp3', async (_, songId) => {
   try {
     const url = "https://www.youtube.com/watch?v=" + songId;
@@ -279,45 +325,80 @@ ipcMain.handle('redownload-mp3', async (_, songId) => {
   }
 });
 
+ipcMain.handle('save-custom-song', async (_, title: string, artist: string, thumbnailPath: string) => {
+  try {
+    const id = uuidv4();
+    const imageDir = getResourcePath('assets', 'images', id);
+    if (!fs.existsSync(imageDir)) {
+      fs.mkdirSync(imageDir, { recursive: true });
+    }
+    // copy the image
+    const imageFileName = `jacket.png`;
+    const newImagePath = path.join(imageDir, imageFileName);
+    fs.copyFileSync(thumbnailPath, newImagePath);
+
+    const song = await makeNewSong(id, title, artist);
+    saveSongAsJson(song);
+    return song;
+  } catch (error) {
+    console.error('Error in save-custom-song handler:', error);
+    throw error;
+  }
+})
+
+async function makeNewSong(id: string, title: string, artist: string, ytId?: string) {
+  // create song entry in database
+  // temporarily assign random status
+  const statuses = ['Blue', 'Yellow', 'Red', 'Green'];
+  const randomStatus: 'Blue' | 'Yellow' | 'Red' | 'Green' = statuses[
+    Math.floor(Math.random() * statuses.length)
+  ] as 'Blue' | 'Yellow' | 'Red' | 'Green';
+  let jacket = 'images/' + id + '/jacket.png';
+  // if (ytId) {
+  //   jacket = 'images/' + ytId + '/jacket.png';
+  // }
+  let audioPath = 'audio/' + id + '.mp3';
+  // if (ytId) {
+  //   audioPath = 'audio/' + ytId + '.mp3';
+  // }
+
+  const song = await Song.create({
+    id: id,
+    title: title,
+    uploader: artist,
+    audioPath: audioPath,
+    jacket: jacket, 
+    images: [jacket],
+    moods: [],
+    status: randomStatus,
+    colours: [],
+    colours_reason: [],
+    objects: [],
+    object_prompts: [],
+    backgrounds: [],
+    background_prompts: [],
+    particles: [],
+    particleColour: ["255", "255", "255"],
+    youtubeId: ytId || "",
+    shaderBackground: '',
+    shaderTexture: ''
+  });
+  return song;
+}
+
+
 ipcMain.handle('download-wav', async (_, url) => {
   try {
-    const id = await downloadYoutubeAudioWav(url, false);
-    const { title, artist, thumbnailPath } = await getYoutubeMetadata(url);
+    const songId = uuidv4();
+    const Ytid = await downloadYoutubeAudioWav(songId, url, false);
+    const { title, artist, thumbnailPath } = await getYoutubeMetadata(songId, url);
     console.log(
-      `Downloaded WAV with id: ${id}, title: ${title}, artist: ${artist}, thumbnail: ${thumbnailPath}`,
+      `Downloaded WAV with id: ${Ytid}, title: ${title}, artist: ${artist}, thumbnail: ${thumbnailPath}`,
     );
-    // create song entry in database
-    // temporarily assign random status
-    const statuses = ['Blue', 'Yellow', 'Red', 'Green'];
-    const randomStatus: 'Blue' | 'Yellow' | 'Red' | 'Green' = statuses[
-      Math.floor(Math.random() * statuses.length)
-    ] as 'Blue' | 'Yellow' | 'Red' | 'Green';
-
-    const song = await Song.create({
-      id: id,
-      title: title,
-      uploader: artist,
-      audioPath: 'audio/' + id + '.mp3',
-      jacket: thumbnailPath, // Use the downloaded thumbnail path instead of icon.png
-      images: [thumbnailPath],
-      moods: [],
-      status: randomStatus,
-      colours: [],
-      colours_reason: [],
-      objects: [],
-      object_prompts: [],
-      backgrounds: [],
-      background_prompts: [],
-      particles: [],
-      particleColour: ["255", "255", "255"],
-      shaderBackground: '',
-      shaderTexture: '',
-      // shaderBackground: 'shader/background/'+ id + '.jpg',
-      // shaderTexture: 'shader/texture/'+ id + '.jpg',
-    });
+    const song = await makeNewSong(songId, title, artist, Ytid);
     saveSongAsJson(song);
     console.log('Song entry created:', song);
-    return id;
+    return Ytid;
   } catch (error) {
     console.error('Error in download-wav handler:', error);
     throw error;
@@ -1052,6 +1133,7 @@ app
   .then(async () => {
     try {
       await initDatabase();
+      // await db.sync();
       console.log('✨ Database system ready!');
       if (mainWindow) {
         mainWindow.setTitle('App (Database: Connected)');
@@ -1069,7 +1151,16 @@ app
       createWindow();
     }
 
-    // Remove the nested activate handler to prevent duplication
+    session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+      desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
+        // Grant access to the first screen found.
+        callback({ video: sources[0], audio: 'loopback' })
+      })
+      // If true, use the system picker if available.
+      // Note: this is currently experimental. If the system picker
+      // is available, it will be used and the media request handler
+      // will not be invoked.
+    }, { useSystemPicker: true }) 
   })
   .catch(console.log);
 
