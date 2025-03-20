@@ -11,7 +11,7 @@ This project provides an affordable, AI-powered sensory room designed to support
 
 ### Particle Visualiser
 
-![Particle Visualiser Demo](https://github.com/user-attachments/assets/REPLACE_WITH_YOUR_IMAGE_ID)
+![Particles](https://github.com/user-attachments/assets/017149b5-553f-4baf-a9c0-683977c6f0b8)
 
 The Particle Visualiser creates dynamic, responsive and interactive particle systems tailored to each song's theme and mood. Using a physics-based engine, particles exhibit realistic behaviors including gravity, bounce effects, air resistance, and custom lifespans.
 
