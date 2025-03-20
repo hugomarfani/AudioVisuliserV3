@@ -14,7 +14,8 @@ const initDatabase = async () => {
   // Create all required directories
   const dirs = ['audios', 'images', 'models'];
   dirs.forEach((dir) => {
-    const dirPath = path.join(__dirname, dir);
+    // const dirPath = path.join(__dirname, dir);
+    const dirPath = path.join(app.getPath('userData'), dir);
     if (!fs.existsSync(dirPath)) {
       fs.mkdirSync(dirPath, { recursive: true });
       console.log(`📁 Created directory: ${dir}`);
