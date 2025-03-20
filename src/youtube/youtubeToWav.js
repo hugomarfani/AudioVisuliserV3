@@ -27,7 +27,7 @@ if (!fs.existsSync(ffprobePath)) {
 ffmpeg.setFfmpegPath(ffmpegPath);
 ffmpeg.setFfprobePath(ffprobePath);
 
-const downloadYoutubeAudio = async (url, onlyMp3) => {
+const downloadYoutubeAudio = async (songId, url, onlyMp3) => {
   const downloadsPath = getResourcePath('assets', 'audio');
 
   if (!fs.existsSync(downloadsPath)) {
@@ -38,9 +38,9 @@ const downloadYoutubeAudio = async (url, onlyMp3) => {
   // start at (v=) and end at (& or the end of the string)
   const videoId = url.match(/(v=)([^&]*)/)[2];
   // const timestamp = new Date().getTime();
-  const tempFile = path.join(downloadsPath, `temp_${videoId}.m4a`);
-  const outputFile = path.join(downloadsPath, `${videoId}.wav`);
-  const mp3OutputFile = path.join(downloadsPath, `${videoId}.mp3`);
+  const tempFile = path.join(downloadsPath, `temp_${songId}.m4a`);
+  const outputFile = path.join(downloadsPath, `${songId}.wav`);
+  const mp3OutputFile = path.join(downloadsPath, `${songId}.mp3`);
   console.log('Downloading audio from:', url);
 
   try {
@@ -105,7 +105,7 @@ const saveAudio = async (tempFile, outputFile, mp3OutputFile, onlyMp3) => {
 }
 
 
-const getYoutubeMetadata = async (url) => {
+const getYoutubeMetadata = async (songId, url) => {
   try {
     const metadata = await ytdlp(url, {
       dumpSingleJson: true,
@@ -122,7 +122,7 @@ const getYoutubeMetadata = async (url) => {
     const videoId = url.match(/(v=)([^&]*)/)[2];
     
     // Create directory for the thumbnail
-    const thumbnailDir = getResourcePath('assets', 'images', videoId);
+    const thumbnailDir = getResourcePath('assets', 'images', songId);
     const thumbnailPath = path.join(thumbnailDir, 'jacket.png');
     
     if (!fs.existsSync(thumbnailDir)) {
@@ -160,7 +160,7 @@ const getYoutubeMetadata = async (url) => {
     return { 
       title, 
       artist, 
-      thumbnailPath: `images/${videoId}/jacket.png` 
+      thumbnailPath: `images/${songId}/jacket.png` 
     };
   } catch (error) {
     console.error('Error fetching metadata:', error);

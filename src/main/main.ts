@@ -367,14 +367,14 @@ async function makeNewSong(id: string, title: string, artist: string, ytId?: str
   const randomStatus: 'Blue' | 'Yellow' | 'Red' | 'Green' = statuses[
     Math.floor(Math.random() * statuses.length)
   ] as 'Blue' | 'Yellow' | 'Red' | 'Green';
-  let jacket = 'images' + id + '/jacket.png';
-  if (ytId) {
-    jacket = 'images/' + ytId + '/jacket.png';
-  }
+  let jacket = 'images/' + id + '/jacket.png';
+  // if (ytId) {
+  //   jacket = 'images/' + ytId + '/jacket.png';
+  // }
   let audioPath = 'audio/' + id + '.mp3';
-  if (ytId) {
-    audioPath = 'audio/' + ytId + '.mp3';
-  }
+  // if (ytId) {
+  //   audioPath = 'audio/' + ytId + '.mp3';
+  // }
 
   const song = await Song.create({
     id: id,
@@ -403,12 +403,12 @@ async function makeNewSong(id: string, title: string, artist: string, ytId?: str
 
 ipcMain.handle('download-wav', async (_, url) => {
   try {
-    const Ytid = await downloadYoutubeAudioWav(url, false);
-    const { title, artist, thumbnailPath } = await getYoutubeMetadata(url);
+    const songId = uuidv4();
+    const Ytid = await downloadYoutubeAudioWav(songId, url, false);
+    const { title, artist, thumbnailPath } = await getYoutubeMetadata(songId, url);
     console.log(
       `Downloaded WAV with id: ${Ytid}, title: ${title}, artist: ${artist}, thumbnail: ${thumbnailPath}`,
     );
-    const songId = uuidv4();
     const song = await makeNewSong(songId, title, artist, Ytid);
     saveSongAsJson(song);
     console.log('Song entry created:', song);
