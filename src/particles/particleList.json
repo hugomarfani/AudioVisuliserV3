@@ -1,15 +1,199 @@
 {
-    "particles": [
-        "balloons",
-        "bubbles",
-        "confetti",
-        "fireworks",
-        "hearts",
-        "musicNotes",
-        "raindrops",
-        "snowflakes",
-        "stars",
-        "animals",
-        "emojis"
-    ]
+  "particles": [
+    {
+      "id": "balloons",
+      "name": "balloon",
+      "weight": 0.2,
+      "gravity": -0.05,
+      "bounce": 0.3,
+      "airResistance": 0.02,
+      "lifespan": 8000,
+      "glow": false,
+      "images": [],
+      "moods": [
+        "happy",
+        "celebratory",
+        "playful"
+      ],
+      "dir": "balloons",
+      "count": 4
+    },
+    {
+      "id": "bubbles",
+      "name": "bubble",
+      "weight": 0.3,
+      "gravity": 0.05,
+      "bounce": 0.8,
+      "airResistance": 0.02,
+      "lifespan": 4000,
+      "glow": false,
+      "images": [],
+      "moods": [
+        "calm",
+        "happy"
+      ],
+      "dir": "bubbles",
+      "count": 1
+    },
+    {
+      "id": "confetti",
+      "name": "confetti",
+      "weight": 0.05,
+      "gravity": 0.08,
+      "bounce": 0.5,
+      "airResistance": 0.02,
+      "lifespan": 4000,
+      "glow": false,
+      "images": [],
+      "moods": [
+        "celebratory",
+        "festive",
+        "energetic"
+      ],
+      "dir": "confetti",
+      "count": 2
+    },
+    {
+      "id": "fireworks",
+      "name": "firework",
+      "weight": 0.8,
+      "gravity": -0.15,
+      "bounce": 0.6,
+      "airResistance": 0.01,
+      "lifespan": 2000,
+      "glow": true,
+      "images": [],
+      "moods": [
+        "celebratory",
+        "festive",
+        "energetic"
+      ],
+      "dir": "fireworks",
+      "count": 4
+    },
+    {
+      "id": "hearts",
+      "name": "heart",
+      "weight": 0.3,
+      "gravity": 0.1,
+      "bounce": 0.4,
+      "airResistance": 0.02,
+      "lifespan": 4500,
+      "glow": true,
+      "images": [],
+      "moods": [
+        "romantic",
+        "loving",
+        "gentle"
+      ],
+      "dir": "hearts",
+      "count": 5
+    },
+    {
+      "id": "musicNotes",
+      "name": "musicNote",
+      "weight": 1,
+      "gravity": 0.15,
+      "bounce": 0.6,
+      "airResistance": 0.01,
+      "lifespan": 5000,
+      "glow": false,
+      "images": [],
+      "moods": [
+        "happy",
+        "energetic"
+      ],
+      "dir": "musicNotes",
+      "count": 5
+    },
+    {
+      "id": "raindrops",
+      "name": "raindrop",
+      "weight": 0.6,
+      "gravity": 0.2,
+      "bounce": 0.7,
+      "airResistance": 0.01,
+      "lifespan": 3000,
+      "glow": false,
+      "images": [],
+      "moods": [
+        "sad",
+        "melancholic",
+        "calm"
+      ],
+      "dir": "raindrops",
+      "count": 4
+    },
+    {
+      "id": "snowflakes",
+      "name": "snowflake",
+      "weight": 0.15,
+      "gravity": 0.05,
+      "bounce": 0.2,
+      "airResistance": 0.03,
+      "lifespan": 5500,
+      "glow": false,
+      "images": [],
+      "moods": [
+        "peaceful",
+        "gentle",
+        "magical"
+      ],
+      "dir": "snowflakes",
+      "count": 3
+    },
+    {
+      "id": "stars",
+      "name": "star",
+      "weight": 2.8,
+      "gravity": 0.1,
+      "bounce": 0.7,
+      "airResistance": 0.015,
+      "lifespan": 6000,
+      "glow": true,
+      "images": [],
+      "moods": [
+        "happy",
+        "magical",
+        "festive"
+      ],
+      "dir": "stars",
+      "count": 3
+    },
+    {
+      "id": "animals",
+      "name": "animal",
+      "weight": 1,
+      "gravity": 0.15,
+      "bounce": 0.6,
+      "airResistance": 0.01,
+      "lifespan": 5000,
+      "glow": false,
+      "images": [],
+      "moods": [
+        "happy",
+        "energetic"
+      ],
+      "dir": "animals",
+      "count": 6
+    },
+    {
+      "id": "emojis",
+      "name": "emoji",
+      "weight": 0.5,
+      "gravity": 0.17,
+      "bounce": 0.4,
+      "airResistance": 0.03,
+      "lifespan": 7000,
+      "glow": true,
+      "images": [],
+      "moods": [
+        "happy",
+        "playful",
+        "fun"
+      ],
+      "dir": "emojis",
+      "count": 5
+    }
+  ]
 }

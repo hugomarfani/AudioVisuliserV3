@@ -324,6 +324,151 @@ ipcMain.handle('download-wav', async (_, url) => {
   }
 });
 
+ipcMain.handle('update-particle-settings', async (event, args) => {
+  try {
+    const { particles } = args;
+    
+    // Path to the particle list JSON file - adjust the path according to your project structure
+    const particleListPath = path.join(__dirname, '../../src/particles/particleList.json');
+    
+    // Create the new JSON content
+    const newContent = {
+      particles: particles
+    };
+    
+    // Write the updated JSON to the file
+    await fs.promises.writeFile(
+      particleListPath,
+      JSON.stringify(newContent, null, 2),
+      'utf-8'
+    );
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating particle settings:', error);
+    return { 
+      success: false, 
+      error: error.message || 'Failed to update particle settings'
+    };
+  }
+});
+
+// Get all images for a particle type
+ipcMain.handle('get-particle-images', async (event, args) => {
+  try {
+    const { particleDir } = args;
+    
+    // Use getResourcePath to get the correct path to the particles directory
+    const particlesBasePath = getResourcePath('assets', `particles/${particleDir}`);
+    console.log(`Looking for particle images in: ${particlesBasePath}`);
+    
+    // Check if directory exists, create it if it doesn't
+    if (!fs.existsSync(particlesBasePath)) {
+      console.log(`Directory not found, creating: ${particlesBasePath}`);
+      fs.mkdirSync(particlesBasePath, { recursive: true });
+      return { 
+        success: true, 
+        images: [], 
+        message: 'Directory was created but contains no images yet' 
+      };
+    }
+    
+    // Read all files in the directory
+    const files = fs.readdirSync(particlesBasePath);
+    const imageFiles = files.filter(file => {
+      const ext = path.extname(file).toLowerCase();
+      return ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext);
+    });
+    
+    console.log(`Found ${imageFiles.length} images in ${particlesBasePath}`);
+    
+    if (imageFiles.length === 0) {
+      return { 
+        success: true, 
+        images: [], 
+        message: 'Directory exists but contains no images' 
+      };
+    }
+    
+    // Create paths for each image
+    const images = imageFiles.map(file => {
+      const fullPath = path.join(particlesBasePath, file);
+      const urlPath = `file://${fullPath.replace(/\\/g, '/')}`;
+      return {
+        name: file,
+        path: urlPath
+      };
+    });
+    
+    return { success: true, images };
+  } catch (error) {
+    console.error('Error getting particle images:', error);
+    return { success: false, error: error.message || 'Failed to get images' };
+  }
+});
+
+// Delete a particle image
+ipcMain.handle('delete-particle-image', async (event, args) => {
+  try {
+    const { particleDir, imageName } = args;
+    const imagePath = getResourcePath('assets', `particles/${particleDir}/${imageName}`);
+    
+    // Check if file exists
+    if (!fs.existsSync(imagePath)) {
+      return { success: false, error: 'Image not found' };
+    }
+    
+    // Delete the file
+    fs.unlinkSync(imagePath);
+    console.log(`Deleted particle image: ${imagePath}`);
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting particle image:', error);
+    return { success: false, error: error.message || 'Failed to delete image' };
+  }
+});
+
+// Add a new particle image
+ipcMain.handle('add-particle-image', async (event, args) => {
+  try {
+    const { particleDir, particleName, currentCount } = args;
+    
+    // Show file dialog to select image
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [
+        { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }
+      ],
+      title: 'Select Particle Image'
+    });
+    
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, error: 'No file selected' };
+    }
+    
+    const sourceFilePath = result.filePaths[0];
+    const fileName = `${particleName}${currentCount + 1}${path.extname(sourceFilePath)}`;
+    const destFolderPath = getResourcePath('assets', `particles/${particleDir}`);
+    const destFilePath = path.join(destFolderPath, fileName);
+    
+    // Ensure destination directory exists
+    if (!fs.existsSync(destFolderPath)) {
+      fs.mkdirSync(destFolderPath, { recursive: true });
+      console.log(`Created directory: ${destFolderPath}`);
+    }
+    
+    // Copy the file
+    fs.copyFileSync(sourceFilePath, destFilePath);
+    console.log(`Copied file to: ${destFilePath}`);
+    
+    return { success: true, fileName, path: `file://${destFilePath.replace(/\\/g, '/')}` };
+  } catch (error) {
+    console.error('Error adding particle image:', error);
+    return { success: false, error: error.message || 'Failed to add image' };
+  }
+});
+
 // Replace existing run-whisper handler
 ipcMain.handle('run-whisper', (event, songId, operationId = null) => {
   console.log('Running whisper with songId:', songId, "with exePath:", exePath);
@@ -762,6 +907,30 @@ ipcMain.on('window-control', (_, command) => {
       break;
     default:
       console.log(`Unknown window command: ${command}`);
+  }
+});
+
+// Handler for get-particle-list
+ipcMain.handle('get-particle-list', async () => {
+  try {
+    // Path to the particle list JSON file
+    const particleListPath = path.join(__dirname, '../../src/particles/particleList.json');
+    
+    // Read the current particle list
+    const data = await fs.promises.readFile(particleListPath, 'utf-8');
+    const particleList = JSON.parse(data);
+    
+    return { 
+      success: true, 
+      particles: particleList.particles 
+    };
+  } catch (error) {
+    console.error('Error reading particle list:', error);
+    return { 
+      success: false, 
+      error: error.message || 'Failed to read particle list',
+      particles: [] 
+    };
   }
 });
 
