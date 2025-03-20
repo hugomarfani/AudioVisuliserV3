@@ -1,21 +1,9 @@
-/* eslint global-require: off, no-console: off, promise/always-return: off */
-
-/**
- * This module executes inside of electron's main process. You can start
- * electron renderer process from here and communicate with the other processes
- * through IPC.
- *
- * When running `npm run build` or `npm run build:main`, this file is compiled to
- * `./src/main.js` using webpack. This gives us some performance wins.
- */
 import path from 'path';
 import { app, BrowserWindow, shell, ipcMain, dialog, desktopCapturer, session } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
-import { exec, spawn, execSync } from 'child_process';
-import os from 'os';
+import { spawn, execSync } from 'child_process';
 import fs, { unlink } from 'fs';
-import { promisify } from 'util';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 import initDatabase from '../database/init';
@@ -31,7 +19,6 @@ import { mainPaths, getResourcePath } from './paths';
 import { registerImageHandlers } from './ipc/imageHandlers';
 import HueService from './HueService';
 import {v4 as uuidv4} from 'uuid';
-import { addAbortListener } from 'events';
 
 const gotTheLock = app.requestSingleInstanceLock();
 let windowCreated = false;
@@ -65,7 +52,7 @@ const ps1Path = mainPaths.ps1Path;
 const exePath = mainPaths.llmWhisperPath;
 const SDPath = mainPaths.SDPath;
 
-// Initialize Hue Service
+// Initialise Hue Service
 const hueService = new HueService();
 
 registerImageHandlers();
@@ -211,7 +198,6 @@ ipcMain.handle('fetch-songs', async () => {
     const songs = await Song.findAll({
       order: [['createdAt', 'DESC']],
     });
-    // console.log('Fetched songs:', JSON.stringify(songs, null, 2));
     return songs;
   } catch (error) {
     console.error('Error fetching songs:', error);

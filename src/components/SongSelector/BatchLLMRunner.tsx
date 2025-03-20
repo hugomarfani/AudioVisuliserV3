@@ -50,12 +50,12 @@ const llmOptions = [
     flag: '--generateBackgroundPrompts',
     description: 'Generate image prompts for backgrounds'
   },
-  { 
-    key: 'rerunWhisper',
-    label: 'Rerun Lyrics Generation',
-    flag: '-w',
-    description: 'Rerun Whisper speech-to-text on audio'
-  },
+  // { 
+  //   key: 'rerunWhisper',
+  //   label: 'Rerun Lyrics Generation',
+  //   flag: '-w',
+  //   description: 'Rerun Whisper speech-to-text on audio'
+  // },
   { 
     key: 'extractStatus',
     label: 'Extract Status',
