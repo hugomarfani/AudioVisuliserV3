@@ -398,7 +398,8 @@ ipcMain.handle('download-wav', async (_, url) => {
     const song = await makeNewSong(songId, title, artist, Ytid);
     saveSongAsJson(song);
     console.log('Song entry created:', song);
-    return Ytid;
+    // return Ytid;
+    return songId;
   } catch (error) {
     console.error('Error in download-wav handler:', error);
     throw error;

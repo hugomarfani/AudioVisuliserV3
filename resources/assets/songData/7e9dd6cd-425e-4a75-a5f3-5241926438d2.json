@@ -1,0 +1,37 @@
+{
+    "audioPath": "audio/7e9dd6cd-425e-4a75-a5f3-5241926438d2.mp3",
+    "background_prompts": [],
+    "backgrounds": [],
+    "colours": [
+        "#FFD700",
+        "#800080",
+        "#008000",
+        "#FFA500",
+        "#0000FF"
+    ],
+    "colours_reason": [
+        "\n\n```\nColor 1: #FFD700\nColor 2: #800080\nColor 3: #008000\nColor 4: #FFA500\nColor 5: #0000FF\n```\n\nColor 1 reason:  The lyrics mention \"polish and wax\" which often involves gold or brass tones, hence the yellow-gold hue.\nColor 2: reason:  The phrase \"the lights will appear just like they do on my third day each year\" suggests a celebration or special occasion, often associated with purple decorations.\nColor 3: reason:  The mention of \"pottery\" and \"candle making\" evokes a sense of earthy, natural tones, leading to a green hue.\nColor 4: reason:  The line \"I'll add a few new paintings to my gallery\" implies a vibrant and bold color palette, suggesting orange.\nColor 5: reason:  The yearning for \"life to begin\" and the desire to escape the routine suggests a sense of mystery and the unknown, often represented by deep blue. \n\n\n\n"
+    ],
+    "createdAt": "2025-03-21T00:13:41.452Z",
+    "id": "7e9dd6cd-425e-4a75-a5f3-5241926438d2",
+    "images": [
+        "images/7e9dd6cd-425e-4a75-a5f3-5241926438d2/jacket.png"
+    ],
+    "jacket": "images/7e9dd6cd-425e-4a75-a5f3-5241926438d2/jacket.png",
+    "moods": [],
+    "object_prompts": [],
+    "objects": [],
+    "particleColour": [
+        "255",
+        "255",
+        "255"
+    ],
+    "particles": [],
+    "shaderBackground": "",
+    "shaderTexture": "",
+    "status": "Yellow",
+    "title": "Mandy Moore - When Will My Life Begin? (From \"Tangled\"/Sing-Along)",
+    "updatedAt": "2025-03-21T00:13:41.453Z",
+    "uploader": "DisneyMusicVEVO",
+    "youtubeId": "kRXmAIHYQR4"
+}
