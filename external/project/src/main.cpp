@@ -551,7 +551,8 @@ class LLM {
       statusOutput = generate(shorterLyricsSetup + statusPrompt, 100);
     }
 
-    outputMap[STATUS] = getOptionsFromLlmOutput(statusOutput);
+    // outputMap[STATUS] = getOptionsFromLlmOutput(statusOutput);
+    outputMap[STATUS] = {statusOutput};
 
     if (debug) {
       std::cout << "Status extracted: " << std::endl;
@@ -645,7 +646,7 @@ class LLM {
     }
     std::vector<std::string> objects = outputMap[OBJECTS];
     for (const auto &object : objects) {
-      std::string objectPromptPrompt = imageSetup + object + imageSettings;
+      std::string objectPromptPrompt = imageSetup + object + imageSettings + objectSettings;
       std::string objectPrompt = generate(objectPromptPrompt, 500);
       objectPromptList.push_back(objectPrompt);
     }
@@ -688,7 +689,15 @@ class LLM {
     std::cout << "Storing data in json file" << std::endl;
     // create empty json object
     json j;
-
+    if (debug) {
+      std::cout << "Output Map: " << std::endl;
+      for (const auto &output : outputMap) {
+        std::cout << outputTypeMap.at(output.first) << ": " << std::endl;
+        for (const auto &data : output.second) {
+          std::cout << data << std::endl;
+        }
+      }
+    }
     // store whole colour string in json object
     for (const auto &output : outputMap) {
       std::string outputType = outputTypeMap.at(output.first);
@@ -700,6 +709,14 @@ class LLM {
         j[outputType] = outputData[0];
       }
     }
+
+    if (debug) {
+      std::cout << "JSON object: " << std::endl;
+      for (json::iterator it = j.begin(); it != j.end(); ++it) {
+        std::cout << it.key() << " : " << it.value() << "\n";
+      }
+    }
+
 
     // write updated json object to file
     std::ofstream outputFile(outputFilePath);
@@ -962,6 +979,7 @@ int main(int argc, char *argv[]) {
   }
 
   if (vm.count("all")) {
+    vm.insert({"status", po::variable_value()});
     vm.insert({"extractColour", po::variable_value()});
     vm.insert({"extractParticle", po::variable_value()});
     vm.insert({"extractObject", po::variable_value()});
