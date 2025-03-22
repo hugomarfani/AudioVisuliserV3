@@ -27,6 +27,8 @@ interface AIRunnerProps {
   runAllKey?: string;
   validateOptions?: (selectedOptions: string[], song: SongModel) => { isValid: boolean; message?: string };
   prepareOptions?: (selectedOptions: string[]) => Record<string, any>;
+  expectedSteps?: string[];
+  onComplete?: (data: any) => void;
 }
 
 const AIRunner: React.FC<AIRunnerProps> = ({
@@ -40,7 +42,9 @@ const AIRunner: React.FC<AIRunnerProps> = ({
   invokeChannel,
   runAllKey,
   validateOptions,
-  prepareOptions
+  prepareOptions,
+  expectedSteps,
+  onComplete
 }) => {
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -48,6 +52,9 @@ const AIRunner: React.FC<AIRunnerProps> = ({
   
   // Use the AI process tracking hook
   const handleComplete = (data: any) => {
+    if (onComplete) {
+      onComplete(data);
+    }
     refetch();
   };
   
@@ -64,7 +71,6 @@ const AIRunner: React.FC<AIRunnerProps> = ({
 
   const toggleOption = (optionKey: string) => {
     setSelectedOptions(prev => {
-      // Clear validation errors when options change
       setValidationError(null);
       
       // If this is the "run all" option
@@ -116,12 +122,17 @@ const AIRunner: React.FC<AIRunnerProps> = ({
       });
     }
     
-    // Start processing tracking
-    startProcessing([]);
+    // Prepare initial progress steps if expected steps are provided
+    const initialSteps = expectedSteps ? expectedSteps.map(step => ({
+      key: step,
+      label: progressLabels[step] || step,
+      completed: false
+    })) : [];
+    
+    startProcessing(initialSteps);
     setStatus('Starting process...');
     
     try {
-      // Invoke the IPC call
       await window.electron.ipcRenderer.invoke(
         invokeChannel,
         {

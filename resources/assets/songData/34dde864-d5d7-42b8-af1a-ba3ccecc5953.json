@@ -1,57 +1,63 @@
 {
-    "audioPath": "audio/34dde864-d5d7-42b8-af1a-ba3ccecc5953.mp3",
-    "background_prompts": [
-        ", soft edges, whimsical, dreamy, magical, ethereal, fantastical, a sense of wonder, a sense of peace, a sense of joy, a sense of hope, a mountaintop, a winding path leading up to the mountaintop, a small cottage nestled at the top of the mountain, a bright sun shining in the sky, fluffy white clouds, a rainbow arching over the mountaintop, a field of wildflowers at the base of the mountain, a babbling brook flowing through the field, a family of deer grazing in the field, a friendly dragon perched on the mountaintop, a magical portal shimmering in the air above the cottage, a sense of adventure, a sense of discovery, a sense of belonging.\n\n\ncolour: colourful, pastel, soft edges, whimsical, dreamy, magical, ethereal, fantastical, a sense of wonder, a sense of peace, a sense of joy, a sense of hope. background: a mountaintop, a winding path leading up to the mountaintop, a small cottage nestled at the top of the mountain, a bright sun shining in the sky, fluffy white clouds, a rainbow arching over the mountaintop, a field of wildflowers at the base of the mountain, a babbling brook flowing through the field, a family of deer grazing in the field, a friendly dragon perched on the mountaintop, a magical portal shimmering in the air above the cottage. \n\n",
-        ", soft lighting, whimsical, magical, a young girl with long flowing hair, a glowing orb, a friendly dragon, a starry night sky, a gentle breeze blowing through the girl's hair, a path leading to a distant castle, a sense of wonder and adventure.\n\n\ncolour:colourful,pastel,soft lighting,whimsical,magical,a young girl with long flowing hair,a glowing orb,a friendly dragon,starry night sky,gentle breeze,path leading to a distant castle,sense of wonder,adventure \n",
-        ", soft edges, whimsical, cute, cartoon style, smiling characters, friendly animals, playing instruments, singing, happy, joyful, celebration, music festival, stage, audience, bright lights, confetti, balloons, streamers, vibrant, energetic, lively, fun, magical, dreamlike, fantastical, imaginative, creative, unique, original.\n\ncolour: colourful, pastel, soft edges, whimsical, cute, cartoon style\ncharacters: smiling, friendly animals, playing instruments, singing\nsetting: stage, audience, bright lights, confetti, balloons, streamers\nmood: happy, joyful, celebration, music festival, vibrant, energetic, lively, fun, magical, dreamlike, fantastical \n\n\n"
-    ],
-    "backgrounds": [
-        "Background 1: A Mountaintop$",
-        "Background 2: A Stormy Night$",
-        "Background 3: A Hidden Conflict$"
-    ],
-    "colours": [
-        "#800080",
-        "#FFD700",
-        "#00FFFF",
-        "#8B4513",
-        "#00CED1"
-    ],
-    "colours_reason": [
-        "\n\n```\nColor 1: #800080\nColor 2: #FFD700\nColor 3: #00FFFF\nColor 4: #8B4513\nColor 5: #00CED1\n```\n\nColor 1 reason:  The lyrics mention \"The Snow Glows White\" which is strongly associated with the color purple.\nColor 2 reason:  The phrase \"swirling storm inside\" evokes a sense of a golden, chaotic energy.\nColor 3 reason:  The line \"Don't let them see\" implies a desire to hide, suggesting a color like turquoise that blends with the background.\nColor 4 reason:  The phrase \"good girl\" suggests a traditional, earthy tone like brown.\nColor 5 reason:  The \"wind howling\" and the \"storm inside\" create a sense of a deep, stormy blue. \n\n\n\n"
-    ],
-    "createdAt": "2025-03-19T19:04:13.446Z",
-    "id": "34dde864-d5d7-42b8-af1a-ba3ccecc5953",
-    "images": [
-        "images/34dde864-d5d7-42b8-af1a-ba3ccecc5953/jacket.png"
-    ],
-    "jacket": "images/34dde864-d5d7-42b8-af1a-ba3ccecc5953/jacket.png",
-    "moods": [],
-    "object_prompts": [
-        ", geometric shapes, sharp lines, abstract, surreal, dreamlike, evokes a sense of mystery, evokes a sense of wonder.\n\nblack, very simple object, white background, minimalistic, geometric shapes, sharp lines, abstract, surreal, dreamlike, mystery, wonder \n\n\n",
-        ", geometric shapes, sharp lines, abstract, evokes a sense of mystery, dark and brooding atmosphere, single light source, illuminating the object from the left, dramatic shadows.\n\n\nblack, very simple object, white background, minimalistic, geometric shapes, sharp lines, abstract, mystery, dark, brooding atmosphere, single light source, left, dramatic shadows \n",
-        ", geometric shapes, sharp lines, abstract, surreal, dreamlike, ethereal, otherworldly, sense of mystery, dark, mysterious, haunting, evocative.\n\nblack, very simple object, white background, minimalistic, geometric shapes, sharp lines, abstract, surreal, dreamlike, ethereal, otherworldly, sense of mystery, dark, mysterious, haunting, evocative \n\n\n"
-    ],
-    "objects": [
-        "mountain$",
-        "storm$",
-        "heaven$"
-    ],
-    "particleColour": [
-        "255",
-        "255",
-        "255"
-    ],
-    "particles": [
-        "snowflakes$",
-        "snowflakes$",
-        "snowflakes$"
-    ],
-    "shaderBackground": "",
-    "shaderTexture": "",
-    "status": "Blue \n\n\n",
-    "title": "Frozen ",
-    "updatedAt": "2025-03-20T19:50:31.087Z",
-    "uploader": "Demo",
-    "youtubeId": ""
+  "id": "34dde864-d5d7-42b8-af1a-ba3ccecc5953",
+  "title": "Frozen ",
+  "uploader": "Demo",
+  "audioPath": "audio/34dde864-d5d7-42b8-af1a-ba3ccecc5953.mp3",
+  "jacket": "images/34dde864-d5d7-42b8-af1a-ba3ccecc5953/jacket.png",
+  "images": [
+    "images/34dde864-d5d7-42b8-af1a-ba3ccecc5953/background_prompts_0.png",
+    "images/34dde864-d5d7-42b8-af1a-ba3ccecc5953/background_prompts_1.png",
+    "images/34dde864-d5d7-42b8-af1a-ba3ccecc5953/background_prompts_2.png",
+    "images/34dde864-d5d7-42b8-af1a-ba3ccecc5953/object_prompts_0.png",
+    "images/34dde864-d5d7-42b8-af1a-ba3ccecc5953/object_prompts_1.png",
+    "images/34dde864-d5d7-42b8-af1a-ba3ccecc5953/object_prompts_2.png",
+    "images/34dde864-d5d7-42b8-af1a-ba3ccecc5953/jacket.png"
+  ],
+  "moods": [],
+  "status": "Blue \n\n\n",
+  "colours": [
+    "#800080",
+    "#FFD700",
+    "#00FFFF",
+    "#8B4513",
+    "#00CED1"
+  ],
+  "colours_reason": [
+    "\n\n```\nColor 1: #800080\nColor 2: #FFD700\nColor 3: #00FFFF\nColor 4: #8B4513\nColor 5: #00CED1\n```\n\nColor 1 reason:  The lyrics mention \"The Snow Glows White\" which is strongly associated with the color purple.\nColor 2 reason:  The phrase \"swirling storm inside\" evokes a sense of a golden, chaotic energy.\nColor 3 reason:  The line \"Don't let them see\" implies a desire to hide, suggesting a color like turquoise that blends with the background.\nColor 4 reason:  The phrase \"good girl\" suggests a traditional, earthy tone like brown.\nColor 5 reason:  The \"wind howling\" and the \"storm inside\" create a sense of a deep, stormy blue. \n\n\n\n"
+  ],
+  "objects": [
+    "mountain$",
+    "storm$",
+    "heaven$"
+  ],
+  "object_prompts": [
+    ", geometric shapes, sharp lines, abstract, surreal, dreamlike, evokes a sense of mystery, evokes a sense of wonder.\n\nblack, very simple object, white background, minimalistic, geometric shapes, sharp lines, abstract, surreal, dreamlike, mystery, wonder \n\n\n",
+    ", geometric shapes, sharp lines, abstract, evokes a sense of mystery, dark and brooding atmosphere, single light source, illuminating the object from the left, dramatic shadows.\n\n\nblack, very simple object, white background, minimalistic, geometric shapes, sharp lines, abstract, mystery, dark, brooding atmosphere, single light source, left, dramatic shadows \n",
+    ", geometric shapes, sharp lines, abstract, surreal, dreamlike, ethereal, otherworldly, sense of mystery, dark, mysterious, haunting, evocative.\n\nblack, very simple object, white background, minimalistic, geometric shapes, sharp lines, abstract, surreal, dreamlike, ethereal, otherworldly, sense of mystery, dark, mysterious, haunting, evocative \n\n\n"
+  ],
+  "particles": [
+    "snowflakes$",
+    "snowflakes$",
+    "snowflakes$"
+  ],
+  "backgrounds": [
+    "Background 1: A Mountaintop$",
+    "Background 2: A Stormy Night$",
+    "Background 3: A Hidden Conflict$"
+  ],
+  "background_prompts": [
+    ", soft edges, whimsical, dreamy, magical, ethereal, fantastical, a sense of wonder, a sense of peace, a sense of joy, a sense of hope, a mountaintop, a winding path leading up to the mountaintop, a small cottage nestled at the top of the mountain, a bright sun shining in the sky, fluffy white clouds, a rainbow arching over the mountaintop, a field of wildflowers at the base of the mountain, a babbling brook flowing through the field, a family of deer grazing in the field, a friendly dragon perched on the mountaintop, a magical portal shimmering in the air above the cottage, a sense of adventure, a sense of discovery, a sense of belonging.\n\n\ncolour: colourful, pastel, soft edges, whimsical, dreamy, magical, ethereal, fantastical, a sense of wonder, a sense of peace, a sense of joy, a sense of hope. background: a mountaintop, a winding path leading up to the mountaintop, a small cottage nestled at the top of the mountain, a bright sun shining in the sky, fluffy white clouds, a rainbow arching over the mountaintop, a field of wildflowers at the base of the mountain, a babbling brook flowing through the field, a family of deer grazing in the field, a friendly dragon perched on the mountaintop, a magical portal shimmering in the air above the cottage. \n\n",
+    ", soft lighting, whimsical, magical, a young girl with long flowing hair, a glowing orb, a friendly dragon, a starry night sky, a gentle breeze blowing through the girl's hair, a path leading to a distant castle, a sense of wonder and adventure.\n\n\ncolour:colourful,pastel,soft lighting,whimsical,magical,a young girl with long flowing hair,a glowing orb,a friendly dragon,starry night sky,gentle breeze,path leading to a distant castle,sense of wonder,adventure \n",
+    ", soft edges, whimsical, cute, cartoon style, smiling characters, friendly animals, playing instruments, singing, happy, joyful, celebration, music festival, stage, audience, bright lights, confetti, balloons, streamers, vibrant, energetic, lively, fun, magical, dreamlike, fantastical, imaginative, creative, unique, original.\n\ncolour: colourful, pastel, soft edges, whimsical, cute, cartoon style\ncharacters: smiling, friendly animals, playing instruments, singing\nsetting: stage, audience, bright lights, confetti, balloons, streamers\nmood: happy, joyful, celebration, music festival, vibrant, energetic, lively, fun, magical, dreamlike, fantastical \n\n\n"
+  ],
+  "shaderBackground": "",
+  "shaderTexture": "",
+  "particleColour": [
+    "255",
+    "255",
+    "255"
+  ],
+  "youtubeId": "",
+  "createdAt": "2025-03-19T19:04:13.446Z",
+  "updatedAt": "2025-03-22T22:43:55.545Z"
 }

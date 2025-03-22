@@ -499,9 +499,16 @@ const SongSelector: React.FC<SongSelectorProps> = ({
         </div>
       )}
 
-      {/* Screen Recorder
-      <ScreenRecorder
-      /> */}
+      {/* Uncomment and modify this section when needed */}
+      {/* Screen Recorder - place within a container to prevent overflow */}
+      {/* <div style={{
+        width: '100%',
+        overflowX: 'hidden',
+        boxSizing: 'border-box',
+        padding: '0.5rem 0',
+      }}>
+        <ScreenRecorder />
+      </div> */}
 
       {/* Shader Warning Popup */}
       {showShaderWarning && (

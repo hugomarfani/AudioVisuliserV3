@@ -135,29 +135,6 @@ void setPaths() {
 }
 
 
-// std::string gemmaModelPath =
-//     (currentDirectory / "AiResources" / "gemma-2-9b-it-int4-ov").string();
-// // std::string stableDiffusionModelPath =
-// //     (currentDirectory / "AiResources" / "FLUX.1-schnell-int8-ov").string();
-// std::string stableDiffusionModelPath =
-//     (currentDirectory / "AiResources" / "dreamlike_anime_1_0_ov" / "FP16")
-//         .string();
-// // using whisper path again after this so needs to be filesystem::path
-// std::filesystem::path whisperModelPath =
-//     (currentDirectory / "AiResources" / "distil-whisper-large-v3-int8-ov");
-// std::filesystem::path songDataPath = (currentDirectory / "assets" / "songData");
-// std::string particleListFilePath =
-//     (currentDirectory / "assets" / "particleList.json").string();
-// std::string logPath = (currentDirectory / "assets" / "aiLog.txt").string();
-// std::filesystem::path lyricsDirPath = (currentDirectory / "assets" / "lyrics");
-// std::filesystem::path wavDirPath = (currentDirectory / "assets" / "audio");
-// std::filesystem::path imageDirPath = (currentDirectory / "assets" / "images");
-
-// ----------------- Temp ONNX Paths -----------------
-// std::filesystem::path sdPath =
-//     (currentDirectory / "AiResources" / "sd-v1-5-int8-onnx");
-// std::string textEncoderPath = (sdPath / "text_encoder" /
-// "model.onnx").string(); std::string
 
 
 // ----------------- Finish Functions -----------------
@@ -871,10 +848,10 @@ int main(int argc, char *argv[]) {
       ("model,m", po::value<std::string>(), "specify model name")
       ("electron,e", "enable electron mode");
 
-  po::options_description stable_diffusion_options(
-      "Stable Diffusion only options");
-  stable_diffusion_options.add_options()("prompt", po::value<std::string>(),
-                                         "prompt to generate image");
+  // po::options_description stable_diffusion_options(
+  //     "Stable Diffusion only options");
+  // stable_diffusion_options.add_options()("prompt", po::value<std::string>(),
+  //                                        "prompt to generate image");
 
   po::options_description whisper_options("Whisper only options");
   whisper_options.add_options()("fixSampleRate",
@@ -895,7 +872,7 @@ int main(int argc, char *argv[]) {
 
   po::options_description cmdline_options;
   cmdline_options.add(general_options)
-      .add(stable_diffusion_options)
+      // .add(stable_diffusion_options)
       .add(whisper_options)
       .add(llm_options);
 

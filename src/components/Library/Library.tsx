@@ -9,7 +9,7 @@ interface LibraryProps {
 }
 
 const Library: React.FC<LibraryProps> = ({ onClose }) => {
-  const [youtubeMode, setYoutubeMode] = React.useState(true);
+  const [youtubeMode, setYoutubeMode] = React.useState(false);
   const handleAddSong = (data: {
     url: string;
     prompt: string;
@@ -86,7 +86,7 @@ const Library: React.FC<LibraryProps> = ({ onClose }) => {
               fontWeight: !youtubeMode ? 'bold' : 'normal',
               fontSize: 'clamp(0.75rem, 1.2vw, 0.875rem)',
             }}>
-              custom
+              System Audio
             </span>
             <div
               onClick={() => setYoutubeMode(!youtubeMode)}

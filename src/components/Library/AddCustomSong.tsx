@@ -190,7 +190,7 @@ const AddCustomSong: React.FC<AddSongFormProps> = ({ onSubmit }) => {
                         onChange={(e) => setSongName(e.target.value)}
                         placeholder="Enter song name"
                         style={{
-                            width: '100%',
+                            width: '95%',
                             padding: '0.75rem',
                             borderRadius: '4px',
                             border: `1px solid ${colors.grey4}`,
@@ -213,7 +213,7 @@ const AddCustomSong: React.FC<AddSongFormProps> = ({ onSubmit }) => {
                         onChange={(e) => setArtistName(e.target.value)}
                         placeholder="Enter artist name"
                         style={{
-                            width: '100%',
+                            width: '95%',
                             padding: '0.75rem',
                             borderRadius: '4px',
                             border: `1px solid ${colors.grey4}`,
