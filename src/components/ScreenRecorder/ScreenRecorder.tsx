@@ -199,8 +199,8 @@ const ScreenRecorder = () => {
                 padding: '1rem',
                 margin: '1.5vh auto',
                 boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                width: '100%', /* Changed from 95% to 100% */
-                maxWidth: '100%', /* Changed from fixed 600px */
+                width: '100%', 
+                maxWidth: '100%',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -237,7 +237,7 @@ const ScreenRecorder = () => {
                         width: '100%', 
                         borderRadius: '16px',
                         display: 'block',
-                        maxHeight: '200px', /* Reduced from 240px */
+                        maxHeight: '200px', 
                         objectFit: 'cover',
                     }} 
                 />
@@ -309,7 +309,7 @@ const ScreenRecorder = () => {
                         fontSize: 'clamp(0.8rem, 0.9vw, 0.9rem)',
                         fontWeight: '500',
                         flex: '1',
-                        minWidth: '0', /* Allow buttons to shrink below minWidth */
+                        minWidth: '0', 
                         maxWidth: '160px',
                         opacity: recording || loading ? 0.7 : 1,
                         whiteSpace: 'nowrap',
@@ -337,7 +337,7 @@ const ScreenRecorder = () => {
                         fontSize: 'clamp(0.8rem, 0.9vw, 0.9rem)',
                         fontWeight: '500',
                         flex: '1',
-                        minWidth: '0', /* Allow buttons to shrink below minWidth */
+                        minWidth: '0',
                         maxWidth: '160px',
                         opacity: !recording ? 0.7 : 1,
                         whiteSpace: 'nowrap',

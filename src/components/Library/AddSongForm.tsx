@@ -15,7 +15,6 @@ const AddSongForm: React.FC<AddSongFormProps> = ({ onSubmit }) => {
   const [currentOperationId, setCurrentOperationId] = useState<string | null>(null);
 
   const handleComplete = (data: any) => {
-    // Continue with form submission or other actions
     onSubmit({ url, prompt: selectedPrompt, moods: selectedMoods });
     setUrl('');
     setSelectedPrompt('');
@@ -50,7 +49,7 @@ const AddSongForm: React.FC<AddSongFormProps> = ({ onSubmit }) => {
     const operationId = `add-song-${Date.now()}`;
     setCurrentOperationId(operationId);
     
-    // Initialize processing state with initial steps
+    // Initialise processing state with initial steps
     startProcessing([
       { key: 'download', label: 'Downloading YouTube Audio', completed: false },
       { key: 'aiSetup', label: 'Preparing AI Environment', completed: false },
@@ -65,7 +64,6 @@ const AddSongForm: React.FC<AddSongFormProps> = ({ onSubmit }) => {
         url,
       );
       
-      // Mark download as complete
       updateStep('download', true);
       
       setStatus(`Successfully downloaded! Processing with Whisper...`);
@@ -77,7 +75,6 @@ const AddSongForm: React.FC<AddSongFormProps> = ({ onSubmit }) => {
         operationId
       );
       
-      // The rest of the process will be handled by the listeners in the hook
     } catch (error) {
       setStatus(`Error: ${error.message || 'Unknown error occurred'}`);
       setCurrentOperationId(null);

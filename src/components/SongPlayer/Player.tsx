@@ -19,7 +19,7 @@ interface PlayerProps {
     artist: string;
     albumArt: string;
     audioSrc: string;
-    id?: string; // Add id to identify which song is playing
+    id?: string;
   };
   autoPlay?: boolean;
   onTimeUpdate?: (currentTime: number, duration: number) => void;
@@ -41,7 +41,7 @@ const Player = forwardRef<any, PlayerProps>(
     const { songs, loading, refetch } = useSongs();
 
     // Debug: Log the track ID we received
-    console.log('🔍 Track ID received in Player:', track.id);
+    // console.log('🔍 Track ID received in Player:', track.id);
 
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);

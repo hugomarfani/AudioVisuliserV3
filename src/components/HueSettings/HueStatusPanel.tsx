@@ -115,17 +115,6 @@ const HueStatusPanel: React.FC<HueStatusPanelProps> = ({
   // Log data for debugging
   useEffect(() => {
     if (isStreamingActive) {
-      // console.log('Hue Status Update:', {
-      //   beat: beatStatus.isDetected,
-      //   vocal: beatStatus.vocalActive,
-      //   energy: {
-      //     bass: beatStatus.bassEnergy,
-      //     mid: beatStatus.midEnergy,
-      //     high: beatStatus.highEnergy
-      //   },
-      //   color: beatStatus.currentColor,
-      //   brightness: beatStatus.brightness
-      // });
       setLastUpdate(Date.now());
     }
   }, [

@@ -1,7 +1,6 @@
 import { ipcMain } from 'electron';
 import fs from 'fs';
 import path from 'path';
-import { app } from 'electron';
 import { Song, saveSongAsJson } from '../../database/models/Song';
 import { getResourcePath } from '../paths';
 

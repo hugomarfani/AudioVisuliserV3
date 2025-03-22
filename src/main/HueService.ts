@@ -1,7 +1,6 @@
 import { ipcMain } from 'electron';
 import axios from 'axios';
 import https from 'https';
-import dgram from 'dgram';
 import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';

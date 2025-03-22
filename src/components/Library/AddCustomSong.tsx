@@ -9,9 +9,6 @@ interface AddSongFormProps {
 }
 
 const AddCustomSong: React.FC<AddSongFormProps> = ({ onSubmit }) => {
-    const [url, setUrl] = useState('');
-    const [selectedPrompt, setSelectedPrompt] = useState('');
-    const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
     const [currentOperationId, setCurrentOperationId] = useState<string | null>(null);
     const [filePath, setFilePath] = useState<string | null>('');
     
@@ -20,17 +17,14 @@ const AddCustomSong: React.FC<AddSongFormProps> = ({ onSubmit }) => {
     const [artistName, setArtistName] = useState<string>('');
     const [thumbnailPath, setThumbnailPath] = useState<string | null>(null);
     const [selectingThumbnail, setSelectingThumbnail] = useState(false);
-    const [linkingFile, setLinkingFile] = useState(false);
 
     // Handle completion of AI processing
     const handleComplete = (data: any) => {
-        // Reset form fields
         setSongName('');
         setArtistName('');
         setThumbnailPath(null);
         setFilePath('');
         
-        // Call onSubmit with the data
         onSubmit({ url: '', prompt: '', moods: [] });
     };
     
@@ -70,14 +64,12 @@ const AddCustomSong: React.FC<AddSongFormProps> = ({ onSubmit }) => {
 
     const handleLinkAudioFile = async () => {
         try {
-            setLinkingFile(true);
 
             // Open file dialog and get selected path
             const result = await window.electron.fileSystem.selectAudioFile();
 
 
             if (result.cancelled) {
-                setLinkingFile(false);
                 return;
             }
             setFilePath(result.filePath);
@@ -89,7 +81,6 @@ const AddCustomSong: React.FC<AddSongFormProps> = ({ onSubmit }) => {
             // alert("Audio file linked successfully!");
 
         } catch (error) {
-            setLinkingFile(false);
             console.error("Error linking audio file:", error);
             alert(`Failed to link audio file: ${error}`);
         }
@@ -159,7 +150,6 @@ const AddCustomSong: React.FC<AddSongFormProps> = ({ onSubmit }) => {
               operationId
             );
             
-            // The rest will be handled by the hook's event listeners
 
         } catch (error) {
             setStatus(`Error: ${error.message || 'Unknown error occurred'}`);

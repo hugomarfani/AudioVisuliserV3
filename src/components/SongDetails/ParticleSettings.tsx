@@ -298,7 +298,7 @@ const ParticleSettings: React.FC<ParticleSettingsProps> = ({ onClose, onSaved, i
   // Load images for the selected particle
   const loadParticleImages = async (particle: ParticleData) => {
     setIsLoading(true);
-    setParticleImages([]); // Clear existing images
+    setParticleImages([]); 
     
     try {
       console.log(`Loading images for ${particle.name} (${particle.dir})`);
@@ -317,7 +317,7 @@ const ParticleSettings: React.FC<ParticleSettingsProps> = ({ onClose, onSaved, i
         // Generate placeholder images if real ones can't be loaded
         const placeholders = Array.from({ length: particle.count }, (_, i) => ({
           name: `${particle.name}${i + 1}.png`,
-          path: `file://placeholder${i}.png` // This won't load but will show the placeholder UI
+          path: `file://placeholder${i}.png` 
         }));
         
         setParticleImages(placeholders);
@@ -326,7 +326,6 @@ const ParticleSettings: React.FC<ParticleSettingsProps> = ({ onClose, onSaved, i
       }
     } catch (error) {
       console.error('Error loading particle images:', error);
-      // Generate placeholder images on error
       const placeholders = Array.from({ length: particle.count }, (_, i) => ({
         name: `${particle.name}${i + 1}.png`,
         path: `file://placeholder${i}.png`
@@ -344,7 +343,7 @@ const ParticleSettings: React.FC<ParticleSettingsProps> = ({ onClose, onSaved, i
     // For numeric fields, convert to number and validate
     if (['weight', 'gravity', 'bounce', 'airResistance', 'lifespan'].includes(field)) {
       const numValue = parseFloat(value);
-      if (isNaN(numValue)) return; // Don't update if not a valid number
+      if (isNaN(numValue)) return;
       
       setEditedParticle({
         ...editedParticle,
@@ -385,7 +384,7 @@ const ParticleSettings: React.FC<ParticleSettingsProps> = ({ onClose, onSaved, i
   
   // Handle image delete click
   const handleDeleteClick = (e: React.MouseEvent, index: number, imageName: string) => {
-    e.stopPropagation(); // Prevent image preview from opening
+    e.stopPropagation(); 
     setImageToDelete({ index, name: imageName });
   };
   
@@ -1229,76 +1228,7 @@ const ParticleSettings: React.FC<ParticleSettingsProps> = ({ onClose, onSaved, i
                       </span>
                     </label>
                   </div>
-                  
-                  {/* Moods (tags) 
-                  <div style={{ marginBottom: '8px' }}>
-                    <label 
-                      htmlFor="moods" 
-                      style={{ 
-                        display: 'block', 
-                        marginBottom: '6px', 
-                        fontSize: '13px',
-                        color: '#86868b',
-                        fontWeight: 500,
-                      }}
-                    >
-                      Moods (comma-separated)
-                    </label>
-                    <input
-                      id="moods"
-                      type="text"
-                      value={editedParticle.moods.join(', ')}
-                      onChange={(e) => {
-                        // Instead of directly setting the moods array, just store the raw input value
-                        // and then parse it only when focus is lost
-                        const inputValue = e.target.value;
-                        const moodsArray = inputValue
-                          .split(',')
-                          .map(mood => mood.trim())
-                          .filter(mood => mood !== '');
-                        handleInputChange('moods', moodsArray);
-                      }}
-                      onBlur={(e) => {
-                        // Clean up the array when focus is lost
-                        const moodsArray = e.target.value
-                          .split(',')
-                          .map(mood => mood.trim())
-                          .filter(mood => mood !== '');
-                        handleInputChange('moods', moodsArray);
-                      }}
-                      style={{
-                        width: '95%',
-                        padding: '10px 12px',
-                        borderRadius: '10px',
-                        border: '1px solid rgba(0, 0, 0, 0.1)',
-                        fontSize: '14px',
-                        backgroundColor: 'white',
-                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                      }}
-                    />
-                  </div>
-                    */}
-                  {/* Mood tags preview 
-                  <div style={{ 
-                    display: 'flex', 
-                    flexWrap: 'wrap', 
-                    gap: '6px',
-                    marginBottom: '20px', 
-                  }}>
-                    {editedParticle.moods.map((mood, index) => (
-                      <span key={index} style={{
-                        backgroundColor: 'rgba(0, 122, 255, 0.1)',
-                        color: '#007aff',
-                        padding: '4px 10px',
-                        borderRadius: '16px',
-                        fontSize: '12px',
-                        fontWeight: 500,
-                      }}>
-                        {mood}
-                      </span>
-                    ))}
-                  </div>
-                  */}
+
                 </div>
               ) : (
                 <div>

@@ -3,7 +3,7 @@ import { app, BrowserWindow, shell, ipcMain, dialog, desktopCapturer, session } 
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import { spawn, execSync } from 'child_process';
-import fs, { unlink } from 'fs';
+import fs from 'fs';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 import initDatabase from '../database/init';
@@ -313,7 +313,7 @@ ipcMain.handle('save-audio-recording', async (_, { blob, fileName }) => {
 ipcMain.handle('redownload-mp3', async (_, songId) => {
   try {
     const url = "https://www.youtube.com/watch?v=" + songId;
-    const id = await downloadYoutubeAudioWav(url, true);
+    const id = await downloadYoutubeAudioWav(songId, url, true);
     // const { title, artist, thumbnailPath } = await getYoutubeMetadata(url);
     // console.log(
     //   `Redownloaded WAV with id: ${id}, title: ${title}, artist: ${artist}, thumbnail: ${thumbnailPath}`,

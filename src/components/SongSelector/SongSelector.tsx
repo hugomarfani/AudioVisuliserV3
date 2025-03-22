@@ -2,14 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FilterButton from './FilterButton';
 import SongCard from './SongCard';
-import ScreenRecorder from '../ScreenRecorder/ScreenRecorder';
 import SongDetails from '../SongDetails/SongDetails';
 import Library from '../Library/Library';
 import HueSettings from '../HueSettings/HueSettings';
 import { useSongs } from '../../hooks/useSongs';
 import { useHue } from '../../hooks/useHue';
 import colors from '../../theme/colors';
-import axios from 'axios';
 import {
   FaMusic,
   FaSync,
@@ -498,17 +496,6 @@ const SongSelector: React.FC<SongSelectorProps> = ({
           </button>
         </div>
       )}
-
-      {/* Uncomment and modify this section when needed */}
-      {/* Screen Recorder - place within a container to prevent overflow */}
-      {/* <div style={{
-        width: '100%',
-        overflowX: 'hidden',
-        boxSizing: 'border-box',
-        padding: '0.5rem 0',
-      }}>
-        <ScreenRecorder />
-      </div> */}
 
       {/* Shader Warning Popup */}
       {showShaderWarning && (

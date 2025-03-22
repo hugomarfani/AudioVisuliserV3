@@ -1,14 +1,11 @@
 import { MemoryRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import { FC, useEffect, useState } from 'react';
+import { FC, useState } from 'react';
 import './App.css';
 import MeshGradientBackground from '../components/Backgrounds/MeshGradientBackground';
 import SongSelector from '../components/SongSelector/SongSelector';
-import SpotifyApp from '../components/Spotify/SpotifyApp';
-import Player from '../components/SongPlayer/Player';
 import Login from '../components/Spotify/auth/Login';
 import SongDetails from '../components/SongDetails/SongDetails';
 import Particles from '../components/Particles/Particles';
-import ShaderVisuals from '../shader/ShaderVisuals';
 import PlayScene from '../shader/PlayScene';
 import { HueProvider } from '../hooks/useHue';
 

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { FaCheckSquare, FaPlay, FaTimes, FaList } from 'react-icons/fa';
+import { FaPlay, FaTimes } from 'react-icons/fa';
 import { SongModel } from '../../database/models/Song';
 import colors from '../../theme/colors';
 import AIProgressTracker from '../common/AIProgressTracker';
 import SongSelectionItem from './SongSelectionItem';
-import { useAIProcessTracking, progressLabels } from '../../hooks/useAIProcessTracking';
+import { useAIProcessTracking} from '../../hooks/useAIProcessTracking';
 
 interface BatchLLMRunnerProps {
   onClose: () => void;

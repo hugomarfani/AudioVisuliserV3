@@ -10,10 +10,10 @@ export class ParticleSelector {
         // Store the full particle data for reference
         this.particleData = particleListData.particles;
         
-        // Initialize valid particles from JSON - store both names and IDs
+        // Initialiase valid particles from JSON - store both names and IDs
         this.validParticles = this.particleData.map(p => p.name.toLowerCase());
         
-        // Initialize particle mappings
+        // Initialise particle mappings
         this.particleMap = {
             'snowfaleks': 'snowflake',
             'snowflakes': 'snowflake',
@@ -65,7 +65,7 @@ export class ParticleSelector {
         const normalized = this.normalizeParticleType(type);
         console.log(`Normalizing particle type: ${type} -> ${normalized}`);
         
-        // Check if the normalized type is in our valid particles list
+        // Check if the normalised type is in our valid particles list
         if (this.validParticles.includes(normalized)) {
             return normalized;
         }

@@ -50,7 +50,7 @@ export const useSongs = () => {
         // Check if we should retry
         if (currentRetry.current < maxRetries.current) {
           currentRetry.current++;
-          const retryDelay = currentRetry.current * 1000; // Increase delay with each retry
+          const retryDelay = currentRetry.current * 1000; 
           console.log(`⏱️ Will retry in ${retryDelay}ms...`);
           
           setTimeout(() => {

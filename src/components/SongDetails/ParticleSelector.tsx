@@ -138,7 +138,6 @@ const ParticleSelector: React.FC<ParticleSelectorProps> = ({ song, songId, refet
         
         // Open particle settings with the new particle selected
         setSelectedParticleForSettings(customParticleId);
-        //setShowSettings(true);
         
         setParticleUploadStatus('Custom particle added successfully');
         
@@ -203,11 +202,10 @@ const ParticleSelector: React.FC<ParticleSelectorProps> = ({ song, songId, refet
           }
         })
         .catch(() => {
-          // Silent fail - we'll use the existing data
           console.log('Using cached particle list data');
         });
       refetch();
-    }, 1000); // Wait a second before refreshing to allow the file to be written
+    }, 1000); 
   };
 
   return (

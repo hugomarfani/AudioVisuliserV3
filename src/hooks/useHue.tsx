@@ -512,7 +512,7 @@ export const HueProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     testLights,
     processBeat,
     refreshBeatStatus,
-    updateBeatStatusDirectly  // Add the new method to the context
+    updateBeatStatusDirectly  
   };
 
   return <HueContext.Provider value={value}>{children}</HueContext.Provider>;
