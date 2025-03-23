@@ -231,6 +231,9 @@ std::string getModelDevice() {
   }
 
   for (const auto &device : availableDevices) {
+    if (device.find("NPU") != std::string::npos) {
+      return device;
+    }
     // use GPU if available
     if (device.find("GPU") != std::string::npos) {
       std::cout << "Selected device: " << device << std::endl;
