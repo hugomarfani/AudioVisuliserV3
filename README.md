@@ -42,6 +42,65 @@ You can also set colour, background and particle shape yourself from the setting
 ### Hue Integration
 Our integration with the Philips Hue Entertainment API provides an immersive experience, synchronising room lighting in real-time with on-screen visuals and audio. Lights dynamically respond to music beats, vocals, and directional cues—for example, on-screen activity occurring on the right side will trigger more intense lighting effects on the corresponding side of the room, creating an engaging and interactive environment.
 
+## Installation 
+
+Create a directory to run the program and place the exe in the location
+```shell
+mkdir SHSpace 
+cd SHSpace
+cp Path/To/SHSCppVer.exe ./SHSCppVer.exe
+cp Path/To/SHSSD.exe ./SHSSD.exe
+```
+
+For default settings (in accordance with our product created for Super Happy Space), create a directory named `AiResources` and download the models in there either manually or using git lfs
+```shell
+mkdir AiResources
+cd AiResources
+# download and move all 3 models from huggingface here
+```
+If using git to install the models:
+1. download Git LFS following the instructions [here](https://docs.github.com/en/repositories/working-with-files/managing-large-files/installing-git-large-file-storage)
+2. Run the following commands
+```shell
+git lfs install
+git clone https://huggingface.co/OpenVINO/distil-whisper-large-v3-int8-ov
+git clone https://huggingface.co/OpenVINO/gemma-2-9b-it-int4-ov
+git clone https://huggingface.co/IDKiro/sdxs-512-dreamshaper
+```
+
+Finally, download the openvino package from the zip file [here](https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/2025.0/windows)
+
+
+## OpenVINO C++ 
+
+The C++ implementation using OpenVINO and OpenVINO GenAI library has 2 ways to compile, using a dynamic library 
+
+### Dynamic Build 
+
+### Static Build 
+
+```shell
+cmake -G "Visual Studio 16 2019" -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=C:/Users/billy/Documents/coding/temp/openvino/cmake/toolchains/mt.runtime.win32.toolchain.cmake -DOPENVINO_EXTRA_MODULES=C:\Users\billy\Documents\coding\temp\openvino.genai ../openvino 
+```
+
+```shell
+cmake --build . --target openvino --config Release 
+```
+
+```shell
+cmake -DCMAKE_INSTALL_PREFIX=C:\Users\billy\Documents\coding\temp\install -P .\build\cmake_install.cmake 
+```
+
+
+## Diffusers Python Pyinstaller 
+```shell
+pyinstaller –F SD.py 
+```
+
+Using Nuitka, it should be possible to  
+
+`nuitka
+
 ## Install
 
 Clone the repo and install dependencies:
