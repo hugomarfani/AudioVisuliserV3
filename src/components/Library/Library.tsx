@@ -71,7 +71,7 @@ const Library: React.FC<LibraryProps> = ({ onClose }) => {
           >
             &times;
           </button>
-          <h2 style={{ marginBottom: '1rem' }}>Search for New Song</h2>
+          <h2 style={{ marginBottom: '1rem' }}>Add a new Song</h2>
           
           <div style={{
             display: 'flex',

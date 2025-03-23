@@ -851,10 +851,10 @@ int main(int argc, char *argv[]) {
       ("model,m", po::value<std::string>(), "specify model name")
       ("electron,e", "enable electron mode");
 
-  // po::options_description stable_diffusion_options(
-  //     "Stable Diffusion only options");
-  // stable_diffusion_options.add_options()("prompt", po::value<std::string>(),
-  //                                        "prompt to generate image");
+  po::options_description stable_diffusion_options(
+      "Stable Diffusion only options");
+  stable_diffusion_options.add_options()("prompt", po::value<std::string>(),
+                                         "prompt to generate image");
 
   po::options_description whisper_options("Whisper only options");
   whisper_options.add_options()("fixSampleRate",

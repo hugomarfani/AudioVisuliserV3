@@ -311,7 +311,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
         <div style={{ position: 'relative' }}>
           <input
             type="text"
-            placeholder="Say or search a song to begin"
+            placeholder="Search a song to begin"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
