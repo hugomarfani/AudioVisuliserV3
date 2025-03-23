@@ -5,6 +5,7 @@ import SongCard from './SongCard';
 import SongDetails from '../SongDetails/SongDetails';
 import Library from '../Library/Library';
 import HueSettings from '../HueSettings/HueSettings';
+import Credits from '../Credits/Credits';
 import { useSongs } from '../../hooks/useSongs';
 import { useHue } from '../../hooks/useHue';
 import colors from '../../theme/colors';
@@ -15,6 +16,7 @@ import {
   FaChevronRight,
   FaCog,
   FaServer,
+  FaInfoCircle,
 } from 'react-icons/fa';
 import BatchLLMRunner from './BatchLLMRunner';
 
@@ -52,6 +54,7 @@ const SongSelector: React.FC<SongSelectorProps> = ({
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   const [isHueSettingsOpen, setIsHueSettingsOpen] = useState(false);
   const [isBatchLLMOpen, setIsBatchLLMOpen] = useState(false);
+  const [isCreditsOpen, setIsCreditsOpen] = useState(false);
 
   // Additional states from file A
   const [visualMode, setVisualMode] = useState(() => {
@@ -497,6 +500,30 @@ const SongSelector: React.FC<SongSelectorProps> = ({
         </div>
       )}
 
+      {/* Credits button (bottom right) */}
+      <button
+        onClick={() => setIsCreditsOpen(true)}
+        style={{
+          position: 'absolute',
+          bottom: '1rem',
+          right: '1rem',
+          backgroundColor: colors.grey5,
+          color: colors.grey2,
+          border: 'none',
+          borderRadius: '9999px',
+          padding: '0.5rem 1rem',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 'clamp(0.75rem, 1vw, 0.875rem)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        }}
+      >
+        <FaInfoCircle />
+        <span style={{ marginLeft: '0.5rem' }}>Credits</span>
+      </button>
+
       {/* Shader Warning Popup */}
       {showShaderWarning && (
         <>
@@ -611,6 +638,13 @@ const SongSelector: React.FC<SongSelectorProps> = ({
           }}
           songs={songs}
           refetch={refetch}
+        />
+      )}
+
+      {/* Credits Modal */}
+      {isCreditsOpen && (
+        <Credits
+          onClose={() => setIsCreditsOpen(false)}
         />
       )}
     </div>
