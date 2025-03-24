@@ -130,17 +130,32 @@ Move this file to `./resources` to be used by the main application.
 
 #### Static Build 
 
+It is possible to create static build of openvino from the source files. However, this is not a recommended method as it is more complex and the nuumber of errors the user encounters heavily depends on their setup.
+
+First clone the necessary repositories and submodules
+```shell
+git clone https://github.com/openvinotoolkit/openvino.git
+git clone https://github.com/openvinotoolkit/openvino.genai.git
+git submodule update --init --recursive
+mkdir build & cd build
+```
+
+Run the following commands to build the project, assuming you have Visual Studio 2019 installed, choose the correct generator for your system.
 ```shell
 cmake -G "Visual Studio 16 2019" -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE={path to openvino}/cmake/toolchains/mt.runtime.win32.toolchain.cmake -DOPENVINO_EXTRA_MODULES={path to openvion.genai} ../openvino 
 ```
 
+Compile the cmake project
 ```shell
 cmake --build . --target openvino --config Release 
 ```
 
+Install the project onto your machine
 ```shell
 cmake -DCMAKE_INSTALL_PREFIX=C:\Users\billy\Documents\coding\temp\install -P .\build\cmake_install.cmake 
 ```
+
+After these steps, the openvino library will be installed on your machine and it should be possible to link it to the C++ project using cmake.
 
 
 ### Diffusers Python Pyinstaller 
