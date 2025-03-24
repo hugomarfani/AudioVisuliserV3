@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import WebPlayback from './auth/WebPlayback';
+import { useState, useEffect } from 'react';
 import Login from './auth/Login';
 import './SpotifyApp.css';
 import Player from '../SongSelector/Player';

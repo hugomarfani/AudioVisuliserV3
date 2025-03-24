@@ -106,6 +106,7 @@
         "queue": "cpp",
         "semaphore": "cpp",
         "shared_mutex": "cpp",
-        "syncstream": "cpp"
+        "syncstream": "cpp",
+        "scoped_allocator": "cpp"
     }
 }

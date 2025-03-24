@@ -81,7 +81,7 @@ const Particles: React.FC = () => {
         ? songDetails.particles
         : ['musicNote'];
 
-      // Initialize sketch with song's particle types
+      // Initialise sketch with song's particle types
       const sketch = initializeSketch(particleTypes, isActive); // Pass isActive to sketch
       const newP5 = new p5(sketch, containerRef.current);
       setP5Instance(newP5);
@@ -109,7 +109,6 @@ const Particles: React.FC = () => {
 
     // Function to track mouse/cursor position and send to the Hue service
     const handleMouseMove = (e: MouseEvent) => {
-      // Get screen dimensions
       const screenWidth = window.innerWidth;
       const screenHeight = window.innerHeight;
 
@@ -145,10 +144,10 @@ const Particles: React.FC = () => {
 
   // Handle leaving the page
   const handleBack = () => {
-    setIsActive(false); // Stop particle generation
+    setIsActive(false); 
     setIsVisible(false);
     if (p5Instance) {
-      p5Instance.remove(); // Remove p5 instance immediately
+      p5Instance.remove(); 
     }
     setTimeout(() => navigate('/'), 300);
   };
@@ -190,7 +189,7 @@ const Particles: React.FC = () => {
         top: 0,
         left: 0,
         overflow: 'hidden',
-        background: 'transparent', // Change to transparent
+        background: 'transparent', 
     }}>
       {/* Replace background div with full-screen image */}
       {backgroundImages.length > 0 && (
@@ -274,7 +273,7 @@ const Particles: React.FC = () => {
         <div
           className={`player-wrapper ${isVisible ? 'visible' : ''}`}
           style={{
-            position: 'fixed', // Change to fixed
+            position: 'fixed', 
             bottom: 20,
             left: 0,
             right: 0,
@@ -288,7 +287,7 @@ const Particles: React.FC = () => {
               artist: songDetails.uploader,
               albumArt: fullJacketPath,
               audioSrc: fullAudioPath,
-              id: songDetails.id, // Add the song ID here
+              id: songDetails.id, 
             }}
             autoPlay={true}
             onTimeUpdate={handleTimeUpdate}

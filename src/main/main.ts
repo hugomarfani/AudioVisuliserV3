@@ -3,7 +3,7 @@ import { app, BrowserWindow, shell, ipcMain, dialog, desktopCapturer, session } 
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import { spawn, execSync } from 'child_process';
-import fs, { unlink } from 'fs';
+import fs from 'fs';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 import initDatabase from '../database/init';
@@ -313,7 +313,7 @@ ipcMain.handle('save-audio-recording', async (_, { blob, fileName }) => {
 ipcMain.handle('redownload-mp3', async (_, songId) => {
   try {
     const url = "https://www.youtube.com/watch?v=" + songId;
-    const id = await downloadYoutubeAudioWav(url, true);
+    const id = await downloadYoutubeAudioWav(songId, url, true);
     // const { title, artist, thumbnailPath } = await getYoutubeMetadata(url);
     // console.log(
     //   `Redownloaded WAV with id: ${id}, title: ${title}, artist: ${artist}, thumbnail: ${thumbnailPath}`,
@@ -398,7 +398,8 @@ ipcMain.handle('download-wav', async (_, url) => {
     const song = await makeNewSong(songId, title, artist, Ytid);
     saveSongAsJson(song);
     console.log('Song entry created:', song);
-    return Ytid;
+    // return Ytid;
+    return songId;
   } catch (error) {
     console.error('Error in download-wav handler:', error);
     throw error;
@@ -684,7 +685,7 @@ ipcMain.handle('run-gemma-with-options', (event, { songId, options, operationId 
 });
 
 // Add the Stable Diffusion handler
-ipcMain.handle('run-stable-diffusion', (event, songId: string, operationId = null) => {
+ipcMain.handle('run-stable-diffusion', (event, {songId, options, operationId = null}) => {
   console.log('Running Stable Diffusion with songId:', songId);
 
   const sdPathStr = SDPath.toString();
@@ -713,32 +714,34 @@ ipcMain.handle('run-stable-diffusion', (event, songId: string, operationId = nul
   return actualOperationId;
 });
 
-ipcMain.on('run-gemma-test', (event) => {
-  console.log(`Running Gemma test with ${ps1Path} and ${exePath}`);
+// DEPRECATED FUNCTION - ONLY FOR UNIT TESTING PURPOSES
+// NOT DELETING AS MAY BE USEFUL IN LATER TEST
+// ipcMain.on('run-gemma-test', (event) => {
+//   console.log(`Running Gemma test with ${ps1Path} and ${exePath}`);
 
-  const gemmaCommand = `${exePath} -e -l --all `;
+//   const gemmaCommand = `${exePath} -e -l --all `;
 
-  // running using spawn -> real time output
-  const process = spawn('powershell', [
-    '-ExecutionPolicy',
-    'Bypass',
-    '-Command',
-    `& { . '${ps1Path}'; & ${gemmaCommand} ;}`,
-  ]);
+//   // running using spawn -> real time output
+//   const process = spawn('powershell', [
+//     '-ExecutionPolicy',
+//     'Bypass',
+//     '-Command',
+//     `& { . '${ps1Path}'; & ${gemmaCommand} ;}`,
+//   ]);
 
-  process.stdout.on('data', (data) => {
-    console.log(`📜 stdout: ${data.toString()}`);
-  });
+//   process.stdout.on('data', (data) => {
+//     console.log(`📜 stdout: ${data.toString()}`);
+//   });
 
-  process.stderr.on('data', (data) => {
-    console.error(`⚠️ stderr: ${data.toString()}`);
-  });
+//   process.stderr.on('data', (data) => {
+//     console.error(`⚠️ stderr: ${data.toString()}`);
+//   });
 
-  process.on('close', (code) => {
-    console.log(`✅ Process exited with code ${code}`);
-    event.reply('run-gemma-test-reply', `Process exited with code ${code}`);
-  });
-});
+//   process.on('close', (code) => {
+//     console.log(`✅ Process exited with code ${code}`);
+//     event.reply('run-gemma-test-reply', `Process exited with code ${code}`);
+//   });
+// });
 
 // Add the delete-song IPC handler
 ipcMain.handle('delete-song', async (_, songId) => {

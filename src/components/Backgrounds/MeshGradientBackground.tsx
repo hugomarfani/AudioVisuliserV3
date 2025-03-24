@@ -6,7 +6,7 @@ const MeshGradientBackground: React.FC = ({ children }) => {
   return (
     <div
       style={{
-        position: 'fixed', // Changed from 'relative' to 'fixed'
+        position: 'fixed', 
         top: 0,
         left: 0,
         width: '100vw',
@@ -48,7 +48,7 @@ const MeshGradientBackground: React.FC = ({ children }) => {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        overflow: 'auto' // Allow content to be scrollable if necessary, while background remains fixed
+        overflow: 'auto' 
       }}>
         {children}
       </div>

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FaInfoCircle, FaStar } from 'react-icons/fa';
+import { FaInfoCircle } from 'react-icons/fa';
 import colors from '../../theme/colors';
 import { SongModel } from '../../database/models/Song';
 import { useNavigate } from 'react-router-dom';
@@ -11,9 +11,9 @@ type SongCardProps = {
   accessToken: string;
   selectedDevice: string | null;
   onDetailsClick: (songID: string) => void;
-  useShader: boolean; // Whether to use shader or particles
+  useShader: boolean;
   onParticleClick?: (songId: string) => void;
-  disabled?: boolean; // Add disabled prop
+  disabled?: boolean;
 };
 
 const statusMap: Record<string, string> = {
@@ -85,34 +85,34 @@ function SongCard({
   
   // Calculate how far the text needs to translate to show all content
   const translateDistance = titleWidth > 0 && containerWidth > 0 
-    ? titleWidth - containerWidth + 20 // Add some padding
+    ? titleWidth - containerWidth + 20 
     : 0;
 
   return (
     <div
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={() => !disabled && onSelect(uri)} // Only call onSelect if not disabled
+      onClick={() => !disabled && onSelect(uri)}
       style={{
         display: 'flex',
         alignItems: 'center',
-        backgroundColor: disabled ? `${colors.grey5}90` : colors.grey5, // Make more transparent if disabled
+        backgroundColor: disabled ? `${colors.grey5}90` : colors.grey5,
         padding: 'clamp(0.75rem, 1.5vw, 1.5rem)',
         borderRadius: '24px',
         width: '95%',
         height: 'clamp(70px, 12vh, 100px)',
         margin: '0 auto',
         overflow: 'hidden',
-        cursor: disabled ? 'not-allowed' : 'pointer', // Change cursor for disabled state
+        cursor: disabled ? 'not-allowed' : 'pointer',
         position: 'relative',
         boxSizing: 'border-box',
         transition: 'all 0.3s ease',
-        transform: isHovered && !disabled ? 'translateY(-3px)' : 'translateY(0)', // Don't lift if disabled
+        transform: isHovered && !disabled ? 'translateY(-3px)' : 'translateY(0)', 
         boxShadow: isHovered && !disabled 
           ? '0 10px 15px rgba(0, 0, 0, 0.1)'
           : '0 2px 5px rgba(0, 0, 0, 0.05)',
         border: isHovered && !disabled ? `1px solid ${colors.grey4}` : '1px solid transparent',
-        opacity: disabled ? 0.7 : 1, // Reduce opacity if disabled
+        opacity: disabled ? 0.7 : 1,
       }}
     >
       <img
@@ -125,7 +125,7 @@ function SongCard({
           objectFit: 'cover',
           transition: 'all 0.3s ease',
           boxShadow: isHovered && !disabled ? '0 4px 8px rgba(0, 0, 0, 0.15)' : 'none',
-          filter: disabled ? 'grayscale(50%)' : 'none', // Add grayscale effect for disabled state
+          filter: disabled ? 'grayscale(50%)' : 'none', 
         }}
       />
       
@@ -167,16 +167,16 @@ function SongCard({
               fontWeight: 'bold',
               color: '#000',
               whiteSpace: 'nowrap',
-              display: 'inline-block', // Important for proper width measurement
-              position: 'relative', // Needed for animation
+              display: 'inline-block', 
+              position: 'relative', 
               transition: 'transform 0.3s ease',
-              overflow: 'visible', // Allow text to flow outside during animation
+              overflow: 'visible', 
               transform: isHovered && isTitleOverflowing 
-                ? `translateX(-${translateDistance}px)` // Use dynamic translation based on calculated overflow
+                ? `translateX(-${translateDistance}px)` 
                 : 'translateX(0)',
-              transitionDelay: isHovered ? '0.2s' : '0s', // Delay before scrolling starts
-              transitionDuration: isHovered ? `${animationDuration}s` : '0.3s', // Slower for scrolling, faster for reset
-              transitionTimingFunction: isHovered ? 'linear' : 'ease', // Linear for smoother scrolling
+              transitionDelay: isHovered ? '0.2s' : '0s', 
+              transitionDuration: isHovered ? `${animationDuration}s` : '0.3s', 
+              transitionTimingFunction: isHovered ? 'linear' : 'ease', 
             }}
           >
             {songDetails.title}

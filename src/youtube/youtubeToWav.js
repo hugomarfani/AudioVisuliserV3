@@ -28,6 +28,7 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 ffmpeg.setFfprobePath(ffprobePath);
 
 const downloadYoutubeAudio = async (songId, url, onlyMp3) => {
+  // console.log('Downloading audio from:', url);
   const downloadsPath = getResourcePath('assets', 'audio');
 
   if (!fs.existsSync(downloadsPath)) {

@@ -1,7 +1,6 @@
 // Using a single default image for now
 import particleListData from './particleList.json';
 
-// load in the images -> TODO: change to dynamic changes later
 const findImagePath = async (p: string) => {
   const response = await window.electron.fileSystem.mergeAssetPath(p);
   return response;

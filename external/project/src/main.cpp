@@ -135,29 +135,6 @@ void setPaths() {
 }
 
 
-// std::string gemmaModelPath =
-//     (currentDirectory / "AiResources" / "gemma-2-9b-it-int4-ov").string();
-// // std::string stableDiffusionModelPath =
-// //     (currentDirectory / "AiResources" / "FLUX.1-schnell-int8-ov").string();
-// std::string stableDiffusionModelPath =
-//     (currentDirectory / "AiResources" / "dreamlike_anime_1_0_ov" / "FP16")
-//         .string();
-// // using whisper path again after this so needs to be filesystem::path
-// std::filesystem::path whisperModelPath =
-//     (currentDirectory / "AiResources" / "distil-whisper-large-v3-int8-ov");
-// std::filesystem::path songDataPath = (currentDirectory / "assets" / "songData");
-// std::string particleListFilePath =
-//     (currentDirectory / "assets" / "particleList.json").string();
-// std::string logPath = (currentDirectory / "assets" / "aiLog.txt").string();
-// std::filesystem::path lyricsDirPath = (currentDirectory / "assets" / "lyrics");
-// std::filesystem::path wavDirPath = (currentDirectory / "assets" / "audio");
-// std::filesystem::path imageDirPath = (currentDirectory / "assets" / "images");
-
-// ----------------- Temp ONNX Paths -----------------
-// std::filesystem::path sdPath =
-//     (currentDirectory / "AiResources" / "sd-v1-5-int8-onnx");
-// std::string textEncoderPath = (sdPath / "text_encoder" /
-// "model.onnx").string(); std::string
 
 
 // ----------------- Finish Functions -----------------
@@ -254,6 +231,9 @@ std::string getModelDevice() {
   }
 
   for (const auto &device : availableDevices) {
+    if (device.find("NPU") != std::string::npos) {
+      return device;
+    }
     // use GPU if available
     if (device.find("GPU") != std::string::npos) {
       std::cout << "Selected device: " << device << std::endl;
@@ -551,7 +531,8 @@ class LLM {
       statusOutput = generate(shorterLyricsSetup + statusPrompt, 100);
     }
 
-    outputMap[STATUS] = getOptionsFromLlmOutput(statusOutput);
+    // outputMap[STATUS] = getOptionsFromLlmOutput(statusOutput);
+    outputMap[STATUS] = {statusOutput};
 
     if (debug) {
       std::cout << "Status extracted: " << std::endl;
@@ -645,7 +626,7 @@ class LLM {
     }
     std::vector<std::string> objects = outputMap[OBJECTS];
     for (const auto &object : objects) {
-      std::string objectPromptPrompt = imageSetup + object + imageSettings;
+      std::string objectPromptPrompt = imageSetup + object + imageSettings + objectSettings;
       std::string objectPrompt = generate(objectPromptPrompt, 500);
       objectPromptList.push_back(objectPrompt);
     }
@@ -688,7 +669,15 @@ class LLM {
     std::cout << "Storing data in json file" << std::endl;
     // create empty json object
     json j;
-
+    if (debug) {
+      std::cout << "Output Map: " << std::endl;
+      for (const auto &output : outputMap) {
+        std::cout << outputTypeMap.at(output.first) << ": " << std::endl;
+        for (const auto &data : output.second) {
+          std::cout << data << std::endl;
+        }
+      }
+    }
     // store whole colour string in json object
     for (const auto &output : outputMap) {
       std::string outputType = outputTypeMap.at(output.first);
@@ -700,6 +689,14 @@ class LLM {
         j[outputType] = outputData[0];
       }
     }
+
+    if (debug) {
+      std::cout << "JSON object: " << std::endl;
+      for (json::iterator it = j.begin(); it != j.end(); ++it) {
+        std::cout << it.key() << " : " << it.value() << "\n";
+      }
+    }
+
 
     // write updated json object to file
     std::ofstream outputFile(outputFilePath);
@@ -878,7 +875,7 @@ int main(int argc, char *argv[]) {
 
   po::options_description cmdline_options;
   cmdline_options.add(general_options)
-      .add(stable_diffusion_options)
+      // .add(stable_diffusion_options)
       .add(whisper_options)
       .add(llm_options);
 
@@ -962,6 +959,7 @@ int main(int argc, char *argv[]) {
   }
 
   if (vm.count("all")) {
+    vm.insert({"status", po::variable_value()});
     vm.insert({"extractColour", po::variable_value()});
     vm.insert({"extractParticle", po::variable_value()});
     vm.insert({"extractObject", po::variable_value()});

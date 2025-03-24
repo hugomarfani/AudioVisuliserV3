@@ -238,8 +238,8 @@ class Particle {
 class ParticleSystem {
   particles: Particle[] = [];
   p: p5;
-  maxParticles = 150;  // Changed from 50 to 10
-
+  maxParticles = 150;  
+  
   constructor(p: p5) {
     console.log('Initializing ParticleSystem');
     this.p = p;

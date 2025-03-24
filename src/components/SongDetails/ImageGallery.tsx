@@ -254,7 +254,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                     top: '5px',
                     right: '5px',
                     backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                    color: '#FF3B30', // Apple red color
+                    color: colors.red, 
                     border: 'none',
                     borderRadius: '50%',
                     width: '26px',
@@ -351,7 +351,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                   borderBottom: '0.5px solid rgba(0, 0, 0, 0.2)',
                   fontSize: '17px',
                   fontWeight: 600,
-                  color: '#FF3B30', // Apple red color
+                  color: '#FF3B30', 
                   cursor: 'pointer',
                 }}
               >
@@ -365,7 +365,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                   border: 'none',
                   fontSize: '17px',
                   fontWeight: 400,
-                  color: '#007AFF', // Apple blue color
+                  color: '#007AFF',
                   cursor: 'pointer',
                 }}
               >

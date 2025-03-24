@@ -1,3 +1,12 @@
+/*
+
+DEPRECATED COMPONENT
+Code now works as Whisper running straight after downloading or uploading audio files.
+May be useful for future reference, but not needed for current implementation.
+
+*/
+
+
 import React from 'react';
 import { SongModel } from '../../database/models/Song';
 import AIRunner from '../common/AIRunner';

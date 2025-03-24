@@ -9,13 +9,13 @@ let lastMouseX: number;
 let lastMouseY: number;
 let mouseVelX = 0;
 let mouseVelY = 0;
-let currentMood = 'happy'; // Can be updated based on AI input
-let allowedParticles: string[] = ['musicNote']; // Default particle
+let currentMood = 'happy'; 
+let allowedParticles: string[] = ['musicNote'];
 let isActive = true;
-let isMouseOnCanvas = true; // Always show overlay by default
-let overlayAlwaysVisible = true; // New flag to control overlay visibility behavior
-let isMouseHeld = false; // Track if mouse is being held down
-let mouseHoldTimer = 0; // Control spawn rate when holding
+let isMouseOnCanvas = true;
+let overlayAlwaysVisible = true; 
+let isMouseHeld = false; 
+let mouseHoldTimer = 0; 
 let mouseParticleType = ParticleSelector.getRandomParticleFromArray(allowedParticles);
 let mouseParticleImageType = 1;
 
@@ -72,7 +72,7 @@ const sketch = (p: p5) => {
     p.clear(); // Use clear instead of background to maintain transparency
     
     // Improved mouse velocity calculation
-    mouseVelX = (p.mouseX - (lastMouseX || p.mouseX)) * 0.5; // Scaled for better control
+    mouseVelX = (p.mouseX - (lastMouseX || p.mouseX)) * 0.5; 
     mouseVelY = (p.mouseY - (lastMouseY || p.mouseY)) * 0.5;
     lastMouseX = p.mouseX;
     lastMouseY = p.mouseY;
@@ -114,18 +114,18 @@ const sketch = (p: p5) => {
 
   // Function to draw a circular overlay around the cursor/touch point
   const drawCursorOverlay = (p: p5, x: number, y: number) => {
-    const radius = 15; // Match the collision radius in handleMouseCollision
+    const radius = 15; 
     
     p.push();
     
     // Draw outer circle
     p.noFill();
-    p.stroke(255, 255, 255, 100); // Semi-transparent white
+    p.stroke(255, 255, 255, 100); 
     p.strokeWeight(2);
     p.circle(x, y, radius * 2);
     
     // Draw inner circle
-    p.fill(255, 255, 255, 20); // Very transparent white
+    p.fill(255, 255, 255, 20);
     p.noStroke();
     p.circle(x, y, radius * 2 - 4);
     
@@ -181,10 +181,10 @@ const sketch = (p: p5) => {
     
     // Create initial burst of particles (all using the same mouseParticleType)
     if (particleSystem && isActive) {
-      createParticlesAtMouse(p, 5); // Initial larger burst
+      createParticlesAtMouse(p, 5); 
     }
     
-    return false; // Prevents default
+    return false;
   };
   
   p.mouseReleased = () => {
@@ -192,7 +192,7 @@ const sketch = (p: p5) => {
     isMouseHeld = false;
     mouseHoldTimer = 0;
     randomiseParticleType();
-    return false; // Prevents default
+    return false;
   };
 
   // Remove existing mouseMoved handler as we're handling mouse interaction in the particle system
@@ -205,12 +205,12 @@ const sketch = (p: p5) => {
     if (particleSystem && isActive) {
       createParticlesAtMouse(p, 5);
     }
-    return false; // Prevents default
+    return false;
   };
   
   p.touchMoved = () => {
     isMouseOnCanvas = true;
-    return false; // Prevents default
+    return false; 
   };
   
   p.touchEnded = () => {
@@ -218,8 +218,6 @@ const sketch = (p: p5) => {
     mouseHoldTimer = 0;
     isMouseOnCanvas = true;
     randomiseParticleType();
-    return false; // Prevents default
+    return false;
   };
 };
-
-// Remove the direct p5 initialization since we'll do it from the React component

@@ -42,50 +42,131 @@ You can also set colour, background and particle shape yourself from the setting
 ### Hue Integration
 Our integration with the Philips Hue Entertainment API provides an immersive experience, synchronising room lighting in real-time with on-screen visuals and audio. Lights dynamically respond to music beats, vocals, and directional cues—for example, on-screen activity occurring on the right side will trigger more intense lighting effects on the corresponding side of the room, creating an engaging and interactive environment.
 
-## Install
+## Installation 
 
-Clone the repo and install dependencies:
+### Recommended Installation
+Download our zip file from our release on github. The zip file contains `SuperHappySpace.exe`, which is the main executable for our product.
 
-```bash
-git clone --depth 1 --branch main https://github.com/electron-react-boilerplate/electron-react-boilerplate.git your-project-name
-cd your-project-name
-npm install
+### Github installation
 
-cd release/app
-npm install sqlite3 sequelize
-
-
-
-npm install p5
-npm i --save-dev @types/p5
-npm install yt-dlp-exec fluent-ffmpeg
-
+1. Clone the repository
+TODO: Change to closed repo
+```shell
+git clone git@github.com:hugomarfani/AudioVisuliserV3.git
 ```
 
-To run the LLM command from the app:
+2. Install dependencies
 
-1. Download the gemma-2-9b-it-int4-ov from the huggingface model hub [here](https://huggingface.co/OpenVINO/gemma-2-9b-it-int4-ov)
-2. Place the model directory in the `AiResources` directory with the name "gemma-2-9b-it-int4-ov"
-3. Download the openvino installer zip file from [here](https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/2025.0/windows)
-4. Extract the zip file and rename the directory to `openvino_2025` and place it in the `AiResources` directory
-5. Run the app as usual and the LLM should be available in the dropdown from File -> Run Gemma Test
+#### Node.js dependencies
+```shell
+npm install
+```
 
-To compile the exe file for gemma:
+#### AI dependencies
 
-1. Run the following command in the terminal
+Go to the resources folder from the root directory. This will automatically contain the executables required.
+```shell
+cd resources
+```
 
-```bash
-AiResources/openvino_2025/setupvars.ps1
+For default settings (in accordance with our product created for Super Happy Space), create a directory named `AiResources` and download the models in there either manually or using git lfs
+```shell
+mkdir AiResources
+cd AiResources
+# download and move all 3 models from huggingface here
+```
+If using git to install the models:
+1. download Git LFS following the instructions [here](https://docs.github.com/en/repositories/working-with-files/managing-large-files/installing-git-large-file-storage)
+2. Run the following commands
+```shell
+git lfs install
+git clone https://huggingface.co/OpenVINO/distil-whisper-large-v3-int8-ov
+git clone https://huggingface.co/OpenVINO/gemma-2-9b-it-int4-ov
+git clone https://huggingface.co/IDKiro/sdxs-512-dreamshaper
+```
+
+Otherwise, download the models from the following links:
+1. [distil-whisper-large-v3-int8-ov](https://huggingface.co/OpenVINO/distil-whisper-large-v3-int8-ov)
+2. [gemma-2-9b-it-int4-ov](https://huggingface.co/OpenVINO/gemma-2-9b-it-int4-ov)
+3. [sdxs-512-dreamshaper](https://huggingface.co/IDKiro/sdxs-512-dreamshaper)
+
+And place them in the `AiResources` directory.
+
+Finally, download the openvino package from the zip file [here](https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/2025.0/windows).
+Unzip the file and rename it to `openvino_2025` and place it in the `AiResources` directory.
+
+## Compiling from Source
+
+### OpenVINO C++ 
+
+The C++ implementation using OpenVINO and OpenVINO GenAI library has 2 ways to compile, using a dynamic library format or a static library format. The dynamic library format is recommended.
+
+#### Dynamic Build 
+
+Download the openvino package from the zip file [here](https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/2025.0/windows).
+Unzip the file and rename it to `openvino_2025` and place it in the `AiResources` directory.
+
+Run the setup script from the root directory
+```shell
+./resources/AiResources/openvino_2025/setupvars.bat
+# or setupvars.ps1 for powershell systems
+```
+
+From the root directory, move to the external directory and create a build directory
+```shell
 cd external
-cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release -S ./project -B ./build
+mkdir build
+``` 
+
+Run the following commands to build the project
+```shell
+cmake -S ./project -B ./build
 cmake --build ./build --config Release
 ```
 
-2. The exe file will be located in the `external/build/Release` directory
+The executable will be in under `./external/build/Release/cppVer.exe`. 
+Move this file to `./resources` to be used by the main application.
 
-3. Place the exe file in the root directory of the app
 
-**Having issues installing? See our [debugging guide](https://github.com/electron-react-boilerplate/electron-react-boilerplate/issues/400)**
+#### Static Build 
+
+It is possible to create static build of openvino from the source files. However, this is not a recommended method as it is more complex and the nuumber of errors the user encounters heavily depends on their setup.
+
+First clone the necessary repositories and submodules
+```shell
+git clone https://github.com/openvinotoolkit/openvino.git
+git clone https://github.com/openvinotoolkit/openvino.genai.git
+git submodule update --init --recursive
+mkdir build & cd build
+```
+
+Run the following commands to build the project, assuming you have Visual Studio 2019 installed, choose the correct generator for your system.
+```shell
+cmake -G "Visual Studio 16 2019" -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE={path to openvino}/cmake/toolchains/mt.runtime.win32.toolchain.cmake -DOPENVINO_EXTRA_MODULES={path to openvion.genai} ../openvino 
+```
+
+Compile the cmake project
+```shell
+cmake --build . --target openvino --config Release 
+```
+
+Install the project onto your machine
+```shell
+cmake -DCMAKE_INSTALL_PREFIX=C:\Users\billy\Documents\coding\temp\install -P .\build\cmake_install.cmake 
+```
+
+After these steps, the openvino library will be installed on your machine and it should be possible to link it to the C++ project using cmake.
+
+
+### Diffusers Python Pyinstaller 
+Go to the external directory and run the following command:
+```shell
+cd external
+pip install requirements.txt
+pyinstaller –F SD.py 
+```
+The build was done with python version 3.10.0. The executable will be in the `dist` folder. Move the executable to the resources folder to be used by the main application.
+
 
 ## Starting Development
 
@@ -103,6 +184,8 @@ To package apps for the local platform:
 npm run package
 ```
 
+The folder with the executable will be under `./release/build` under the name `win-unpacked`.
+
 ## Coders
 - [Hugo Marfani](https://github.com/hugomarfani)
 - [Horesh Lopian](https://github.com/HoreshLupi)
@@ -119,7 +202,7 @@ This repository was forked off [electron-react-boilerplate](https://github.com/e
 - [C. T. Lin](https://github.com/chentsulin)
 - [Jhen-Jie Hong](https://github.com/jhen0409)
 
-### License
+<!-- ### License
 
 MIT © [Electron React Boilerplate](https://github.com/electron-react-boilerplate)
 
@@ -128,4 +211,4 @@ MIT © [Electron React Boilerplate](https://github.com/electron-react-boilerplat
 [github-tag-image]: https://img.shields.io/github/tag/electron-react-boilerplate/electron-react-boilerplate.svg?label=version
 [github-tag-url]: https://github.com/electron-react-boilerplate/electron-react-boilerplate/releases/latest
 [stackoverflow-img]: https://img.shields.io/badge/stackoverflow-electron_react_boilerplate-blue.svg
-[stackoverflow-url]: https://stackoverflow.com/questions/tagged/electron-react-boilerplate
+[stackoverflow-url]: https://stackoverflow.com/questions/tagged/electron-react-boilerplate -->

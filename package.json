@@ -14,25 +14,36 @@
     "hot",
     "reload"
   ],
-  "homepage": "https://github.com/electron-react-boilerplate/electron-react-boilerplate#readme",
-  "bugs": {
-    "url": "https://github.com/electron-react-boilerplate/electron-react-boilerplate/issues"
-  },
+  "homepage": "https://students.cs.ucl.ac.uk/2024/group1",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/electron-react-boilerplate/electron-react-boilerplate.git"
+    "url": "git+https://github.com/hugomarfani/AudioVisuliserV3.git"
   },
   "license": "MIT",
   "author": {
-    "name": "Electron React Boilerplate Maintainers",
-    "email": "electronreactboilerplate@gmail.com",
-    "url": "https://electron-react-boilerplate.js.org"
+    "name": "UCl SysEngGrp1_25"
   },
   "contributors": [
     {
       "name": "Amila Welihinda",
       "email": "amilajack@gmail.com",
       "url": "https://github.com/amilajack"
+    },
+    {
+      "name": "Hugo Marfani",
+      "email": "hugo.marfani.23@ucl.ac.uk"
+    },
+    {
+      "name": "Kiminao Usami",
+      "email": "kimi.usami.23@ucl.ac.uk"
+    },
+    {
+      "name": "Horesh Lopian",
+      "email": "horesh.lopian.23@ucl.ac.uk"
+    },
+    {
+      "name": "Runze Cheng",
+      "email": "runze.cheng.23@ucl.ac.uk"
     }
   ],
   "main": "./.erb/dll/main.bundle.dev.js",
@@ -207,8 +218,8 @@
     "webpack-merge": "^5.9.0"
   },
   "build": {
-    "productName": "AudioVisuliserV3",
-    "appId": "org.erb.ElectronReact",
+    "productName": "SuperHappySpace",
+    "appId": "org.erb.SuperHappySpace",
     "asar": true,
     "asarUnpack": [
       "**\\*.{node,dll}",
@@ -289,9 +300,6 @@
         "releaseType": "draft"
       }
     ]
-  },
-  "collective": {
-    "url": "https://opencollective.com/electron-react-boilerplate-594"
   },
   "devEngines": {
     "runtime": {

@@ -6,7 +6,6 @@ import ParticleSelector from './ParticleSelector';
 import BackgroundSelector from './BackgroundSelector';
 import ImageGallery from './ImageGallery';
 import LLMRunner from './LLMRunner';
-import WhisperRunner from './WhisperRunner';
 import ShaderImageSelector from './ShaderImageSelector';
 import DeleteSongButton from './DeleteSongButton';
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import colors from '../../theme/colors';
 
 type ColorKeys = keyof typeof colors;

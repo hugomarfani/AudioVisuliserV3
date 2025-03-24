@@ -1,7 +1,6 @@
 import { ipcMain } from 'electron';
 import fs from 'fs';
 import path from 'path';
-import { app } from 'electron';
 import { Song, saveSongAsJson } from '../../database/models/Song';
 import { getResourcePath } from '../paths';
 
@@ -131,7 +130,7 @@ export const registerImageHandlers = () => {
       // Copy the file
       fs.copyFileSync(filePath, outputPath);
       
-      const relativePath = `assets/shader/${folderName}/${outputFileName}`;
+      const relativePath = `shader/${folderName}/${outputFileName}`;
 
       // Update song in database with new image path
       const song = await Song.findByPk(songId);
