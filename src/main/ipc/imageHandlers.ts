@@ -130,7 +130,7 @@ export const registerImageHandlers = () => {
       // Copy the file
       fs.copyFileSync(filePath, outputPath);
       
-      const relativePath = `assets/shader/${folderName}/${outputFileName}`;
+      const relativePath = `shader/${folderName}/${outputFileName}`;
 
       // Update song in database with new image path
       const song = await Song.findByPk(songId);
